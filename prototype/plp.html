@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alimento para perro — Filtrado para Toby · Manada</title>
+  <meta name="description" content="Catálogo de alimento para perro filtrado para tu mascota: etapa, tamaño, condición y suscripción." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='11' r='3.2' fill='%23C2603F'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23C2603F'/%3E%3Ccircle cx='23' cy='11' r='3.2' fill='%23C2603F'/%3E%3Cpath d='M16 14c4.2 0 7.5 3 7.5 6.4 0 2.8-2.7 4.6-7.5 4.6S8.5 23.2 8.5 20.4C8.5 17 11.8 14 16 14Z' fill='%23C2603F'/%3E%3C/svg%3E" />
+</head>
+<body class="pb-nav">
+  <a href="#main" class="skip-link">Saltar al contenido</a>
+
+  <!-- Chrome reutilizable (assets/components.js) -->
+  <manada-header page="comprar"></manada-header>
+
+  <main id="main">
+    <div class="container">
+      <!-- Breadcrumb -->
+      <nav class="crumb" aria-label="Ruta de navegación">
+        <a href="index.html">Inicio</a> › <a href="plp.html">Perro</a> › <span aria-current="page" class="muted">Alimento seco</span>
+      </nav>
+
+      <h1 class="h1">Alimento seco para perro</h1>
+
+      <!-- Banner personalización -->
+      <div class="perso-banner mt-12" role="status">
+        <span aria-hidden="true">🐾</span>
+        <span><strong>Filtrado para Toby</strong> — adulto · 8&nbsp;kg · raza mediana · RM / Ñuñoa.</span>
+        <button class="link-edit" type="button">Cambiar</button>
+      </div>
+
+      <!-- Chips de filtro rápido + ordenar -->
+      <div class="row between wrap gap-12 mt-16">
+        <div class="row wrap gap-8">
+          <button class="chip chip--active" type="button" data-toggle-chip>Para Toby ✕</button>
+          <button class="chip" type="button" data-toggle-chip>◍ Suscribible</button>
+          <button class="chip" type="button" data-toggle-chip>🚚 Despacho rápido</button>
+          <button class="chip" type="button" data-toggle-chip>Raza mediana</button>
+          <button class="chip only-mobile" type="button" data-open="#filtersSheet" aria-haspopup="dialog">⚙️ Filtros</button>
+        </div>
+        <label class="row gap-8" style="font-size:14px;">
+          <span class="muted hide-mobile">Ordenar:</span>
+          <select class="input" style="padding:8px 12px;" aria-label="Ordenar resultados">
+            <option>Recomendado para Toby</option>
+            <option>Precio: menor a mayor</option>
+            <option>Precio: mayor a menor</option>
+            <option>Mejor evaluados</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="plp mt-24">
+        <!-- ===== Sidebar filtros (desktop) ===== -->
+        <aside class="filters card" aria-label="Filtros">
+          <h2 class="h4 mb-8">Filtros</h2>
+          <div class="filter-group">
+            <h3 class="overline mb-8">Etapa</h3>
+            <label class="check"><input type="checkbox" checked /> Adulto <span class="note">(recom.)</span></label>
+            <label class="check"><input type="checkbox" /> Cachorro</label>
+            <label class="check"><input type="checkbox" /> Senior</label>
+          </div>
+          <div class="filter-group">
+            <h3 class="overline mb-8">Tamaño / raza</h3>
+            <label class="check"><input type="checkbox" checked /> Mediano</label>
+            <label class="check"><input type="checkbox" /> Pequeño</label>
+            <label class="check"><input type="checkbox" /> Grande</label>
+          </div>
+          <div class="filter-group">
+            <h3 class="overline mb-8">Condición</h3>
+            <label class="check"><input type="checkbox" /> Control de peso</label>
+            <label class="check"><input type="checkbox" /> Piel sensible</label>
+            <label class="check"><input type="checkbox" /> Digestión</label>
+          </div>
+          <div class="filter-group">
+            <h3 class="overline mb-8">Marca</h3>
+            <label class="check"><input type="checkbox" /> Royal Canin</label>
+            <label class="check"><input type="checkbox" /> Pro Plan</label>
+            <label class="check"><input type="checkbox" /> Hill's</label>
+            <label class="check"><input type="checkbox" /> Acana</label>
+          </div>
+          <div class="filter-group">
+            <h3 class="overline mb-8">Formato</h3>
+            <label class="check"><input type="checkbox" /> 3 kg</label>
+            <label class="check"><input type="checkbox" /> 7,5 kg</label>
+            <label class="check"><input type="checkbox" checked /> 15 kg</label>
+          </div>
+          <div class="filter-group">
+            <h3 class="overline mb-8">Extras</h3>
+            <label class="check"><input type="checkbox" /> ◍ Suscribible</label>
+            <label class="check"><input type="checkbox" /> 🚚 Despacho rápido</label>
+          </div>
+        </aside>
+
+        <!-- ===== Grid de productos ===== -->
+        <section aria-label="Resultados">
+          <p class="note mb-16">24 productos · mostrando los mejores para Toby</p>
+          <div class="grid-products">
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🍖<span class="badge badge--subscribe">◍ Suscribible</span></div>
+              <div class="product__body">
+                <p class="overline">Royal Canin</p>
+                <h3 class="product__name"><a href="pdp.html">Medium Adult 15 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.8 (212)</p>
+                <div class="product__price"><span class="price now">$54.990</span><span class="price was">$62.990</span></div>
+                <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--subscribe" aria-label="Suscribir">◍</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🥩<span class="badge badge--subscribe">◍ Suscribible</span></div>
+              <div class="product__body">
+                <p class="overline">Pro Plan</p>
+                <h3 class="product__name"><a href="pdp.html">Adult Medium Optihealth 15 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.7 (164)</p>
+                <div class="product__price"><span class="price now">$58.990</span></div>
+                <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--subscribe" aria-label="Suscribir">◍</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🌾</div>
+              <div class="product__body">
+                <p class="overline">Hill's</p>
+                <h3 class="product__name"><a href="pdp.html">Science Diet Adult 12 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★☆</span> 4.5 (97)</p>
+                <div class="product__price"><span class="price now">$61.490</span></div>
+                <p class="ship">🚚 Llega en 2 días a Ñuñoa · $2.990</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--secondary">Ver</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🍗<span class="badge badge--urgency">Últimas unidades</span></div>
+              <div class="product__body">
+                <p class="overline">Acana</p>
+                <h3 class="product__name"><a href="pdp.html">Adult Recipe 11,4 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.9 (73)</p>
+                <div class="product__price"><span class="price now">$79.990</span></div>
+                <p class="ship">🚚 Llega en 3 días a Ñuñoa · $3.490</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--secondary">Ver</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">⚖️<span class="badge badge--subscribe">◍ Suscribible</span></div>
+              <div class="product__body">
+                <p class="overline">Royal Canin</p>
+                <h3 class="product__name"><a href="pdp.html">Medium Light Weight Care 13 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★☆</span> 4.4 (51)</p>
+                <div class="product__price"><span class="price now">$57.990</span></div>
+                <p class="reco">🐾 Buena opción si quieres cuidar el peso de Toby</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--subscribe" aria-label="Suscribir">◍</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🐟</div>
+              <div class="product__body">
+                <p class="overline">Pro Plan</p>
+                <h3 class="product__name"><a href="pdp.html">Sensitive Skin Salmón 15 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.6 (120)</p>
+                <div class="product__price"><span class="price now">$64.990</span></div>
+                <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--secondary">Ver</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🥫<span class="badge badge--subscribe">◍ Suscribible</span></div>
+              <div class="product__body">
+                <p class="overline">Royal Canin</p>
+                <h3 class="product__name"><a href="pdp.html">Medium Adult húmedo pack 12</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★☆</span> 4.3 (44)</p>
+                <div class="product__price"><span class="price now">$15.990</span></div>
+                <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--subscribe" aria-label="Suscribir">◍</a>
+                </div>
+              </div>
+            </article>
+
+            <article class="product">
+              <div class="product__media" aria-hidden="true">🌿</div>
+              <div class="product__body">
+                <p class="overline">Hill's</p>
+                <h3 class="product__name"><a href="pdp.html">Digestive Care i/d 10 kg</a></h3>
+                <p class="product__rating"><span class="stars" aria-hidden="true">★★★★☆</span> 4.5 (39)</p>
+                <div class="product__price"><span class="price now">$68.990</span></div>
+                <p class="ship">🚚 Llega en 2 días a Ñuñoa · $2.990</p>
+                <div class="product__actions">
+                  <button class="btn btn--primary" data-add-cart>Agregar</button>
+                  <a href="pdp.html" class="btn btn--secondary">Ver</a>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="text-c mt-32">
+            <button class="btn btn--secondary btn--lg" type="button">Cargar más productos</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== Sheet de filtros (móvil) ===== -->
+  <div class="overlay sheet" id="filtersSheet" role="dialog" aria-modal="true" aria-label="Filtros" hidden>
+    <div class="overlay__backdrop" data-close></div>
+    <div class="overlay__panel">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="overlay__head">
+        <h2 class="h3">Filtros</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Cerrar filtros">✕</button>
+      </div>
+      <div class="overlay__body">
+        <div class="filter-group">
+          <h3 class="overline mb-8">Etapa</h3>
+          <label class="check"><input type="checkbox" checked /> Adulto (recom.)</label>
+          <label class="check"><input type="checkbox" /> Cachorro</label>
+          <label class="check"><input type="checkbox" /> Senior</label>
+        </div>
+        <div class="filter-group">
+          <h3 class="overline mb-8">Tamaño / raza</h3>
+          <label class="check"><input type="checkbox" checked /> Mediano</label>
+          <label class="check"><input type="checkbox" /> Pequeño</label>
+          <label class="check"><input type="checkbox" /> Grande</label>
+        </div>
+        <div class="filter-group">
+          <h3 class="overline mb-8">Marca</h3>
+          <label class="check"><input type="checkbox" /> Royal Canin</label>
+          <label class="check"><input type="checkbox" /> Pro Plan</label>
+          <label class="check"><input type="checkbox" /> Hill's</label>
+        </div>
+        <div class="filter-group">
+          <h3 class="overline mb-8">Extras</h3>
+          <label class="check"><input type="checkbox" /> ◍ Suscribible</label>
+          <label class="check"><input type="checkbox" /> 🚚 Despacho rápido</label>
+        </div>
+      </div>
+      <div class="overlay__foot row gap-12">
+        <button class="btn btn--ghost grow" type="button" data-close>Limpiar</button>
+        <button class="btn btn--primary grow" type="button" data-close>Ver 24 productos</button>
+      </div>
+    </div>
+  </div>
+
+  <manada-footer></manada-footer>
+  <manada-botnav page="comprar"></manada-botnav>
+
+  <span class="proto-tag">Prototipo · Manada</span>
+  <script src="assets/components.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

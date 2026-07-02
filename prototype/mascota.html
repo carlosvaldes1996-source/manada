@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Toby — Perfil de mascota · Manada</title>
+  <meta name="description" content="Perfil de Toby. Lo que sabemos de tu mascota nos deja cuidarlo mejor: peso, etapa, alimento, recordatorios y suscripción." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='11' r='3.2' fill='%23C2603F'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23C2603F'/%3E%3Ccircle cx='23' cy='11' r='3.2' fill='%23C2603F'/%3E%3Cpath d='M16 14c4.2 0 7.5 3 7.5 6.4 0 2.8-2.7 4.6-7.5 4.6S8.5 23.2 8.5 20.4C8.5 17 11.8 14 16 14Z' fill='%23C2603F'/%3E%3C/svg%3E" />
+</head>
+<body class="pb-nav">
+  <a href="#main" class="skip-link">Saltar al contenido</a>
+
+  <!-- Chrome reutilizable (assets/components.js) -->
+  <manada-header page="mascota"></manada-header>
+
+  <main id="main">
+    <div class="container">
+      <nav class="crumb" aria-label="Ruta de navegación">
+        <a href="index.html">Inicio</a> › <span class="muted">Mis mascotas</span> › <span aria-current="page" class="muted">Toby</span>
+      </nav>
+
+      <!-- ===== Cabecera del perfil ===== -->
+      <div class="card" style="overflow:hidden;">
+        <div class="row gap-24 wrap items-start">
+          <div class="avatar-lg" aria-hidden="true">🐶</div>
+          <div class="grow">
+            <p class="overline">Perro · Mestizo</p>
+            <h1 class="display-l" style="margin-top:4px;">Toby</h1>
+            <p class="body-m muted mt-8">Adulto · 3 años · 8&nbsp;kg · RM / Ñuñoa</p>
+            <div class="row gap-8 wrap mt-12">
+              <span class="badge badge--subscribe">◍ Suscripción activa</span>
+              <span class="badge badge--success">Perfil 80% completo</span>
+            </div>
+          </div>
+          <a href="#" class="btn btn--secondary">Editar perfil</a>
+        </div>
+
+        <!-- Barra de completitud -->
+        <div class="mt-24">
+          <div class="row between mb-8">
+            <span class="caption">Lo que sabemos de Toby</span>
+            <span class="caption brand">80%</span>
+          </div>
+          <div class="completeness" aria-hidden="true"><i style="width:80%;"></i></div>
+          <p class="note mt-8">Mientras más sabemos, mejor lo cuidamos: te avisamos antes de que le falte comida y te sugerimos lo justo para él. 🐾</p>
+        </div>
+      </div>
+
+      <!-- ===== Cápsula de anticipación ===== -->
+      <div class="capsule mt-24" role="region" aria-label="Recompra de Toby">
+        <p class="overline" style="color:var(--miel-700);">Para Toby 🐾 · Próxima entrega</p>
+        <h2 class="h3 mt-8">Le quedan <strong>~5 días</strong> de comida.</h2>
+        <p class="body-m muted mt-8">Su saco de <strong>Royal Canin Medium Adult 15&nbsp;kg</strong> se acaba el <strong>2 de julio</strong>. Tu próxima entrega está agendada para el <strong>30 de junio</strong>.</p>
+        <div class="row gap-12 wrap mt-16">
+          <a href="carrito.html" class="btn btn--subscribe">◍ Adelantar entrega</a>
+          <button class="btn btn--ghost" type="button">Reagendar</button>
+        </div>
+      </div>
+
+      <!-- ===== Tarjetas editables ===== -->
+      <h2 class="h2 mt-40 mb-16">Lo que sabemos de Toby</h2>
+      <div class="grid-cats" style="grid-template-columns:repeat(1,1fr);">
+        <div class="edit-card">
+          <div><span class="lbl">Peso</span><div class="val">8 kg</div></div>
+          <button class="link-edit" type="button">Editar</button>
+        </div>
+        <div class="edit-card">
+          <div><span class="lbl">Etapa</span><div class="val">Adulto (3 años)</div></div>
+          <button class="link-edit" type="button">Editar</button>
+        </div>
+        <div class="edit-card">
+          <div><span class="lbl">Esterilización</span><div class="val">Esterilizado</div></div>
+          <button class="link-edit" type="button">Editar</button>
+        </div>
+        <div class="edit-card">
+          <div><span class="lbl">Alimento actual</span><div class="val">Royal Canin Medium Adult</div></div>
+          <button class="link-edit" type="button">Editar</button>
+        </div>
+        <!-- Campo vacío = invitación cálida -->
+        <div class="edit-card edit-card--empty">
+          <div>
+            <span class="lbl">Condiciones de salud</span>
+            <div class="val" style="font-weight:500; color:var(--text-secondary);">¿Toby tiene alguna condición o alergia?</div>
+            <p class="note mt-8">Cuéntanos y filtramos solo lo que le hace bien.</p>
+          </div>
+          <button class="btn btn--subscribe" type="button">Agregar</button>
+        </div>
+        <div class="edit-card edit-card--empty">
+          <div>
+            <span class="lbl">Cumpleaños</span>
+            <div class="val" style="font-weight:500; color:var(--text-secondary);">¿Cuándo nació Toby?</div>
+            <p class="note mt-8">Le preparamos un regalo sorpresa ese día. 🎂</p>
+          </div>
+          <button class="btn btn--subscribe" type="button">Agregar</button>
+        </div>
+      </div>
+
+      <!-- ===== Recordatorio cross-sell farmacia ===== -->
+      <div class="card mt-24" style="background:var(--bg-accent-soft); border-color:var(--miel-200);">
+        <div class="row between wrap gap-12 items-center">
+          <div>
+            <p class="overline" style="color:var(--miel-700);">Recordatorio de salud</p>
+            <h3 class="h3 mt-8">¿Ya desparasitaste a Toby este mes?</h3>
+            <p class="body-s muted mt-8">Según su última compra, la desparasitación toca pronto. Te mostramos solo lo compatible con su peso (8&nbsp;kg).</p>
+          </div>
+          <a href="plp.html" class="btn btn--primary">Ver farmacia 🔒</a>
+        </div>
+      </div>
+
+      <!-- ===== Acciones ===== -->
+      <div class="grid-cats mt-24">
+        <a href="mascota.html" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">◍</span><b>Mi suscripción</b><span class="note">Frecuencia y pausa</span></a>
+        <a href="#" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">📦</span><b>Historial</b><span class="note">Pedidos de Toby</span></a>
+        <a href="#" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">🔔</span><b>Recordatorios</b><span class="note">Comida y salud</span></a>
+        <a href="#" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">➕</span><b>Agregar mascota</b><span class="note">Suma a la manada</span></a>
+      </div>
+    </div>
+  </main>
+
+  <manada-footer></manada-footer>
+  <manada-botnav page="mascota"></manada-botnav>
+
+  <span class="proto-tag">Prototipo · Manada</span>
+  <script src="assets/components.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

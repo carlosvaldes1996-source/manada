@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manada — Te conoce como nadie · Inicio</title>
+  <meta name="description" content="Manada: e-commerce de mascotas en Chile. Te conoce como nadie y se anticipa a lo que tu mascota necesita." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='11' r='3.2' fill='%23C2603F'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23C2603F'/%3E%3Ccircle cx='23' cy='11' r='3.2' fill='%23C2603F'/%3E%3Cpath d='M16 14c4.2 0 7.5 3 7.5 6.4 0 2.8-2.7 4.6-7.5 4.6S8.5 23.2 8.5 20.4C8.5 17 11.8 14 16 14Z' fill='%23C2603F'/%3E%3C/svg%3E" />
+</head>
+<body class="pb-nav">
+  <a href="#main" class="skip-link">Saltar al contenido</a>
+
+  <!-- Chrome reutilizable (assets/components.js) -->
+  <manada-header page="home"></manada-header>
+
+  <main id="main">
+    <!-- ============ SALUDO + ANTICIPACIÓN ============ -->
+    <section class="section" style="padding-top:28px;">
+      <div class="container">
+        <p class="overline">Hola, Carlos 👋</p>
+        <h1 class="h1 mt-8">Toby está listo para su semana.</h1>
+        <p class="body-l muted mt-8" style="max-width:60ch;">Conocemos a <span class="pet-name">Toby</span> como nadie y nos adelantamos para que nunca le falte nada.</p>
+
+        <!-- Cápsula de anticipación -->
+        <div class="capsule pulse mt-24" role="region" aria-label="Anticipación para Toby">
+          <p class="overline" style="color:var(--miel-700);">Para Toby 🐾 · Anticipación</p>
+          <h2 class="h3 mt-8">A Toby le quedan <strong>~5 días</strong> de comida.</h2>
+          <p class="body-m muted mt-8">Según su ración diaria (8&nbsp;kg · adulto) calculamos que su saco actual de <strong>Royal Canin Medium Adult 15&nbsp;kg</strong> se acaba el <strong>2 de julio</strong>. ¿La reagendamos para que no le falte?</p>
+          <div class="capsule__bar" aria-hidden="true"><i></i></div>
+          <p class="note mt-8">≈ 18% restante</p>
+          <div class="row gap-12 wrap mt-16">
+            <a href="carrito.html" class="btn btn--subscribe">◍ Reagendar ahora</a>
+            <a href="mascota.html" class="btn btn--ghost">Ver suscripción</a>
+            <button class="link-edit" type="button" aria-label="Por qué te lo decimos">¿Por qué te lo decimos?</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ACCESOS RÁPIDOS ============ -->
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+        <nav class="quick" aria-label="Accesos rápidos">
+          <a href="carrito.html"><span class="ic" aria-hidden="true">🔁</span><b>Lo de siempre</b><span class="note">Repite el pedido de Toby</span></a>
+          <a href="plp.html"><span class="ic" aria-hidden="true">🐶</span><b>Por mascota</b><span class="note">Filtrado para Toby</span></a>
+          <a href="plp.html"><span class="ic" aria-hidden="true">💊</span><b>Farmacia</b><span class="note">Antiparasitarios y más</span></a>
+          <a href="plp.html"><span class="ic" aria-hidden="true">🏷️</span><b>Ofertas</b><span class="note">Para la manada</span></a>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ CARRUSEL "PARA LA MANADA DE TOBY" ============ -->
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+        <div class="row between items-end mb-16">
+          <div>
+            <p class="overline">Elegido para él</p>
+            <h2 class="h2">Para la manada de <span class="pet-name">Toby</span></h2>
+          </div>
+          <a href="plp.html" class="link-edit hide-mobile">Ver todo →</a>
+        </div>
+
+        <div class="rail">
+          <!-- card 1 -->
+          <article class="product">
+            <div class="product__media" aria-hidden="true">🍖
+              <span class="badge badge--subscribe">◍ Suscribible</span>
+            </div>
+            <div class="product__body">
+              <p class="overline">Royal Canin</p>
+              <h3 class="product__name">Medium Adult 15 kg</h3>
+              <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.8 (212)</p>
+              <div class="product__price"><span class="price now">$54.990</span><span class="price was">$62.990</span></div>
+              <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+              <div class="product__actions">
+                <button class="btn btn--primary" data-add-cart data-added-label="Agregado ✓">Agregar</button>
+                <a href="pdp.html" class="btn btn--subscribe" aria-label="Suscribir Royal Canin Medium Adult">◍</a>
+              </div>
+            </div>
+          </article>
+          <!-- card 2 -->
+          <article class="product">
+            <div class="product__media" aria-hidden="true">🦴</div>
+            <div class="product__body">
+              <p class="overline">Pedigree</p>
+              <h3 class="product__name">Snacks Dentastix Medium</h3>
+              <p class="product__rating"><span class="stars" aria-hidden="true">★★★★☆</span> 4.5 (88)</p>
+              <div class="product__price"><span class="price now">$6.490</span></div>
+              <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+              <div class="product__actions">
+                <button class="btn btn--primary" data-add-cart>Agregar</button>
+                <a href="pdp.html" class="btn btn--secondary">Ver</a>
+              </div>
+            </div>
+          </article>
+          <!-- card 3 -->
+          <article class="product">
+            <div class="product__media" aria-hidden="true">💊
+              <span class="badge badge--info">Farmacia</span>
+            </div>
+            <div class="product__body">
+              <p class="overline">NexGard</p>
+              <h3 class="product__name">Antiparasitario 4–10 kg</h3>
+              <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.9 (140)</p>
+              <div class="product__price"><span class="price now">$18.990</span></div>
+              <p class="reco">🐾 ¿Ya desparasitaste a Toby este mes?</p>
+              <div class="product__actions">
+                <button class="btn btn--primary" data-add-cart>Agregar</button>
+                <a href="pdp.html" class="btn btn--secondary">Ver</a>
+              </div>
+            </div>
+          </article>
+          <!-- card 4 -->
+          <article class="product">
+            <div class="product__media" aria-hidden="true">🧸</div>
+            <div class="product__body">
+              <p class="overline">Kong</p>
+              <h3 class="product__name">Juguete resistente Classic M</h3>
+              <p class="product__rating"><span class="stars" aria-hidden="true">★★★★★</span> 4.7 (96)</p>
+              <div class="product__price"><span class="price now">$12.990</span></div>
+              <p class="ship">🚚 Llega mañana a Ñuñoa · $2.990</p>
+              <div class="product__actions">
+                <button class="btn btn--primary" data-add-cart>Agregar</button>
+                <a href="pdp.html" class="btn btn--secondary">Ver</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BLOQUE EDUCATIVO ============ -->
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+        <div class="edu">
+          <div class="row between items-start wrap gap-16">
+            <div style="max-width:52ch;">
+              <p class="overline">¿Sabías? · Etapa de vida</p>
+              <h2 class="h2" style="color:#fff;">Toby está entrando a su etapa adulta plena.</h2>
+              <p class="body-m mt-8" style="color:var(--pino-100);">A los perros medianos les conviene una fórmula que cuide articulaciones y peso. Cuando quieras, te ayudamos con la transición sin que le caiga mal.</p>
+            </div>
+            <a href="plp.html" class="btn btn--subscribe">Ver fórmulas por etapa</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CATEGORÍAS POR NECESIDAD ============ -->
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+        <h2 class="h2 mb-16">Comprar por necesidad</h2>
+        <div class="grid-cats">
+          <a href="plp.html" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">🥣</span><b>Alimento</b><span class="note">Seco · húmedo · medicado</span></a>
+          <a href="plp.html" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">🛏️</span><b>Accesorios</b><span class="note">Camas · juguetes · paseo</span></a>
+          <a href="plp.html" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">💊</span><b>Farmacia 🔒</b><span class="note">Antiparasitarios · suplementos</span></a>
+          <a href="plp.html" class="cat-tile"><span class="cat-tile__icon" aria-hidden="true">🧼</span><b>Higiene</b><span class="note">Baño · dental · arena</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VARIANTE VISITANTE (hero de marca) ============ -->
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+        <div class="hero">
+          <div class="hero__grid">
+            <div>
+              <p class="overline">¿Nuevo en Manada?</p>
+              <h2 class="display-l mt-8">Cuidamos a quien más quieres.</h2>
+              <p class="body-l muted mt-12" style="max-width:50ch;">Crea el perfil de tu mascota y deja que Manada se anticipe: te avisamos antes de que se acabe la comida, sugerimos la fórmula por etapa y recordamos la desparasitación.</p>
+              <div class="row gap-12 wrap mt-24">
+                <a href="mascota.html" class="btn btn--primary btn--lg">Crear perfil de mi mascota</a>
+                <a href="plp.html" class="btn btn--secondary btn--lg">Explorar tienda</a>
+              </div>
+            </div>
+            <div class="hero__photo" aria-hidden="true">🐕</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <manada-footer></manada-footer>
+  <manada-botnav page="home"></manada-botnav>
+
+  <span class="proto-tag">Prototipo · Manada</span>
+  <script src="assets/components.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+/* ==========================================================================
+   MANADA — Design tokens & theme (Fase 3 · Etapa 1)
+   Fuente de verdad visual: ai-context/DESIGN_SYSTEM.md (D9·D10·D11)
+   Concepto rector: "Manada te conoce como nadie y se anticipa."
+   --------------------------------------------------------------------------
+   Estructura:
+   1. @import Tailwind v4 + animaciones
+   2. :root  → tokens crudos (escalas 50–900) + semánticos + puente shadcn
+   3. @theme → expone los tokens como utilidades de Tailwind
+   4. @layer base       → estilos globales (fondo Arena, foco, selección)
+   5. @layer components → escala tipográfica del design system
+   ========================================================================== */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ------------------------------------------------------------------ */
+/* 1. TOKENS                                                          */
+/* ------------------------------------------------------------------ */
+:root {
+  /* ---- Marca · escalas 50–900 (DESIGN_SYSTEM §3.1) ---- */
+  --terracota-50: #fbf0eb;  --terracota-100: #f5dad0; --terracota-200: #ebb6a4;
+  --terracota-300: #e0917a; --terracota-400: #d1755a; --terracota-500: #c2603f;
+  --terracota-600: #a54e31; --terracota-700: #843e27; --terracota-800: #632f1e;
+  --terracota-900: #421f14;
+
+  --pino-50: #ecf3f1;  --pino-100: #cfe0db; --pino-200: #9fc1b7;
+  --pino-300: #6fa293; --pino-400: #4a7e6f; --pino-500: #2f5d50;
+  --pino-600: #264b41; --pino-700: #1d3933; --pino-800: #142824;
+  --pino-900: #0b1614;
+
+  --miel-50: #fdf6ea;  --miel-100: #fbeacb; --miel-200: #f6d596;
+  --miel-300: #efbe61; --miel-400: #eaae47; --miel-500: #e5a23c;
+  --miel-600: #c9852a; --miel-700: #a0681f; --miel-800: #774d18;
+  --miel-900: #4e3210;
+
+  /* ---- Neutros cálidos (DESIGN_SYSTEM §3.2) ---- */
+  --neutral-0: #ffffff;   --neutral-50: #faf6f0;  /* Arena */
+  --neutral-100: #f0eae1; --neutral-200: #e0d8cc; --neutral-300: #c4baab;
+  --neutral-400: #9e9486; --neutral-500: #7a7064; --neutral-600: #5a5249;
+  --neutral-700: #403a33; --neutral-800: #2a2722; /* Carbón */ --neutral-900: #1a1814;
+
+  /* ---- Semánticos: superficies (§3.3) ---- */
+  --bg-canvas: var(--neutral-50);   /* fondo base — nunca blanco puro */
+  --bg-surface: var(--neutral-0);   /* cards, modales, inputs */
+  --bg-subtle: var(--neutral-100);
+  --bg-muted: var(--neutral-200);
+  --bg-inverse: var(--neutral-800);
+  --bg-brand-soft: var(--terracota-50);
+  --bg-accent-soft: var(--miel-50);
+
+  /* ---- Semánticos: texto y borde (§3.4) ---- */
+  --text-primary: var(--neutral-800);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-500);
+  --text-inverse: var(--neutral-0);
+  --text-brand: var(--terracota-600);
+  --border-default: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+  --border-focus: var(--terracota-500);
+
+  /* ---- Estados semánticos soft/base/strong (§3.5) ---- */
+  --success-soft: #e7f2ec; --success: #3c8c5a; --success-strong: #256b42;
+  --subscribe-soft: var(--miel-50); --subscribe: var(--miel-500); --subscribe-strong: var(--miel-700);
+  --urgency-soft: #fbeddd; --urgency: #d98324; --urgency-strong: #9a5a12;
+  --info-soft: #e7f0f4; --info: #3b7a9e; --info-strong: #255a78;
+  --error-soft: #f9e5e3; --error: #c0392b; --error-strong: #8e2a20;
+
+  /* ---- Radios (§9.2) ---- */
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
+  --radius: var(--radius-md); /* default que consumen los componentes shadcn */
+
+  /* ---- Sombras cálidas, base Carbón (§9.3) ---- */
+  --shadow-xs: 0 1px 2px rgba(42, 39, 34, 0.06);
+  --shadow-sm: 0 2px 8px rgba(42, 39, 34, 0.08);
+  --shadow-md: 0 8px 24px rgba(42, 39, 34, 0.1);
+  --shadow-lg: 0 16px 48px rgba(42, 39, 34, 0.12);
+
+  /* ---- Motion (§10) ---- */
+  --duration-micro: 150ms;
+  --duration-standard: 250ms;
+  --duration-overlay: 400ms;
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1); /* entrada/estándar */
+  --ease-in-soft: cubic-bezier(0.4, 0, 1, 1);      /* salida */
+
+  /* ---- Layout ---- */
+  --container-max: 1280px;
+
+  /* ---- Puente shadcn/ui → tokens Manada -----------------------------
+     Los componentes shadcn consumen estas variables; las mapeamos a la
+     paleta de marca para que entren ya re-estilizados (DESIGN_SYSTEM §11). */
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--bg-surface);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-surface);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--terracota-500);          /* acción */
+  --primary-foreground: var(--neutral-0);
+  --secondary: var(--bg-subtle);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-subtle);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--miel-500);                /* anticipación / suscripción */
+  --accent-foreground: var(--neutral-800);  /* texto sobre Miel = Carbón (a11y) */
+  --destructive: var(--error);
+  --destructive-foreground: var(--neutral-0);
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--border-focus);
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. THEME — exponer tokens como utilidades Tailwind                 */
+/* ------------------------------------------------------------------ */
+@theme inline {
+  /* Escalas de marca → bg-terracota-500, text-pino-700, border-miel-200… */
+  --color-terracota-50: var(--terracota-50);   --color-terracota-100: var(--terracota-100);
+  --color-terracota-200: var(--terracota-200); --color-terracota-300: var(--terracota-300);
+  --color-terracota-400: var(--terracota-400); --color-terracota-500: var(--terracota-500);
+  --color-terracota-600: var(--terracota-600); --color-terracota-700: var(--terracota-700);
+  --color-terracota-800: var(--terracota-800); --color-terracota-900: var(--terracota-900);
+
+  --color-pino-50: var(--pino-50);   --color-pino-100: var(--pino-100);
+  --color-pino-200: var(--pino-200); --color-pino-300: var(--pino-300);
+  --color-pino-400: var(--pino-400); --color-pino-500: var(--pino-500);
+  --color-pino-600: var(--pino-600); --color-pino-700: var(--pino-700);
+  --color-pino-800: var(--pino-800); --color-pino-900: var(--pino-900);
+
+  --color-miel-50: var(--miel-50);   --color-miel-100: var(--miel-100);
+  --color-miel-200: var(--miel-200); --color-miel-300: var(--miel-300);
+  --color-miel-400: var(--miel-400); --color-miel-500: var(--miel-500);
+  --color-miel-600: var(--miel-600); --color-miel-700: var(--miel-700);
+  --color-miel-800: var(--miel-800); --color-miel-900: var(--miel-900);
+
+  --color-neutral-0: var(--neutral-0);     --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100); --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300); --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500); --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700); --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+
+  /* Semánticos de superficie/texto/borde → bg-canvas, text-secondary… */
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-subtle: var(--bg-subtle);
+  --color-brand-soft: var(--bg-brand-soft);
+  --color-accent-soft: var(--bg-accent-soft);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-brand: var(--text-brand);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  /* Estados → bg-success-soft, text-urgency-strong… */
+  --color-success-soft: var(--success-soft); --color-success: var(--success); --color-success-strong: var(--success-strong);
+  --color-subscribe-soft: var(--subscribe-soft); --color-subscribe: var(--subscribe); --color-subscribe-strong: var(--subscribe-strong);
+  --color-urgency-soft: var(--urgency-soft); --color-urgency: var(--urgency); --color-urgency-strong: var(--urgency-strong);
+  --color-info-soft: var(--info-soft); --color-info: var(--info); --color-info-strong: var(--info-strong);
+  --color-error-soft: var(--error-soft); --color-error: var(--error); --color-error-strong: var(--error-strong);
+
+  /* Puente shadcn */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Tipografía (DESIGN_SYSTEM §4) — variables inyectadas por next/font */
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-hanken), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Radios */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Sombras cálidas (override de las default de Tailwind) */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Contenedor */
+  --container-max: var(--container-max);
+
+  /* Easing como utilidades de transición */
+  --ease-out-soft: var(--ease-out-soft);
+  --ease-in-soft: var(--ease-in-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. BASE                                                            */
+/* ------------------------------------------------------------------ */
+@layer base {
+  * {
+    border-color: var(--border-default);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Datos y precios con cifras tabulares (§4.2) */
+  input,
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Foco visible accesible — anillo Terracota 2px (a11y §13) */
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: var(--terracota-100);
+    color: var(--terracota-900);
+  }
+
+  /* Respeta prefers-reduced-motion (§10) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. ESCALA TIPOGRÁFICA (DESIGN_SYSTEM §4.1)                         */
+/* Clases utilitarias; el componente <Text> (Etapa 2) las consumirá.  */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .display-xl {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.5rem, 6vw, 3.75rem); /* 40 → 60 */
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  .display-l {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.0625rem, 5vw, 3rem); /* 33 → 48 */
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .heading-1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.75rem, 4vw, 2.5rem); /* 28 → 40 */
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .heading-2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(1.5rem, 3vw, 2rem); /* 24 → 32 */
+    line-height: 1.2;
+  }
+  .heading-3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(1.25rem, 2.4vw, 1.5rem); /* 20 → 24 */
+    line-height: 1.25;
+  }
+  .heading-4 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: clamp(1.125rem, 2vw, 1.25rem); /* 18 → 20 */
+    line-height: 1.3;
+  }
+  .body-l {
+    font-size: 1.125rem;
+    line-height: 1.55;
+  }
+  .body-m {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  .body-s {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .caption {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+  .overline {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .price {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  /* El nombre de la mascota como acento (§4.2) */
+  .pet-name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--text-brand);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. KEYFRAMES (consumidos por componentes — Skeleton, cápsulas)     */
+/* ------------------------------------------------------------------ */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Pulso único en Miel para la cápsula de anticipación (§10) */
+@keyframes pulse-soft {
+  0% {
+    box-shadow: 0 0 0 0 rgba(229, 162, 60, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(229, 162, 60, 0);
+  }
+}
+
+/* Bounce del contador del carrito al agregar (§10) */
+@keyframes count-bounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

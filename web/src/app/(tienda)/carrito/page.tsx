@@ -1,0 +1,174 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { RefreshCw, ShoppingBag, Truck, ShieldCheck } from "lucide-react";
+import { Section } from "@/components/ui/section";
+import { Stack, Row } from "@/components/ui/stack";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  CartItem,
+  FreeShippingBar,
+  OrderSummary,
+  ProductRail,
+} from "@/components/commerce";
+import { useCart, usePet } from "@/components/providers";
+import { SITE } from "@/config/site";
+import { PRODUCTS, DEMO_SHIPPING } from "@/lib/demo-data";
+
+/**
+ * Carrito.
+ *
+ * Decisiones de IA (AUDIT_UI_UX):
+ * - U042: la barra de envío gratis usa el subtotal real del carrito.
+ * - U050: el ahorro por suscripción se celebra (verde, línea propia).
+ * - U051: las líneas se agrupan en "Se repite" vs "Compra única".
+ * - U052: un ÚNICO bloque de cross-sell, al final y discreto, RELEVANTE a la
+ *   mascota activa (no ofrecer comida de gato a un dueño de perro).
+ */
+export default function CarritoPage() {
+  const { items, updateQuantity, removeItem } = useCart();
+  const { activePet } = usePet();
+  const router = useRouter();
+
+  const threshold = SITE.commerce.freeShippingThreshold;
+
+  // Precio efectivo (con descuento de suscripción) y ahorro por línea.
+  const effective = (i: (typeof items)[number]) =>
+    i.subscriptionWeeks && i.product.subscriptionDiscount
+      ? Math.round(i.product.price.current * (1 - i.product.subscriptionDiscount / 100))
+      : i.product.price.current;
+
+  const regularSubtotal = items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
+  const savings = items.reduce((s, i) => s + (i.product.price.current - effective(i)) * i.quantity, 0);
+  const paySubtotal = regularSubtotal - savings;
+  const shippingCost = paySubtotal >= threshold ? 0 : DEMO_SHIPPING.cost;
+
+  const subscriptionLines = items.filter((i) => i.subscriptionWeeks);
+  const oneTimeLines = items.filter((i) => !i.subscriptionWeeks);
+
+  const related = PRODUCTS.filter(
+    (p) =>
+      !items.some((i) => i.product.id === p.id) &&
+      (!activePet || p.species.includes(activePet.species)),
+  ).slice(0, 6);
+
+  if (items.length === 0) {
+    return (
+      <Section spacing="lg">
+        <EmptyState
+          icon={<span className="text-5xl">🛍️</span>}
+          title="Tu carrito está vacío"
+          description="Cuando agregues productos, los verás aquí. Nosotros te avisamos antes de que se acaben."
+          action={
+            <Button asChild>
+              <Link href="/categoria/todo">Ir a la tienda</Link>
+            </Button>
+          }
+        />
+      </Section>
+    );
+  }
+
+  return (
+    <Section spacing="md">
+      <Stack gap={6}>
+        <h1 className="heading-1 text-text-primary">Tu carrito</h1>
+
+        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+          <Stack gap={6}>
+            {/* Líneas recurrentes (U051) */}
+            {subscriptionLines.length > 0 && (
+              <Stack gap={3}>
+                <Row gap={2}>
+                  <Badge variant="subscribe">
+                    <RefreshCw className="size-3.5" aria-hidden />
+                    Se repite automáticamente
+                  </Badge>
+                </Row>
+                <Stack gap={3}>
+                  {subscriptionLines.map((line) => (
+                    <CartItem
+                      key={line.product.id}
+                      line={line}
+                      onQuantityChange={updateQuantity}
+                      onRemove={removeItem}
+                    />
+                  ))}
+                </Stack>
+              </Stack>
+            )}
+
+            {/* Líneas de compra única (U051) */}
+            {oneTimeLines.length > 0 && (
+              <Stack gap={3}>
+                <Row gap={2}>
+                  <Badge variant="neutral">
+                    <ShoppingBag className="size-3.5" aria-hidden />
+                    Compra única
+                  </Badge>
+                </Row>
+                <Stack gap={3}>
+                  {oneTimeLines.map((line) => (
+                    <CartItem
+                      key={line.product.id}
+                      line={line}
+                      onQuantityChange={updateQuantity}
+                      onRemove={removeItem}
+                    />
+                  ))}
+                </Stack>
+              </Stack>
+            )}
+          </Stack>
+
+          {/* Resumen + envío gratis */}
+          <Stack gap={4}>
+            <FreeShippingBar subtotal={paySubtotal} threshold={threshold} />
+            <OrderSummary
+              subtotal={regularSubtotal}
+              savings={savings}
+              shipping={shippingCost}
+              note="Los precios incluyen IVA. Emitimos boleta SII."
+            >
+              <Button block size="lg" onClick={() => router.push("/checkout")}>
+                Ir a pagar
+              </Button>
+              <Button variant="ghost" block asChild>
+                <Link href="/categoria/todo">Seguir comprando</Link>
+              </Button>
+            </OrderSummary>
+
+            {/* Reaseguros de confianza (vale para todo carrito, clave en la 1ª compra) */}
+            <Stack gap={2} className="rounded-[var(--radius-md)] border border-border-default bg-surface p-4 text-[13px] text-text-secondary">
+              <Row gap={2} align="start">
+                <Truck className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
+                Despacho honesto: ves la fecha y el costo reales antes de pagar.
+              </Row>
+              <Row gap={2} align="start">
+                <RefreshCw className="mt-0.5 size-4 shrink-0 text-miel-700" aria-hidden />
+                Las suscripciones no tienen permanencia: pausa o cancela cuando quieras.
+              </Row>
+              <Row gap={2} align="start">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--success)]" aria-hidden />
+                Pago seguro y boleta SII en cada pedido.
+              </Row>
+            </Stack>
+          </Stack>
+        </div>
+
+        {/* Cross-sell único y discreto (U052) */}
+        {related.length > 0 && (
+          <ProductRail
+            overline="Quizás falta algo"
+            title="Completa tu pedido"
+            products={related}
+            shipping={DEMO_SHIPPING}
+          />
+        )}
+      </Stack>
+    </Section>
+  );
+}

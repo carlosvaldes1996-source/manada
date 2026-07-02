@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tu carrito — Manada</title>
+  <meta name="description" content="Tu carrito en Manada: con suscripción, despacho honesto y envío gratis sobre $39.990." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='11' r='3.2' fill='%23C2603F'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23C2603F'/%3E%3Ccircle cx='23' cy='11' r='3.2' fill='%23C2603F'/%3E%3Cpath d='M16 14c4.2 0 7.5 3 7.5 6.4 0 2.8-2.7 4.6-7.5 4.6S8.5 23.2 8.5 20.4C8.5 17 11.8 14 16 14Z' fill='%23C2603F'/%3E%3C/svg%3E" />
+</head>
+<body class="pb-nav">
+  <a href="#main" class="skip-link">Saltar al contenido</a>
+
+  <!-- Chrome reutilizable (assets/components.js) -->
+  <manada-header page="carrito"></manada-header>
+
+  <main id="main">
+    <div class="container">
+      <h1 class="h1" style="margin-top:24px;">Tu carrito</h1>
+      <p class="muted mt-8">Listo para la manada de <span class="pet-name">Toby</span> 🐾</p>
+
+      <!-- Barra envío gratis -->
+      <div class="freebar mt-16">🚚 ¡Te faltan <strong>$0</strong>! Tu pedido tiene <strong>envío gratis</strong> a Ñuñoa.</div>
+
+      <div class="pdp mt-24" style="align-items:start;">
+              <!-- columna líneas -->
+              <section aria-label="Productos en el carrito">
+                <div class="card" style="padding:0;">
+                  <div style="padding:16px 20px;">
+                    <!-- línea 1 -->
+                    <div class="line">
+                      <div class="line__media" aria-hidden="true">🍖</div>
+                      <div class="grow">
+                        <div class="row between gap-12">
+                          <div>
+                            <p class="overline">Royal Canin</p>
+                            <p class="h4">Medium Adult 15 kg</p>
+                          </div>
+                          <button class="icon-btn" type="button" aria-label="Quitar Royal Canin Medium Adult">🗑️</button>
+                        </div>
+                        <span class="badge badge--subscribe mt-8">◍ Suscripción · cada 6 sem</span>
+                        <div class="ship mt-8" style="font-size:13px;">🚚 Llega mañana a Ñuñoa · gratis</div>
+                        <div class="row between mt-12">
+                          <div class="qty" aria-label="Cantidad">
+                            <button type="button" data-qty="dec" aria-label="Quitar uno">−</button>
+                            <span data-qty-val style="padding:0 12px;">1</span>
+                            <button type="button" data-qty="inc" aria-label="Agregar uno">+</button>
+                          </div>
+                          <div class="row gap-8 items-end" style="flex-direction:column; align-items:flex-end;">
+                            <span class="price" style="font-size:18px;">$46.741</span>
+                            <span class="price was" style="font-size:13px;">$54.990</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- línea 2 -->
+                    <div class="line" style="border-bottom:none;">
+                      <div class="line__media" aria-hidden="true">💊</div>
+                      <div class="grow">
+                        <div class="row between gap-12">
+                          <div>
+                            <p class="overline">NexGard</p>
+                            <p class="h4">Antiparasitario 4–10 kg</p>
+                          </div>
+                          <button class="icon-btn" type="button" aria-label="Quitar NexGard">🗑️</button>
+                        </div>
+                        <span class="reco mt-8">🐾 Recomendado para Toby (8 kg)</span>
+                        <div class="ship mt-8" style="font-size:13px;">🚚 Llega mañana a Ñuñoa · gratis</div>
+                        <div class="row between mt-12">
+                          <div class="qty" aria-label="Cantidad">
+                            <button type="button" data-qty="dec" aria-label="Quitar uno">−</button>
+                            <span data-qty-val style="padding:0 12px;">1</span>
+                            <button type="button" data-qty="inc" aria-label="Agregar uno">+</button>
+                          </div>
+                          <span class="price" style="font-size:18px;">$18.990</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Cross-sell suave -->
+                <div class="mt-24">
+                  <h2 class="h3 mb-16">¿Le sumamos algo a Toby?</h2>
+                  <div class="rail">
+                    <article class="product">
+                      <div class="product__media" aria-hidden="true">🦴</div>
+                      <div class="product__body">
+                        <p class="overline">Pedigree</p>
+                        <h3 class="product__name">Dentastix Medium</h3>
+                        <div class="product__price"><span class="price now">$6.490</span></div>
+                        <div class="product__actions"><button class="btn btn--primary" data-add-cart>Agregar</button></div>
+                      </div>
+                    </article>
+                    <article class="product">
+                      <div class="product__media" aria-hidden="true">🧸</div>
+                      <div class="product__body">
+                        <p class="overline">Kong</p>
+                        <h3 class="product__name">Classic M</h3>
+                        <div class="product__price"><span class="price now">$12.990</span></div>
+                        <div class="product__actions"><button class="btn btn--primary" data-add-cart>Agregar</button></div>
+                      </div>
+                    </article>
+                    <article class="product">
+                      <div class="product__media" aria-hidden="true">🥣</div>
+                      <div class="product__body">
+                        <p class="overline">Manada</p>
+                        <h3 class="product__name">Plato antivuelco</h3>
+                        <div class="product__price"><span class="price now">$8.990</span></div>
+                        <div class="product__actions"><button class="btn btn--primary" data-add-cart>Agregar</button></div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </section>
+
+        <!-- columna resumen -->
+        <aside aria-label="Resumen del pedido">
+          <div class="card summary">
+            <h2 class="h3 mb-16">Resumen</h2>
+            <div class="totals">
+              <div><span>Subtotal (2 productos)</span><span class="price">$73.980</span></div>
+              <div><span>Ahorro por suscripción</span><span class="price" style="color:var(--success-strong);">−$8.249</span></div>
+              <div><span>Despacho a Ñuñoa</span><span class="price" style="color:var(--success-strong);">Gratis</span></div>
+              <div class="grand"><span>Total</span><span class="price">$65.731</span></div>
+            </div>
+            <a href="checkout.html" class="btn btn--primary btn--block btn--lg mt-16">Ir a pagar</a>
+            <a href="plp.html" class="btn btn--ghost btn--block mt-8">Seguir comprando</a>
+            <p class="note mt-12 text-c">Pago seguro · Boleta SII · Devolución sin costo</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <manada-footer></manada-footer>
+  <manada-botnav page="carrito"></manada-botnav>
+
+  <span class="proto-tag">Prototipo · Manada</span>
+  <script src="assets/components.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

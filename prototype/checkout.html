@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pagar — Manada</title>
+  <meta name="description" content="Checkout de 1 pantalla en Manada: identificación, despacho honesto, pago y suscripción opcional." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='11' r='3.2' fill='%23C2603F'/%3E%3Ccircle cx='16' cy='8.5' r='3.4' fill='%23C2603F'/%3E%3Ccircle cx='23' cy='11' r='3.2' fill='%23C2603F'/%3E%3Cpath d='M16 14c4.2 0 7.5 3 7.5 6.4 0 2.8-2.7 4.6-7.5 4.6S8.5 23.2 8.5 20.4C8.5 17 11.8 14 16 14Z' fill='%23C2603F'/%3E%3C/svg%3E" />
+</head>
+<body class="pb-nav">
+  <a href="#main" class="skip-link">Saltar al contenido</a>
+
+  <!-- Chrome reutilizable (assets/components.js) -->
+  <manada-header variant="checkout"></manada-header>
+
+  <main id="main">
+    <div class="container">
+      <nav class="crumb" aria-label="Ruta de navegación">
+        <a href="carrito.html">Carrito</a> › <span aria-current="page" class="muted">Pagar</span>
+      </nav>
+      <h1 class="h1">Finaliza tu compra</h1>
+      <p class="muted mt-8">Todo en una pantalla. Sin vueltas, como le gusta a la manada de <span class="pet-name">Toby</span>.</p>
+
+      <div class="pdp mt-24" style="align-items:start;">
+        <!-- ===== Pasos (formulario) ===== -->
+        <section aria-label="Pasos del pago">
+          <!-- Paso 1: Identificación -->
+          <div class="card mb-16">
+            <div class="step" style="padding-bottom:0;">
+              <span class="step__num done" aria-hidden="true">✓</span>
+              <div class="grow">
+                <h2 class="h3">Identificación</h2>
+                <p class="body-s muted mt-8">Carlos Valdés · carlosvaldes1996@gmail.com</p>
+                <button class="link-edit" type="button" style="padding-left:0;">Editar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 2: Despacho -->
+          <div class="card mb-16">
+            <div class="step" style="padding-bottom:0;">
+              <span class="step__num" aria-hidden="true">2</span>
+              <div class="grow">
+                <h2 class="h3">Despacho</h2>
+                <div class="field mt-12">
+                  <label for="dir">Dirección</label>
+                  <input class="input" id="dir" value="Av. Irarrázaval 2345, depto 71, Ñuñoa" />
+                </div>
+                <div class="row gap-12 wrap">
+                  <div class="field grow"><label for="reg">Región</label><input class="input" id="reg" value="Región Metropolitana" /></div>
+                  <div class="field grow"><label for="com">Comuna</label><input class="input" id="com" value="Ñuñoa" /></div>
+                </div>
+
+                <fieldset style="border:none; padding:0; margin:0;" data-radio-group>
+                  <legend class="overline mb-8">Fecha y costo (real, sin sorpresas)</legend>
+                  <label class="radio-card sel mb-8">
+                    <input type="radio" name="ship" checked />
+                    <span class="grow"><strong>Mañana, 28 jun</strong><br /><span class="note">Despacho estándar a Ñuñoa</span></span>
+                    <span class="price" style="color:var(--success-strong);">Gratis</span>
+                  </label>
+                  <label class="radio-card mb-8">
+                    <input type="radio" name="ship" />
+                    <span class="grow"><strong>Hoy, 27 jun (3 h)</strong><br /><span class="note">Despacho express</span></span>
+                    <span class="price">$4.990</span>
+                  </label>
+                  <label class="radio-card">
+                    <input type="radio" name="ship" />
+                    <span class="grow"><strong>Retiro en tienda</strong><br /><span class="note">Providencia · listo en 2 h</span></span>
+                    <span class="price" style="color:var(--success-strong);">Gratis</span>
+                  </label>
+                </fieldset>
+                <div class="ship mt-12" style="font-size:13px;">🚚 Te avisamos por WhatsApp cuando el repartidor salga hacia donde Toby.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 3: Pago -->
+          <div class="card mb-16">
+            <div class="step" style="padding-bottom:0;">
+              <span class="step__num" aria-hidden="true">3</span>
+              <div class="grow">
+                <h2 class="h3">Pago</h2>
+                <fieldset style="border:none; padding:0; margin:12px 0 0;" data-radio-group>
+                  <legend class="overline mb-8">Elige cómo pagar</legend>
+                  <label class="radio-card sel mb-8"><input type="radio" name="pay" checked /> <span aria-hidden="true">💳</span> <span class="grow">Webpay (débito / crédito)</span></label>
+                  <label class="radio-card mb-8"><input type="radio" name="pay" /> <span aria-hidden="true">🟦</span> <span class="grow">MercadoPago</span></label>
+                  <label class="radio-card"><input type="radio" name="pay" /> <span aria-hidden="true">⚡</span> <span class="grow">Khipu (transferencia)</span></label>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paso 4: ¿Convertir en suscripción? -->
+          <div class="subbox mb-16">
+            <div class="step" style="padding-bottom:0;">
+              <span class="step__num" style="background:var(--miel-500); color:var(--neutral-800);" aria-hidden="true">4</span>
+              <div class="grow">
+                <div class="row between gap-12 items-start">
+                  <div>
+                    <h2 class="h3">¿Convertir en suscripción?</h2>
+                    <p class="body-s muted mt-8">Activa la recompra del alimento de <span class="pet-name">Toby</span> y <strong>ahorra 15%</strong>. Frecuencia editable, pausable cuando quieras. Sin letra chica.</p>
+                  </div>
+                  <button class="toggle on" role="switch" aria-checked="true" tabindex="0" aria-label="Convertir en suscripción" data-reveal="[data-save-row]"></button>
+                </div>
+                <div class="reco mt-12" data-save-row>💛 Estás ahorrando <strong style="margin:0 4px;">$8.249</strong> en este pedido.</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn--primary btn--block btn--lg" type="button" data-add-cart data-added-label="¡Pago confirmado! 🐾">Pagar $65.731</button>
+
+          <!-- Señales de confianza -->
+          <div class="row gap-16 wrap mt-16 center">
+            <span class="note">🔒 Pago seguro</span>
+            <span class="note">🧾 Boleta SII automática</span>
+            <span class="note">↩️ Devolución sin costo</span>
+          </div>
+        </section>
+
+        <!-- ===== Resumen sticky ===== -->
+        <aside aria-label="Resumen del pedido">
+          <div class="card summary">
+            <h2 class="h3 mb-16">Tu pedido</h2>
+            <div class="line" style="padding-top:0;">
+              <div class="line__media" aria-hidden="true">🍖</div>
+              <div class="grow">
+                <p class="body-s"><strong>Royal Canin Medium Adult 15 kg</strong></p>
+                <span class="badge badge--subscribe mt-8">◍ Suscripción · cada 6 sem</span>
+              </div>
+              <span class="price body-s">$46.741</span>
+            </div>
+            <div class="line">
+              <div class="line__media" aria-hidden="true">💊</div>
+              <div class="grow">
+                <p class="body-s"><strong>NexGard Antiparasitario</strong></p>
+                <span class="note">Para Toby · 8 kg</span>
+              </div>
+              <span class="price body-s">$18.990</span>
+            </div>
+
+            <div class="totals mt-12">
+              <div><span>Subtotal</span><span class="price">$73.980</span></div>
+              <div><span>Ahorro suscripción</span><span class="price" style="color:var(--success-strong);">−$8.249</span></div>
+              <div><span>Despacho a Ñuñoa</span><span class="price" style="color:var(--success-strong);">Gratis</span></div>
+              <div class="grand"><span>Total</span><span class="price">$65.731</span></div>
+            </div>
+            <div class="ship mt-16" style="font-size:13px;">🚚 Llega mañana 28 jun a Ñuñoa</div>
+            <p class="note mt-12">Al pagar creas el perfil de recompra de Toby y aceptas los términos de Manada.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <manada-footer></manada-footer>
+  <manada-botnav page="carrito"></manada-botnav>
+
+  <span class="proto-tag">Prototipo · Manada</span>
+  <script src="assets/components.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

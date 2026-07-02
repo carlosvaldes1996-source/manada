@@ -1,0 +1,43 @@
+import type { Metadata } from "next";
+import { ContentPage, ProseBlock } from "@/components/layout/content-page";
+import { SITE } from "@/config/site";
+
+export const metadata: Metadata = { title: "Términos y condiciones" };
+
+export default function TerminosPage() {
+  return (
+    <ContentPage
+      title="Términos y condiciones"
+      lead={`Condiciones de uso de ${SITE.name} (${SITE.domain}).`}
+      updated="29 de junio de 2026"
+    >
+      <ProseBlock heading="Quiénes somos">
+        <p>
+          {SITE.name} es una tienda de productos para mascotas en Chile. Al usar el sitio y comprar,
+          aceptas estos términos.
+        </p>
+      </ProseBlock>
+      <ProseBlock heading="Precios y boleta">
+        <p>
+          Los precios se muestran en pesos chilenos (CLP) e incluyen IVA. Emitimos <strong>boleta
+          electrónica SII</strong> por cada compra.
+        </p>
+      </ProseBlock>
+      <ProseBlock heading="Suscripciones">
+        <p>
+          Las entregas recurrentes no tienen permanencia: puedes pausar, reagendar o cancelar cuando
+          quieras desde tu cuenta, sin costo. Te avisamos antes de cada cobro.
+        </p>
+      </ProseBlock>
+      <ProseBlock heading="Despacho">
+        <p>
+          La fecha y el costo de despacho se muestran de forma honesta antes de pagar. Pueden variar
+          según tu comuna y disponibilidad.
+        </p>
+      </ProseBlock>
+      <ProseBlock heading="Contacto">
+        <p>Para dudas sobre estos términos, escríbenos a hola@{SITE.domain}.</p>
+      </ProseBlock>
+    </ContentPage>
+  );
+}
