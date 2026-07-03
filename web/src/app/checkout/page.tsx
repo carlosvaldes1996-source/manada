@@ -36,6 +36,8 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
   { id: "mercadopago", label: "Mercado Pago", description: "Saldo o tarjetas" },
 ];
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Checkout — UNA sola pantalla (AUDIT U047): sin numeración que prometa una
  * secuencia inexistente. Todas las secciones a la vista con encabezados claros.
@@ -44,18 +46,31 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
  * - U049: la creación del "perfil de recompra" es una decisión visible, no una
  *   nota al pie.
  * - U050: el ahorro por suscripción se celebra en el resumen.
- * - U071: la dirección se elige entre direcciones guardadas.
+ * - U071: la dirección se elige entre direcciones guardadas (con sesión).
+ *
+ * **Compra como invitado** (e-commerce como piso): sin sesión se piden
+ * nombre + correo + dirección; nunca se bloquea la compra única. Si el pedido
+ * incluye SUSCRIPCIÓN, la cuenta se crea al pagar (gate honesto: se necesita
+ * para pausar/cancelar) y se anuncia en el botón. Si no, el comprador queda
+ * como invitado y `/bienvenida` le ofrece guardar la compra en una cuenta.
  */
 export default function CheckoutPage() {
   const { items, clear } = useCart();
-  const { user } = useSession();
+  const { user, status, setGuest, signUp } = useSession();
   const { activePet } = usePet();
   const router = useRouter();
 
-  // Datos del comprador: usuario real de la sesión (recién registrado o demo).
+  const isAuthed = status === "authenticated";
+
+  // Datos del comprador con sesión (recién registrado o demo).
   const buyerName = user?.firstName ?? DEMO_USER.firstName;
   const buyerEmail = user?.email ?? "carlos@ejemplo.cl";
   const buyerLocation = user?.comuna ? `${user.comuna}${user.region ? `, ${user.region}` : ""}` : undefined;
+
+  // Datos del comprador invitado (sin sesión).
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestErrors, setGuestErrors] = useState<{ name?: string; email?: string }>({});
 
   const threshold = SITE.commerce.freeShippingThreshold;
   const effective = (i: (typeof items)[number]) =>
@@ -102,9 +117,32 @@ export default function CheckoutPage() {
   const total = regularSubtotal - savings + shippingCost;
 
   function pay() {
+    if (!isAuthed) {
+      // Validación mínima del invitado (para boleta y seguimiento).
+      const errs: typeof guestErrors = {};
+      if (!guestName.trim()) errs.name = "Cuéntanos tu nombre";
+      if (!EMAIL_RE.test(guestEmail)) errs.email = "Revisa tu correo";
+      setGuestErrors(errs);
+      if (Object.keys(errs).length > 0) return;
+
+      if (subscriptionLines.length > 0) {
+        // Gate honesto: la suscripción necesita cuenta para pausar/cancelar.
+        // Se crea al pagar con los datos ya ingresados (anunciado en el botón).
+        signUp({ firstName: guestName, email: guestEmail });
+      } else {
+        // Compra única sin cuenta: queda como invitado; /bienvenida ofrece
+        // guardar la compra en una cuenta (email prellenado).
+        setGuest({ firstName: guestName.trim(), email: guestEmail.trim() });
+      }
+    }
     clear();
     router.push("/bienvenida");
   }
+
+  const payLabel =
+    !isAuthed && subscriptionLines.length > 0
+      ? `Crear cuenta y pagar ${formatCLP(total)}`
+      : `Pagar ${formatCLP(total)}`;
 
   return (
     <AppShell variant="checkout">
@@ -114,43 +152,90 @@ export default function CheckoutPage() {
 
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
             <Stack gap={6}>
-              {/* Identificación */}
+              {/* Identificación: sesión o invitado (compra sin cuenta, siempre posible) */}
               <Block title="Tus datos">
-                <p className="body-m text-text-secondary">
-                  Compras como <strong className="text-text-primary">{buyerName}</strong>
-                  {buyerLocation ? ` · ${buyerLocation}` : ""}
-                </p>
-                <Input
-                  type="email"
-                  label="Correo para la boleta y el seguimiento"
-                  defaultValue={buyerEmail}
-                  className="max-w-sm"
-                />
+                {isAuthed ? (
+                  <>
+                    <p className="body-m text-text-secondary">
+                      Compras como <strong className="text-text-primary">{buyerName}</strong>
+                      {buyerLocation ? ` · ${buyerLocation}` : ""}
+                    </p>
+                    <Input
+                      type="email"
+                      label="Correo para la boleta y el seguimiento"
+                      defaultValue={buyerEmail}
+                      className="max-w-sm"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-text-secondary">
+                      Compras como invitado.{" "}
+                      <Link href="/ingresar" className="font-semibold text-text-brand underline-offset-2 hover:underline">
+                        Ingresa
+                      </Link>{" "}
+                      si ya tienes cuenta y usamos tus datos guardados.
+                    </p>
+                    <Stack gap={3} className="max-w-sm">
+                      <Input
+                        label="Tu nombre"
+                        placeholder="Ej: Carlos"
+                        autoComplete="given-name"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        error={guestErrors.name}
+                        required
+                      />
+                      <Input
+                        type="email"
+                        label="Correo para la boleta y el seguimiento"
+                        placeholder="tucorreo@ejemplo.cl"
+                        autoComplete="email"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        error={guestErrors.email}
+                        required
+                      />
+                    </Stack>
+                  </>
+                )}
               </Block>
 
-              {/* Dirección de entrega (U071) */}
+              {/* Dirección de entrega: guardadas con sesión (U071); inputs si invitado */}
               <Block title="Dirección de entrega">
-                <RadioGroup value={addressId} onValueChange={setAddressId} aria-label="Dirección guardada">
-                  <Stack gap={3}>
-                    {SAVED_ADDRESSES.map((a) => (
-                      <RadioCard
-                        key={a.id}
-                        value={a.id}
-                        title={`${a.label} · ${a.comuna}`}
-                        description={a.line}
-                        icon={<MapPin className="size-5 text-text-brand" aria-hidden />}
-                      />
-                    ))}
-                    <RadioCard
-                      value="otra"
-                      title="Usar otra dirección"
-                      description="Ingresa una nueva dirección de entrega"
-                    />
-                  </Stack>
-                </RadioGroup>
-                {addressId === "otra" && (
+                {isAuthed ? (
+                  <>
+                    <RadioGroup value={addressId} onValueChange={setAddressId} aria-label="Dirección guardada">
+                      <Stack gap={3}>
+                        {SAVED_ADDRESSES.map((a) => (
+                          <RadioCard
+                            key={a.id}
+                            value={a.id}
+                            title={`${a.label} · ${a.comuna}`}
+                            description={a.line}
+                            icon={<MapPin className="size-5 text-text-brand" aria-hidden />}
+                          />
+                        ))}
+                        <RadioCard
+                          value="otra"
+                          title="Usar otra dirección"
+                          description="Ingresa una nueva dirección de entrega"
+                        />
+                      </Stack>
+                    </RadioGroup>
+                    {addressId === "otra" && (
+                      <Stack gap={3} className="max-w-md">
+                        <Input label="Dirección" placeholder="Calle y número" />
+                        <Row gap={3}>
+                          <Input label="Comuna" placeholder="Ñuñoa" />
+                          <Input label="Depto / casa" placeholder="Opcional" />
+                        </Row>
+                      </Stack>
+                    )}
+                  </>
+                ) : (
                   <Stack gap={3} className="max-w-md">
-                    <Input label="Dirección" placeholder="Calle y número" />
+                    <Input label="Dirección" placeholder="Calle y número" autoComplete="street-address" />
                     <Row gap={3}>
                       <Input label="Comuna" placeholder="Ñuñoa" />
                       <Input label="Depto / casa" placeholder="Opcional" />
@@ -197,6 +282,12 @@ export default function CheckoutPage() {
                       El resto de tu pedido es una <strong>compra única</strong>. Sin permanencia:
                       pausa o cancela cuando quieras.
                     </p>
+                    {!isAuthed && (
+                      <p className="mt-2 text-[13px] text-text-secondary">
+                        Al pagar <strong>crearemos tu cuenta</strong> con tu correo, para que puedas
+                        pausar, adelantar o cancelar la suscripción cuando quieras.
+                      </p>
+                    )}
                   </div>
 
                   <Switch
@@ -249,7 +340,7 @@ export default function CheckoutPage() {
                   note="Al pagar aceptas los términos. Emitimos boleta SII."
                 >
                   <Button block size="lg" onClick={pay}>
-                    Pagar {formatCLP(total)}
+                    {payLabel}
                   </Button>
                   <Button variant="ghost" block asChild>
                     <Link href="/carrito">Volver al carrito</Link>

@@ -30,8 +30,14 @@ export default function AyudaPage() {
       </ProseBlock>
       <ProseBlock heading="Hablar con una persona">
         <p>
-          Escríbenos a hola@{SITE.domain} y te respondemos a la brevedad. Si es sobre un pedido, ten a
-          mano tu correo de compra.
+          Escríbenos a{" "}
+          <a
+            href={`mailto:hola@${SITE.domain}`}
+            className="font-semibold text-text-brand underline-offset-2 hover:underline"
+          >
+            hola@{SITE.domain}
+          </a>{" "}
+          y te respondemos a la brevedad. Si es sobre un pedido, ten a mano tu correo de compra.
         </p>
       </ProseBlock>
     </ContentPage>

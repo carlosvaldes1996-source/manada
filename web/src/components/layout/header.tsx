@@ -28,19 +28,31 @@ export interface HeaderProps {
  */
 export function Header({ variant = "default" }: HeaderProps) {
   if (variant === "marketing") {
+    // Chrome de visitante con TIENDA navegable: el anónimo puede buscar,
+    // recorrer categorías y comprar sin cuenta (e-commerce como piso).
+    // "Comenzar" (perfil de mascota) sigue siendo el CTA destacado.
     return (
       <header className="sticky top-0 z-40 border-b border-border-default bg-[rgba(250,246,240,0.92)] backdrop-blur-md">
-        <Container className="flex h-16 items-center justify-between gap-3">
+        <Container className="flex h-16 items-center gap-3 md:gap-4">
+          <MobileNav />
           <Logo />
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
+          <div className="hidden flex-1 md:block">
+            <SearchBar />
+          </div>
+          <div className="ml-auto flex items-center gap-1.5 md:ml-0">
+            <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
               <Link href="/ingresar">Ingresar</Link>
             </Button>
             <Button size="sm" asChild>
               <Link href="/comenzar">Comenzar</Link>
             </Button>
+            <CartButton />
           </div>
         </Container>
+        <div className="border-t border-border-default px-4 py-2 md:hidden">
+          <SearchBar />
+        </div>
+        <Navbar />
       </header>
     );
   }

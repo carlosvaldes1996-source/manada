@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { Section } from "@/components/ui/section";
@@ -97,7 +98,8 @@ export function ProductView({ slug }: { slug: string }) {
   if (specs.length === 0 && product.format) specs.push({ label: "Formato", value: product.format });
 
   return (
-    <Section spacing="md">
+    // pt reducido (mismo criterio que la PLP): breadcrumb cerca del nav.
+    <Section spacing="md" className="pt-6 lg:pt-10">
       <Stack gap={6}>
         <Breadcrumb
           items={[
@@ -148,6 +150,20 @@ export function ProductView({ slug }: { slug: string }) {
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Invitación contextual (anónimo): el perfil desbloquea la ración
+                y la duración de ESTE saco — valor evidente, no un registro seco. */}
+            {isFood && !activePet && (
+              <p className="text-[13px] text-text-secondary">
+                <Link
+                  href="/comenzar"
+                  className="font-semibold text-text-brand underline-offset-2 hover:underline"
+                >
+                  Crea el perfil de tu mascota
+                </Link>{" "}
+                y te decimos su ración diaria y cuánto le dura este saco.
+              </p>
             )}
 
             {/* Suscripción primero (U045) + reaseguro visible (U046) */}

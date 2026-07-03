@@ -49,7 +49,7 @@ export function ProductCard({ product, shipping, showSubscribe = true, className
   return (
     <article
       className={cn(
-        "group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-surface shadow-sm transition-[transform,box-shadow] duration-[var(--duration-standard)] hover:-translate-y-0.5 hover:shadow-md",
+        "group flex h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-surface shadow-sm transition-[transform,box-shadow] duration-[var(--duration-standard)] hover:-translate-y-0.5 hover:shadow-md",
         className,
       )}
     >

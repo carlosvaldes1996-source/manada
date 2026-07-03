@@ -6,12 +6,12 @@
 > | **Purpose** | Fases del proyecto (0–8) y su estado. Vista estratégica de alto nivel. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-06-29 |
+> | **Last Updated** | 2026-07-03 |
 > | **Depends On** | DECISIONS.md, CURRENT_STATE.md |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *las fases y su orden*. El detalle táctico está en TODO.md y AUDIT_UI_UX.md. |
 
-> *Actualizado: 2026-06-29*
+> *Actualizado: 2026-07-03*
 
 | Fase | Nombre | Entregable principal | Estado |
 |---|---|---|---|
@@ -51,6 +51,6 @@
 1. ✅ **Etapa 1 — Fundaciones** (D13): scaffold `web/`, estructura, routing, providers, design tokens, tema, tipografías. *Verificado.*
 2. ✅ **Auditoría UI/UX → backlog priorizado** (D14): `AUDIT_UI_UX.md` (108 ítems, fuente de verdad de mejoras de frontend).
 3. ✅ **Etapa 2 — Componentes reutilizables / "Component Library"** (D15): ~70 componentes en `ui → layout → commerce → pet` + `hooks/` + `lib/`; doc en `COMPONENT_LIBRARY.md`; styleguide en `/dev/components`. Resuelve los P0 (+ mayoría de P1) de **Fase 3.2** de `AUDIT_UI_UX.md`. *Verificado.* ⏸ **Espera aprobación** antes de Etapa 3.
-4. 🔄 **Etapa 3 — Pantallas / "Product Experience"** (Home → Categoría → Producto → Carrito → Checkout → Mi Cuenta) ensambladas. Incluye **Fase 3.3B — New User Experience & Activation Flow** (D16): embudo del visitante nuevo (Landing → alta de mascota → recomendación → registro → carrito → checkout → bienvenida). **Espera revisión visual; no cierra la Fase 3.3.** Resuelve **Fase 3.3** de `AUDIT_UI_UX.md`.
-5. ⬜ **Etapa 4 — Polish / "Frontend Polish"** (dirección de arte, microinteracciones, premium). Resuelve **Fase 3.4** de `AUDIT_UI_UX.md` (depende de fotografía real `U090`).
+4. ✅ **Etapa 3 — Pantallas / "Product Experience"** (Home → Categoría → Producto → Carrito → Checkout → Mi Cuenta) ensambladas. Incluye **Fase 3.3B — New User Experience & Activation Flow** (D16) y la **revisión visual final con modelo de compra de invitado** (D17: tienda anónima navegable, guest checkout, gate honesto de suscripción, registro valor-primero post-compra). **Cerrada 2026-07-03 (D17)** — 27/33 ítems de Fase 3.3 de `AUDIT_UI_UX.md` en Hecho.
+5. ⬜ **Etapa 4 — Polish / "Frontend Polish"** ← **siguiente** (dirección de arte, microinteracciones, premium). Resuelve **Fase 3.4** de `AUDIT_UI_UX.md` + diferidos (U003/U009/U010/U028/U029/U066); los ítems fotográficos dependen de fotografía real `U090`.
 > Stack y deviations en D13; inventario de componentes en FRONTEND_ARCHITECTURE.md §4; backlog de mejoras en **AUDIT_UI_UX.md** (ítems "Fase futura" → Fases 4–7).

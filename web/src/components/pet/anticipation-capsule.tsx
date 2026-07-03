@@ -10,6 +10,17 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioCard } from "@/components/ui/radio";
+import { Stack } from "@/components/ui/stack";
 
 export interface AnticipationCapsuleProps {
   petName: string;
@@ -20,15 +31,38 @@ export interface AnticipationCapsuleProps {
   runOutDate?: Date;
   /** Explicación honesta del cálculo ("¿por qué te lo decimos?"). */
   reason?: string;
-  onReschedule?: () => void;
+  /** Se llama al CONFIRMAR el reagendo, con la fecha de entrega elegida. */
+  onReschedule?: (date: Date) => void;
   onSubscribe?: () => void;
   className?: string;
+}
+
+/** Suma días a una fecha (sin mutar la original). */
+function addDays(base: Date, days: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** "mañana" → "Mañana" (título de opción). */
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+interface RescheduleOption {
+  id: string;
+  date: Date;
+  description: string;
 }
 
 /**
  * Cápsula de anticipación — el momento "se adelantó por mí" (DESIGN_SYSTEM
  * §10, §12.2). Entra con slide+fade y un único pulso en Miel (no loop). Ofrece
  * reagendar, nunca cobra solo. La razón del cálculo es transparente (Popover).
+ *
+ * "Reagendar entrega" abre un diálogo que muestra la fecha programada actual
+ * (un día antes de que se acabe) y deja elegir una nueva; `onReschedule`
+ * recibe la fecha confirmada.
  */
 export function AnticipationCapsule({
   petName,
@@ -41,6 +75,37 @@ export function AnticipationCapsule({
   className,
 }: AnticipationCapsuleProps) {
   const reduced = usePrefersReducedMotion();
+  const [open, setOpen] = React.useState(false);
+  const [selected, setSelected] = React.useState<string | null>(null);
+
+  // Opciones de entrega relativas a cuándo se acaba: la programada (1 día
+  // antes), una holgada (2 días antes) y "lo antes posible" (mañana).
+  // Se deduplican (si el saco está por acabarse pueden coincidir) y nunca
+  // se ofrece una fecha pasada.
+  const options = React.useMemo<RescheduleOption[]>(() => {
+    if (!runOutDate) return [];
+    const tomorrow = addDays(new Date(), 1);
+    const candidates: RescheduleOption[] = [
+      { id: "asap", date: tomorrow, description: "Lo antes posible" },
+      { id: "holgada", date: addDays(runOutDate, -2), description: "Dos días antes de que se acabe" },
+      { id: "programada", date: addDays(runOutDate, -1), description: "Un día antes de que se acabe · programada" },
+    ];
+    const byDay = new Map<string, RescheduleOption>();
+    for (const c of candidates) {
+      if (c.date.getTime() < tomorrow.getTime()) continue;
+      byDay.set(c.date.toDateString(), c); // la última gana → prevalece "programada"
+    }
+    return [...byDay.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [runOutDate]);
+
+  const scheduled = runOutDate ? addDays(runOutDate, -1) : undefined;
+  const effectiveSelected = selected ?? options.find((o) => o.id === "programada")?.id ?? options.at(-1)?.id;
+
+  function confirmReschedule() {
+    const opt = options.find((o) => o.id === effectiveSelected);
+    setOpen(false);
+    if (opt) onReschedule?.(opt.date);
+  }
 
   return (
     <motion.section
@@ -73,7 +138,12 @@ export function AnticipationCapsule({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button onClick={onReschedule} leadingIcon={<CalendarClock className="size-4" aria-hidden />}>
+        <Button
+          onClick={() =>
+            options.length > 0 ? setOpen(true) : onReschedule?.(addDays(new Date(), 1))
+          }
+          leadingIcon={<CalendarClock className="size-4" aria-hidden />}
+        >
           Reagendar entrega
         </Button>
         <Button variant="secondary" onClick={onSubscribe}>
@@ -89,6 +159,49 @@ export function AnticipationCapsule({
           </Popover>
         )}
       </div>
+
+      {/* Diálogo de reagendo: fecha programada visible + elección explícita */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reagendar la entrega de {petName}</DialogTitle>
+            <DialogDescription>
+              {scheduled && runOutDate
+                ? `Hoy está programada para llegar ${formatDeliveryDate(scheduled)}, un día antes de que se le acabe la comida (${formatDeliveryDate(runOutDate)}). Elige cuándo prefieres recibirla.`
+                : "Elige cuándo prefieres recibirla."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <RadioGroup
+            value={effectiveSelected}
+            onValueChange={setSelected}
+            aria-label="Nueva fecha de entrega"
+          >
+            <Stack gap={3}>
+              {options.map((o) => (
+                <RadioCard
+                  key={o.id}
+                  value={o.id}
+                  title={capitalize(formatDeliveryDate(o.date))}
+                  description={o.description}
+                  icon={<CalendarClock className="size-5 text-text-brand" aria-hidden />}
+                />
+              ))}
+            </Stack>
+          </RadioGroup>
+
+          <p className="mt-3 text-[13px] text-text-muted">
+            Es una sugerencia, no un cobro: puedes volver a cambiarla cuando quieras.
+          </p>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={confirmReschedule}>Confirmar nueva fecha</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.section>
   );
 }

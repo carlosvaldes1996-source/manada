@@ -6,7 +6,7 @@
 > | **Purpose** | Documento maestro: visión, estrategia y resumen de decisiones del proyecto. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-06-29 |
+> | **Last Updated** | 2026-07-03 |
 > | **Depends On** | DECISIONS.md (fuente), CURRENT_STATE.md, ROADMAP.md |
 > | **Supersedes** | `history/PROJECT_MASTER_v0.md` |
 > | **Source of Truth** | ✅ de la *visión y estrategia*. El detalle vive en los archivos temáticos. |
@@ -14,7 +14,7 @@
 > **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
 > Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. Fase activa: 3 (Frontend / Design System) — Etapas 1 (fundaciones, D13) y 2 (Component Library, D15) ✅ ejecutadas en `web/`; **siguiente: Etapa 3 — Pantallas** (espera aprobación). Ver `CURRENT_STATE.md`.*
+> *Estado: Fases 0–2 ✅ COMPLETAS. Fase activa: 3 (Frontend / Design System) — Etapas 1 (fundaciones, D13), 2 (Component Library, D15) y **3 (Pantallas + Activation Flow + revisión, D16/D17) ✅ cerradas** en `web/`; **siguiente: Etapa 4 — Polish (Fase 3.4)**, condicionada por fotografía real (U090). Ver `CURRENT_STATE.md`.*
 
 ---
 
@@ -136,11 +136,12 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D13 | Fase 3 · Etapa 1 — Fundaciones del frontend Next.js en `web/` (Next 16 + React 19 + Tailwind v4 CSS-first + Radix) |
 | D14 | Fase 3 — Auditoría UI/UX → backlog priorizado `AUDIT_UI_UX.md` (fuente de verdad de mejoras FE) |
 | D15 | Fase 3 · Etapa 2 — Component Library construida (~70 componentes) + styleguide `/dev/components` |
-| D16 | Fase 3 · Etapa 3.3B — New User Experience & Activation Flow + modelo de sesión (Landing→onboarding→recomendación→registro→checkout→bienvenida); espera revisión visual |
+| D16 | Fase 3 · Etapa 3.3B — New User Experience & Activation Flow + modelo de sesión (Landing→onboarding→recomendación→registro→checkout→bienvenida) — *revisado y cerrado por D17* |
+| D17 | Fase 3 · Cierre Etapa 3.3 — revisión visual aplicada + modelo **"e-commerce como piso, perfil como camino destacado"** (tienda anónima navegable, checkout de invitado, gate honesto de suscripción, registro valor-primero post-compra) |
 
 ## 17. Pendientes
 
-Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–2 ✅. **Inmediato:** **Etapa 3 — Pantallas** (Home → Categoría → Producto → Carrito → Checkout → Mi Cuenta), ensamblando solo con la Component Library y aplicando Fase 3.3 de `AUDIT_UI_UX.md` (espera aprobación). **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo. *(Las fuentes Fraunces/Hanken ya se cargan vía `next/font` en `web/`.)*
+Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–3 ✅ (pantallas + embudo de activación + revisión visual, D16/D17). **Inmediato:** **Etapa 4 — Polish (Fase 3.4)** según los ítems Fase 3.4 de `AUDIT_UI_UX.md` (+ diferidos U003/U009/U010/U028/U029/U066); los ítems fotográficos dependen de **U090 (fotografía real)**. **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo. *(Las fuentes Fraunces/Hanken ya se cargan vía `next/font` en `web/`.)*
 
 ## 18. Roadmap
 

@@ -14,7 +14,7 @@ import { Rating } from "@/components/ui/rating";
 import { SubscriptionBox } from "@/components/commerce/subscription-box";
 import { HonestShippingBlock } from "@/components/commerce/honest-shipping-block";
 import { ProductRail } from "@/components/commerce/product-rail";
-import { usePet, useCart } from "@/components/providers";
+import { usePet, useCart, useSession } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { recommendFood, recommendComplements, foodPlan } from "@/lib/recommend";
 import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
@@ -33,10 +33,17 @@ export function RecommendationView() {
   const router = useRouter();
   const { activePet } = usePet();
   const { addItem } = useCart();
+  // Con sesión (alta de 2ª mascota): el pedido va directo al carrito,
+  // sin pasar por el registro "valor primero" (que es solo para visitantes).
+  const { status } = useSession();
+  const isAuthed = status === "authenticated";
 
   const food = useMemo(() => (activePet ? recommendFood(activePet) : undefined), [activePet]);
   const plan = useMemo(() => (activePet && food ? foodPlan(activePet, food) : undefined), [activePet, food]);
-  const complements = useMemo(() => (activePet ? recommendComplements(activePet) : []), [activePet]);
+  const complements = useMemo(
+    () => (activePet ? recommendComplements(activePet).filter((p) => p.stock > 0) : []),
+    [activePet],
+  );
   const sub = useSubscription(food ?? FALLBACK_PRODUCT);
 
   // Sin mascota (entrada directa a la URL) → al alta.
@@ -50,7 +57,7 @@ export function RecommendationView() {
   function addToOrder() {
     if (!food) return;
     addItem(food, { quantity: 1, subscriptionWeeks: sub.isSubscribed ? sub.frequency : undefined });
-    router.push("/crear-cuenta");
+    router.push(isAuthed ? "/carrito" : "/crear-cuenta");
   }
 
   // Catálogo demo sin alimento para esta especie (p. ej. "otro"): igual celebramos.
@@ -66,7 +73,11 @@ export function RecommendationView() {
               perfil y te avisaremos cuando lleguen novedades para {activePet.name}.
             </p>
             <Button size="lg" asChild>
-              <Link href="/crear-cuenta">Guardar su perfil y crear mi cuenta</Link>
+              {isAuthed ? (
+                <Link href="/cuenta/mascotas">Ir a su perfil</Link>
+              ) : (
+                <Link href="/crear-cuenta">Guardar su perfil y crear mi cuenta</Link>
+              )}
             </Button>
           </Stack>
         </Section>
@@ -116,8 +127,8 @@ export function RecommendationView() {
               <Price now={food.price.current} was={food.price.compareAt} size="xl" />
 
               {/* Por qué se lo recomendamos (transparencia = confianza) */}
-              <div className="flex gap-3 rounded-[var(--radius-lg)] border border-miel-200 bg-accent-soft p-4">
-                <Sparkles className="size-5 shrink-0 text-miel-700" aria-hidden />
+              <div className="flex gap-3 rounded-[var(--radius-lg)] border border-terracota-200 bg-brand-soft p-4">
+                <Sparkles className="size-5 shrink-0 text-text-brand" aria-hidden />
                 <p className="text-sm text-text-primary">{reason}</p>
               </div>
 
@@ -132,11 +143,18 @@ export function RecommendationView() {
 
               {/* Anticipación: cuándo reponer */}
               {plan && (
-                <Row gap={2} className="rounded-[var(--radius-md)] bg-brand-soft px-4 py-3 text-sm text-text-primary">
-                  <CalendarClock className="size-4 shrink-0 text-text-brand" aria-hidden />
-                  <span>
-                    Se le acabaría <strong>{formatDeliveryDate(plan.estimate.runOutDate)}</strong>. Te
-                    avisaremos antes para que a {activePet.name} nunca le falte.
+                <Row
+                  gap={3}
+                  align="start"
+                  className="rounded-[var(--radius-lg)] border border-terracota-200 bg-brand-soft px-4 py-4 text-text-primary"
+                >
+                  <CalendarClock className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
+                  <span className="text-sm text-text-secondary">
+                    Se le acabaría{" "}
+                    <strong className="font-semibold text-text-brand">
+                      {formatDeliveryDate(plan.estimate.runOutDate)}
+                    </strong>
+                    . Te avisaremos antes para que a {activePet.name} nunca le falte.
                   </span>
                 </Row>
               )}
@@ -158,7 +176,11 @@ export function RecommendationView() {
                 onClick={addToOrder}
                 trailingIcon={<ArrowRight className="size-4" aria-hidden />}
               >
-                {sub.isSubscribed ? "Suscribir y armar mi pedido" : "Agregar a mi primer pedido"}
+                {sub.isSubscribed
+                  ? "Suscribir y armar mi pedido"
+                  : isAuthed
+                    ? "Agregar a mi pedido"
+                    : "Agregar a mi primer pedido"}
               </Button>
 
               <HonestShippingBlock date={shipping.date} cost={shipping.cost} comuna={shipping.comuna} size="md" />

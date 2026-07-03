@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { HelpCircle } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
@@ -112,7 +113,8 @@ export function CategoryView({ slug }: { slug: string }) {
   const sortLabel = personalized && activePet ? `Recomendado para ${activePet.name}` : "Relevancia";
 
   return (
-    <Section spacing="md">
+    // pt reducido: el breadcrumb no necesita los 72px de una sección editorial.
+    <Section spacing="md" className="pt-6 lg:pt-10">
       <Stack gap={6}>
         <Stack gap={3}>
           <Breadcrumb items={breadcrumb} />
@@ -150,6 +152,24 @@ export function CategoryView({ slug }: { slug: string }) {
               />
             </div>
           ))}
+
+        {/* Invitación contextual para el anónimo: discreta, nunca bloquea el
+            catálogo. El valor del perfil se explica donde es evidente (filtrar). */}
+        {!activePet && (
+          <div className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-3">
+            <div>
+              <p className="text-[15px] font-semibold text-text-primary">
+                ¿Quieres ver primero lo ideal para tu mascota?
+              </p>
+              <p className="text-sm text-text-secondary">
+                Crea su perfil gratis en 2 minutos y filtramos por su especie, etapa y salud.
+              </p>
+            </div>
+            <Button variant="secondary" size="sm" className="shrink-0" asChild>
+              <Link href="/comenzar">Crear su perfil</Link>
+            </Button>
+          </div>
+        )}
 
         {/* Barra de resultados: conteo real (U055) + orden con criterio (U064) + filtros móvil */}
         <Row align="center" justify="between" className="gap-3">

@@ -4,7 +4,17 @@ import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { PartyPopper, Sparkles, PawPrint, RefreshCw, Pill, ArrowRight } from "lucide-react";
+import {
+  PartyPopper,
+  Sparkles,
+  PawPrint,
+  RefreshCw,
+  Pill,
+  ArrowRight,
+  BellRing,
+  ShoppingBag,
+  ShieldCheck,
+} from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
@@ -16,19 +26,23 @@ import { AnticipationCapsule } from "@/components/pet/anticipation-capsule";
 import { PetAvatar } from "@/components/pet/pet-avatar";
 import { useSession, usePet } from "@/components/providers";
 import { recommendFood, foodPlan } from "@/lib/recommend";
+import { formatDeliveryDate } from "@/lib/format";
 import { fadeInUp } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 /**
  * Bienvenida al ecosistema (cierre del embudo de activación). Celebra que el
  * perfil quedó creado y demuestra que Manada YA se anticipa: cápsula de
- * anticipación activa para la mascota recién registrada + próximos pasos. Cierra
- * el círculo del journey A (UX.md §5): "Creamos el perfil de {nombre}.
- * Complétalo y cuidamos el resto."
+ * anticipación activa para la mascota recién registrada + próximos pasos.
+ *
+ * **Variante invitado** (compra sin cuenta): confirma el pedido y — en el pico
+ * de motivación post-compra — ofrece guardar la compra creando la cuenta con
+ * el correo ya escrito (registro "valor primero"). Nunca bloquea: puede seguir
+ * explorando como invitado.
  */
 export default function BienvenidaPage() {
   const router = useRouter();
-  const { user, status } = useSession();
+  const { user, status, guest, signUp } = useSession();
   const { activePet } = usePet();
   const { toast } = useToast();
   const reduced = usePrefersReducedMotion();
@@ -36,11 +50,81 @@ export default function BienvenidaPage() {
   const food = useMemo(() => (activePet ? recommendFood(activePet) : undefined), [activePet]);
   const plan = useMemo(() => (activePet && food ? foodPlan(activePet, food) : undefined), [activePet, food]);
 
-  // Entrada directa sin sesión → al inicio.
+  // Entrada directa sin sesión NI compra de invitado → al inicio.
+  const bounce = status === "anonymous" && !guest;
   useEffect(() => {
-    if (status === "anonymous") router.replace("/");
-  }, [status, router]);
-  if (status === "anonymous") return null;
+    if (bounce) router.replace("/");
+  }, [bounce, router]);
+  if (bounce) return null;
+
+  // ── Variante invitado: pedido confirmado + invitación a guardar la compra ──
+  if (status === "anonymous" && guest) {
+    return (
+      <AppShell>
+        <Section spacing="lg" tone="brand">
+          <motion.div
+            variants={reduced ? undefined : fadeInUp}
+            initial={reduced ? undefined : "hidden"}
+            animate={reduced ? undefined : "visible"}
+          >
+            <Stack gap={5} align="center" className="mx-auto max-w-2xl text-center">
+              <span className="grid size-16 place-items-center rounded-full bg-surface text-3xl shadow-sm" aria-hidden>
+                🎉
+              </span>
+              <Badge variant="success">
+                <PartyPopper className="size-3.5" aria-hidden /> Pedido confirmado
+              </Badge>
+              <h1 className="display-l text-text-primary">
+                ¡Gracias, {guest.firstName}! Tu pedido está en camino
+              </h1>
+              <p className="body-l text-text-secondary">
+                Te enviamos la confirmación y la boleta a{" "}
+                <strong className="text-text-primary">{guest.email}</strong>. Compraste como
+                invitado, sin cuenta ni compromisos.
+              </p>
+            </Stack>
+          </motion.div>
+        </Section>
+
+        {/* El momento "valor primero": guardar lo comprado en una cuenta */}
+        <Section spacing="md" tone="canvas">
+          <div className="mx-auto max-w-2xl rounded-[var(--radius-xl)] border border-border-default bg-surface p-6">
+            <Stack gap={4}>
+              <Stack gap={1}>
+                <h2 className="heading-3 text-text-primary">¿Guardamos tu compra en una cuenta?</h2>
+                <p className="body-m text-text-secondary">
+                  Con tu correo ya escrito, es un clic. Sin contraseñas raras ni spam.
+                </p>
+              </Stack>
+              <Stack gap={2}>
+                <GuestPerk icon={<ShoppingBag className="size-4" aria-hidden />} text="Sigue tu pedido y repite la compra en un toque." />
+                <GuestPerk icon={<BellRing className="size-4" aria-hidden />} text="Si registras a tu mascota, te avisamos antes de que se le acabe la comida." />
+                <GuestPerk icon={<ShieldCheck className="size-4" aria-hidden />} text="Tus datos son privados y puedes borrar la cuenta cuando quieras." />
+              </Stack>
+              <Row gap={3} wrap>
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    signUp(guest);
+                    toast({
+                      title: "Cuenta creada",
+                      description: `Guardamos tu compra en ${guest.email}.`,
+                      variant: "success",
+                    });
+                  }}
+                >
+                  Crear mi cuenta con {guest.email}
+                </Button>
+                <Button size="lg" variant="ghost" asChild>
+                  <Link href="/categoria/todo">Seguir explorando</Link>
+                </Button>
+              </Row>
+            </Stack>
+          </div>
+        </Section>
+      </AppShell>
+    );
+  }
 
   const petName = activePet?.name ?? "tu mascota";
 
@@ -65,8 +149,9 @@ export default function BienvenidaPage() {
               <span className="pet-name">{petName}</span> contigo
             </h1>
             <p className="body-l text-text-secondary">
-              Su perfil quedó guardado y tu primer pedido está en camino. Desde ahora nos
-              adelantamos a lo que necesita para que nunca le falte nada.
+              {activePet
+                ? "Su perfil quedó guardado y tu primer pedido está en camino. Desde ahora nos adelantamos a lo que necesita para que nunca le falte nada."
+                : "Tu cuenta quedó creada y tu pedido está en camino. Cuando registres a tu mascota, nos adelantaremos a lo que necesita."}
             </p>
             {activePet && (
               <Row gap={3} className="rounded-[var(--radius-pill)] border border-terracota-100 bg-surface px-4 py-2">
@@ -93,8 +178,12 @@ export default function BienvenidaPage() {
               percentLeft={plan.estimate.percentLeft}
               runOutDate={plan.estimate.runOutDate}
               reason={`Lo calculamos con su peso (${activePet.weightKg} kg) y el saco que acabas de pedir. Te avisaremos antes de que se acabe.`}
-              onReschedule={() =>
-                toast({ title: "Te avisaremos a tiempo", description: `Un día antes de que se le acabe a ${petName}.`, variant: "success" })
+              onReschedule={(date) =>
+                toast({
+                  title: "Entrega reagendada",
+                  description: `Llegará ${formatDeliveryDate(date)} para que a ${petName} no le falte.`,
+                  variant: "success",
+                })
               }
               onSubscribe={() => router.push("/cuenta/mascotas")}
             />
@@ -107,14 +196,25 @@ export default function BienvenidaPage() {
         <Stack gap={6}>
           <h2 className="heading-2 text-text-primary">¿Qué sigue?</h2>
           <Grid cols={1} md={3} gap={4}>
-            <NextStep
-              icon={<PawPrint className="size-5" aria-hidden />}
-              tone="brand"
-              title={`Completa el perfil de ${petName}`}
-              body="Una foto y un par de datos más nos dejan cuidarlo aún mejor."
-              href="/cuenta/mascotas"
-              cta="Ir a su perfil"
-            />
+            {activePet ? (
+              <NextStep
+                icon={<PawPrint className="size-5" aria-hidden />}
+                tone="brand"
+                title={`Completa el perfil de ${petName}`}
+                body="Una foto y un par de datos más nos dejan cuidarlo aún mejor."
+                href="/cuenta/mascotas"
+                cta="Ir a su perfil"
+              />
+            ) : (
+              <NextStep
+                icon={<PawPrint className="size-5" aria-hidden />}
+                tone="brand"
+                title="Crea el perfil de tu mascota"
+                body="Con su especie, peso y edad nos anticipamos a lo que necesita."
+                href="/comenzar"
+                cta="Crear su perfil"
+              />
+            )}
             <NextStep
               icon={<RefreshCw className="size-5" aria-hidden />}
               tone="accent"
@@ -140,6 +240,18 @@ export default function BienvenidaPage() {
         </Stack>
       </Section>
     </AppShell>
+  );
+}
+
+/** Beneficio corto de crear cuenta (vista invitado). */
+function GuestPerk({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <Row gap={3} align="start">
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-text-brand" aria-hidden>
+        {icon}
+      </span>
+      <span className="text-sm text-text-secondary">{text}</span>
+    </Row>
   );
 }
 

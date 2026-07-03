@@ -192,6 +192,7 @@ export const REVIEWS: Review[] = [
     author: "Felipe M.",
     rating: 4,
     date: new Date("2026-05-28"),
+    title: "Buen precio, buen rendimiento",
     body: "Buen precio y el saco rinde lo que dicen. Le bajaría una estrella solo porque quería más formato.",
     verified: true,
   },

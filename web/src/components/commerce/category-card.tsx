@@ -33,7 +33,7 @@ export function CategoryCard({ label, href, icon, description, size = "md", clas
         </span>
       )}
       <span className="heading-4 text-text-primary">{label}</span>
-      {description && <span className="text-[13px] text-text-secondary">{description}</span>}
+      {description && <span className="flex-1 text-[13px] text-text-secondary">{description}</span>}
       <span className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-text-brand">
         Ver
         <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />

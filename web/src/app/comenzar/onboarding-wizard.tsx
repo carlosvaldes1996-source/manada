@@ -202,22 +202,47 @@ export function OnboardingWizard() {
                       title={`¿Cuánto pesa ${petName}?`}
                       why="Con su peso calculamos cuánto come al día y cuándo se le acaba la comida."
                     >
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step={0.1}
-                        label="Peso"
-                        placeholder="8"
-                        autoFocus
-                        trailing="kg"
-                        value={draft.weightKg ?? ""}
-                        onChange={(e) => {
-                          const n = parseFloat(e.target.value);
-                          set("weightKg", Number.isFinite(n) ? n : undefined);
-                        }}
-                        className="max-w-[160px]"
-                      />
+                      <div className="flex max-w-[280px] items-center gap-3">
+                        <button
+                          type="button"
+                          aria-label="Bajar 1 kg"
+                          onClick={() =>
+                            set("weightKg", Math.max(1, Math.round(((draft.weightKg ?? 1) - 1) * 10) / 10))
+                          }
+                          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
+                        >
+                          −
+                        </button>
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            step={0.1}
+                            aria-label="Peso en kilos"
+                            placeholder="8"
+                            autoFocus
+                            trailing="kg"
+                            withField={false}
+                            value={draft.weightKg ?? ""}
+                            onChange={(e) => {
+                              const n = parseFloat(e.target.value);
+                              set("weightKg", Number.isFinite(n) ? n : undefined);
+                            }}
+                            className="text-center"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          aria-label="Subir 1 kg"
+                          onClick={() =>
+                            set("weightKg", Math.min(150, Math.round(((draft.weightKg ?? 0) + 1) * 10) / 10))
+                          }
+                          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
+                        >
+                          +
+                        </button>
+                      </div>
                       {liveRation && (
                         <Row gap={2} className="rounded-[var(--radius-md)] bg-accent-soft px-3.5 py-2.5 text-sm text-text-primary">
                           <Utensils className="size-4 shrink-0 text-miel-700" aria-hidden />
@@ -296,14 +321,13 @@ export function OnboardingWizard() {
                             </Chip>
                           );
                         })}
+                        <Chip
+                          active={(draft.conditions?.length ?? 0) === 0}
+                          onToggle={() => set("conditions", [])}
+                        >
+                          Ninguna por ahora
+                        </Chip>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => set("conditions", [])}
-                        className="self-start text-[13px] font-semibold text-text-secondary underline-offset-2 hover:underline"
-                      >
-                        Ninguna por ahora
-                      </button>
                     </Question>
                   )}
                 </Stack>

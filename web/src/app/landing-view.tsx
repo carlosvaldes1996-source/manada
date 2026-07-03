@@ -21,7 +21,8 @@ import { FeatureCard } from "@/components/ui/feature-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CategoryCard } from "@/components/commerce/category-card";
 import { ReviewCard } from "@/components/commerce/review-card";
-import { CATEGORIES, REVIEWS } from "@/lib/demo-data";
+import { ProductRail } from "@/components/commerce/product-rail";
+import { CATEGORIES, REVIEWS, PRODUCTS, DEMO_SHIPPING, TOBY_ANTICIPATION } from "@/lib/demo-data";
 
 /**
  * Landing del visitante anónimo (Fase 3.3B · resuelve U041/U058).
@@ -57,8 +58,10 @@ export function LandingView() {
               <Button size="lg" asChild>
                 <Link href="/comenzar">Crear el perfil de tu mascota</Link>
               </Button>
-              <Button size="lg" variant="ghost" asChild>
-                <Link href="/ingresar">Ya tengo cuenta</Link>
+              {/* Puerta a la tienda sin cuenta (e-commerce como piso);
+                  "Ingresar" vive en el header. */}
+              <Button size="lg" variant="secondary" asChild>
+                <Link href="/categoria/todo">Explorar la tienda</Link>
               </Button>
             </Row>
             <Row gap={4} wrap className="text-[13px] text-text-secondary">
@@ -78,24 +81,44 @@ export function LandingView() {
                 <Sparkles className="size-3.5" aria-hidden /> Para Toby 🐾
               </span>
               <h2 className="heading-3 mt-1 text-text-primary">
-                A <span className="pet-name">Toby</span> le quedan ~5 días de comida
+                A <span className="pet-name">Toby</span> le quedan ~{TOBY_ANTICIPATION.daysLeft} días de comida
               </h2>
               <p className="body-s mt-1 text-text-secondary">
                 Lo calculamos por su peso y su última compra. ¿La reagendamos para que no le falte?
               </p>
               <div className="mt-4 flex items-center gap-3">
-                <Progress value={18} tone="miel" label="Queda ~18% del saco" className="max-w-[200px]" />
-                <span className="price text-[13px] text-text-secondary">~18%</span>
+                {/* Misma fuente única de anticipación que la app (U040/U056) */}
+                <Progress
+                  value={TOBY_ANTICIPATION.percentLeft}
+                  tone="miel"
+                  label={`Queda ~${TOBY_ANTICIPATION.percentLeft}% del saco`}
+                  className="h-2.5 max-w-[200px] bg-neutral-300"
+                />
+                <span className="price text-[13px] font-semibold text-urgency">
+                  ~{TOBY_ANTICIPATION.percentLeft}%
+                </span>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Badge variant="subscribe">
                   <CalendarClock className="size-3.5" aria-hidden /> Llega el martes
                 </Badge>
-                <Badge variant="neutral">Despacho gratis</Badge>
+                <Badge variant="success">Despacho gratis</Badge>
               </div>
             </div>
           </div>
         </div>
+      </Section>
+
+      {/* ── Vitrina: se puede comprar desde ya, sin cuenta ── */}
+      <Section spacing="md" tone="canvas">
+        <ProductRail
+          overline="La vitrina"
+          title="Lo que más recompran las familias"
+          products={PRODUCTS.filter((p) => p.stock > 0).slice(0, 6)}
+          shipping={DEMO_SHIPPING}
+          href="/categoria/todo"
+          linkLabel="Ver toda la tienda"
+        />
       </Section>
 
       {/* ── Cómo funciona: Conocimiento → Anticipación → Amor (arquitectura de marca) ── */}
@@ -109,21 +132,36 @@ export function LandingView() {
           <Grid cols={1} md={3} gap={4}>
             <FeatureCard
               tone="brand"
-              eyebrow="Paso 1"
+              eyebrow={
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-terracota-200">01</span>
+                  <span className="overline text-text-brand">Paso 1</span>
+                </div>
+              }
               icon={<Brain className="size-5" aria-hidden />}
               title="La conoces, la conocemos"
               description="Registras a tu mascota: especie, peso, edad y su comida. Con eso ya sabemos qué le sirve y qué no."
             />
             <FeatureCard
               tone="accent"
-              eyebrow="Paso 2"
+              eyebrow={
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-terracota-200">02</span>
+                  <span className="overline text-text-brand">Paso 2</span>
+                </div>
+              }
               icon={<BellRing className="size-5" aria-hidden />}
               title="Nos anticipamos"
               description="Calculamos cuánto come al día y te avisamos justo antes de que se le acabe. Sin apuros de último minuto."
             />
             <FeatureCard
               tone="pino"
-              eyebrow="Paso 3"
+              eyebrow={
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-terracota-200">03</span>
+                  <span className="overline text-text-brand">Paso 3</span>
+                </div>
+              }
               icon={<Heart className="size-5" aria-hidden />}
               title="Nunca le falta nada"
               description="Recibe su comida en la puerta, a tiempo, con la opción de suscribirte y ahorrar. Pausas o cancelas cuando quieras."
@@ -168,7 +206,7 @@ export function LandingView() {
           />
           <Grid cols={1} md={3} gap={6}>
             {REVIEWS.map((r) => (
-              <ReviewCard key={r.id} review={r} className="border-b-0" />
+              <ReviewCard key={r.id} review={r} variant="panel" />
             ))}
           </Grid>
         </Stack>
@@ -183,7 +221,7 @@ export function LandingView() {
               <CategoryCard
                 key={c.id}
                 label={c.label}
-                href="/comenzar"
+                href={`/categoria/${c.slug}`}
                 description={c.description}
                 icon={<span className="text-3xl">{c.emoji}</span>}
               />
@@ -193,7 +231,7 @@ export function LandingView() {
       </Section>
 
       {/* ── CTA final ── */}
-      <Section spacing="lg" tone="brand">
+      <Section spacing="lg" tone="brand" className="bg-terracota-100">
         <Stack gap={5} align="center" className="mx-auto max-w-2xl text-center">
           <h2 className="display-l text-text-primary">
             Empieza por conocer mejor a quien más quieres.
@@ -201,14 +239,20 @@ export function LandingView() {
           <p className="body-l text-text-secondary">
             Crea su perfil en 2 minutos y mira cómo Manada se adelanta a lo que necesita.
           </p>
-          <Row gap={3} justify="center" wrap>
+          <Stack gap={3} align="center">
             <Button size="lg" asChild>
               <Link href="/comenzar">Crear el perfil de tu mascota</Link>
             </Button>
-            <Button size="lg" variant="secondary" asChild>
-              <Link href="/ingresar">Ingresar</Link>
-            </Button>
-          </Row>
+            <p className="text-sm text-text-secondary">
+              ¿Ya tienes cuenta?{" "}
+              <Link
+                href="/ingresar"
+                className="font-semibold text-text-brand underline-offset-2 hover:underline"
+              >
+                Ingresar
+              </Link>
+            </p>
+          </Stack>
         </Stack>
       </Section>
     </AppShell>

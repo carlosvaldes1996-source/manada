@@ -14,6 +14,7 @@ import { ProductRail } from "@/components/commerce/product-rail";
 import { CategoryCard } from "@/components/commerce/category-card";
 import { AppShell } from "@/components/layout";
 import { usePet, useSession } from "@/components/providers";
+import { formatDeliveryDate } from "@/lib/format";
 import {
   DEMO_NUDGE,
   DEMO_SHIPPING,
@@ -89,10 +90,10 @@ export function DashboardView() {
               percentLeft={TOBY_ANTICIPATION.percentLeft}
               runOutDate={TOBY_ANTICIPATION.runOutDate}
               reason={DEMO_NUDGE.reason}
-              onReschedule={() =>
+              onReschedule={(date) =>
                 toast({
-                  title: "Listo, te lo recordaremos",
-                  description: "Te avisaremos un día antes para reagendar la entrega.",
+                  title: "Entrega reagendada",
+                  description: `Llegará ${formatDeliveryDate(date)}. Te avisaremos un día antes.`,
                   variant: "success",
                 })
               }

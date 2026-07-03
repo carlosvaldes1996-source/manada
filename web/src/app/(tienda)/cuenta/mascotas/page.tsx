@@ -13,9 +13,11 @@ import {
   PetEditCard,
   FeedingSchedule,
   AnticipationCapsule,
+  RecommendationCard,
 } from "@/components/pet";
 import { usePet } from "@/components/providers";
 import { missingProfileFields } from "@/lib/pet";
+import { formatDeliveryDate } from "@/lib/format";
 import { DEMO_NUDGE, TOBY_ANTICIPATION, PRODUCT_BY_ID } from "@/lib/demo-data";
 
 /**
@@ -93,18 +95,37 @@ export default function MascotasPage() {
           </div>
         )}
 
-        {/* La anticipación de su comida (fuente única, U056) */}
-        <AnticipationCapsule
-          petName={activePet.name}
-          daysLeft={TOBY_ANTICIPATION.daysLeft}
-          percentLeft={TOBY_ANTICIPATION.percentLeft}
-          runOutDate={TOBY_ANTICIPATION.runOutDate}
-          reason={DEMO_NUDGE.reason}
-          onReschedule={() =>
-            toast({ title: "Listo, te lo recordaremos", description: "Te avisaremos un día antes.", variant: "success" })
-          }
-          onSubscribe={() => (currentFood ? router.push(`/producto/${currentFood.slug}`) : router.push("/categoria/alimento"))}
-        />
+        {/* La anticipación de su comida (fuente única, U056). Solo si conocemos
+            su alimento: una mascota recién creada no hereda los días de Toby. */}
+        {currentFood ? (
+          <AnticipationCapsule
+            petName={activePet.name}
+            daysLeft={TOBY_ANTICIPATION.daysLeft}
+            percentLeft={TOBY_ANTICIPATION.percentLeft}
+            runOutDate={TOBY_ANTICIPATION.runOutDate}
+            reason={DEMO_NUDGE.reason}
+            onReschedule={(date) =>
+              toast({
+                title: "Entrega reagendada",
+                description: `Llegará ${formatDeliveryDate(date)}. Te avisaremos un día antes.`,
+                variant: "success",
+              })
+            }
+            onSubscribe={() => router.push(`/producto/${currentFood.slug}`)}
+          />
+        ) : (
+          <RecommendationCard
+            eyebrow={`Para anticiparnos por ${activePet.name}`}
+            title={`Cuéntanos qué come ${activePet.name}`}
+            description="Con su alimento calculamos cuánto le dura el saco y te avisamos antes de que se acabe. Es lo único que nos falta."
+            media={<span className="text-4xl">🍽️</span>}
+            action={
+              <Button variant="secondary" onClick={() => router.push("/categoria/alimento")}>
+                Elegir su alimento
+              </Button>
+            }
+          />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           <FeedingSchedule pet={activePet} />

@@ -24,7 +24,7 @@
 - **Proyecto:** Manada — e-commerce de mascotas en Chile (alimento + accesorios + farmacia + suscripción inteligente).
 - **Concepto rector:** *"Te conoce como nadie y se anticipa a lo que tu mascota necesita."*
 - **Nombre/dominio:** Manada · `tumanada.cl` (definitivo, D8).
-- **Fase activa:** ver `ai-context/CURRENT_STATE.md`. **Fases 0–2 ✅ completas** (marca + sistema visual + UX + prototipo HTML). **Fase 3 (Frontend) en curso:** app Next.js en **`web/`** — Etapa 1 (fundaciones) ✅ D13 · **Etapa 2 (Component Library) ✅ D15**: ~70 componentes en `web/src/components/{ui,layout,commerce,pet}`, documentados en `ai-context/COMPONENT_LIBRARY.md` + styleguide navegable en `/dev/components`. **Siguiente (espera aprobación): Etapa 3 — Pantallas.** Para continuar en un chat nuevo usa el prompt #7 de `ai-context/PROMPTS.md`.
+- **Fase activa:** ver `ai-context/CURRENT_STATE.md`. **Fases 0–2 ✅ completas** (marca + sistema visual + UX + prototipo HTML). **Fase 3 (Frontend) en curso:** app Next.js en **`web/`** — Etapa 1 (fundaciones) ✅ D13 · Etapa 2 (Component Library) ✅ D15 (~70 componentes en `web/src/components/{ui,layout,commerce,pet}`, doc en `ai-context/COMPONENT_LIBRARY.md` + styleguide en `/dev/components`) · **Etapa 3 (Pantallas + Activation Flow + revisión visual) ✅ D16/D17, cerrada 2026-07-03** — incluye el modelo **"e-commerce como piso, perfil como camino destacado"** (tienda anónima navegable, checkout de invitado, gate honesto de suscripción). **Siguiente: Etapa 4 — Polish (Fase 3.4)**, condicionada por fotografía real (U090). Para continuar en un chat nuevo usa el prompt #7 de `ai-context/PROMPTS.md`.
 
 ## 🔧 Reglas de trabajo del proyecto
 

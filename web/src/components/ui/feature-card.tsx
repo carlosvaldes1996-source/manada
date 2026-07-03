@@ -36,7 +36,7 @@ export function FeatureCard({ icon, eyebrow, title, description, tone = "brand",
         </span>
       )}
       <div className="flex flex-col gap-1">
-        {eyebrow && <span className="overline text-text-brand">{eyebrow}</span>}
+        {eyebrow}
         <h3 className="heading-4 text-text-primary">{title}</h3>
         {description && <p className="body-s text-text-secondary">{description}</p>}
       </div>
