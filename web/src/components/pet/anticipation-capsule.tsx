@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { CalendarClock, HelpCircle, Sparkles } from "lucide-react";
 import { fadeInUp } from "@/lib/motion";
 import { formatDeliveryDate, pluralize } from "@/lib/format";
-import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -57,8 +56,10 @@ interface RescheduleOption {
 
 /**
  * Cápsula de anticipación — el momento "se adelantó por mí" (DESIGN_SYSTEM
- * §10, §12.2). Entra con slide+fade y un único pulso en Miel (no loop). Ofrece
- * reagendar, nunca cobra solo. La razón del cálculo es transparente (Popover).
+ * §10, §12.2). Entra con slide+fade y la barra se llena con calma (U085);
+ * sin pulso tipo alerta: anticipación es cuidado tranquilo, no urgencia
+ * (U087). Ofrece reagendar, nunca cobra solo. La razón del cálculo es
+ * transparente (Popover).
  *
  * "Reagendar entrega" abre un diálogo que muestra la fecha programada actual
  * (un día antes de que se acabe) y deja elegir una nueva; `onReschedule`
@@ -74,7 +75,6 @@ export function AnticipationCapsule({
   onSubscribe,
   className,
 }: AnticipationCapsuleProps) {
-  const reduced = usePrefersReducedMotion();
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<string | null>(null);
 
@@ -115,7 +115,6 @@ export function AnticipationCapsule({
       aria-labelledby="anticipation-title"
       className={cn(
         "rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft p-6",
-        !reduced && "animate-[pulse-soft_1.2s_ease_1]",
         className,
       )}
     >
@@ -133,7 +132,7 @@ export function AnticipationCapsule({
       </p>
 
       <div className="mt-4 flex items-center gap-3">
-        <Progress value={percentLeft} tone="miel" label={`Queda ~${percentLeft}% del saco`} className="max-w-xs" />
+        <Progress value={percentLeft} tone="miel" label={`Queda ~${percentLeft}% del saco`} animateIn className="max-w-xs" />
         <span className="price text-[13px] text-text-secondary">~{percentLeft}%</span>
       </div>
 
@@ -149,9 +148,10 @@ export function AnticipationCapsule({
         <Button variant="secondary" onClick={onSubscribe}>
           Ver suscripción
         </Button>
+        {/* Afordancia de botón real (U088): pill con borde, no texto suelto. */}
         {reason && (
           <Popover>
-            <PopoverTrigger className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-secondary underline-offset-2 hover:text-text-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)]">
+            <PopoverTrigger className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-terracota-200 bg-surface px-3 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:border-terracota-300 hover:text-text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)]">
               <HelpCircle className="size-4" aria-hidden />
               ¿Por qué te lo decimos?
             </PopoverTrigger>

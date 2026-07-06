@@ -58,3 +58,22 @@ export function discountPercent(current: number, compareAt?: number): number {
   if (!compareAt || compareAt <= current) return 0;
   return Math.round(((compareAt - current) / compareAt) * 100);
 }
+
+/**
+ * Política de redondeo CLP para precios calculados (U066): hacia abajo al
+ * múltiplo de $10. Un precio derivado de un % ($54.990 − 15% = $46.741,5)
+ * se muestra $46.740: nunca se cobra de más por redondear y el monto se ve
+ * intencional, no como el residuo de un cálculo.
+ */
+export function roundCLP(amount: number): number {
+  return Math.floor(amount / 10) * 10;
+}
+
+/**
+ * Precio de suscripción: base − descuento %, con la política de redondeo CLP.
+ * Única fuente del cálculo (la consumen carrito, checkout y PDP).
+ */
+export function subscriptionPrice(base: number, discountPct?: number): number {
+  if (!discountPct) return base;
+  return roundCLP(base * (1 - discountPct / 100));
+}

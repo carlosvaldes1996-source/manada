@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { subscriptionPrice } from "@/lib/format";
 import type { Product, SubscriptionFrequencyWeeks } from "@/types";
 
 /** Frecuencias ofrecidas, con su etiqueta legible. */
@@ -28,7 +29,7 @@ export function useSubscription(product: Pick<Product, "price" | "subscriptionDi
   return useMemo(() => {
     const discountPct = product.subscriptionDiscount ?? 0;
     const base = product.price.current;
-    const subscribedPrice = Math.round(base * (1 - discountPct / 100));
+    const subscribedPrice = subscriptionPrice(base, discountPct);
     const savings = base - subscribedPrice;
     const effectivePrice = isSubscribed ? subscribedPrice : base;
     return {

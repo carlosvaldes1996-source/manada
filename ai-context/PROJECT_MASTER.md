@@ -6,7 +6,7 @@
 > | **Purpose** | Documento maestro: visión, estrategia y resumen de decisiones del proyecto. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-03 |
+> | **Last Updated** | 2026-07-05 |
 > | **Depends On** | DECISIONS.md (fuente), CURRENT_STATE.md, ROADMAP.md |
 > | **Supersedes** | `history/PROJECT_MASTER_v0.md` |
 > | **Source of Truth** | ✅ de la *visión y estrategia*. El detalle vive en los archivos temáticos. |
@@ -14,7 +14,7 @@
 > **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
 > Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. Fase activa: 3 (Frontend / Design System) — Etapas 1 (fundaciones, D13), 2 (Component Library, D15) y **3 (Pantallas + Activation Flow + revisión, D16/D17) ✅ cerradas** en `web/`; **siguiente: Etapa 4 — Polish (Fase 3.4)**, condicionada por fotografía real (U090). Ver `CURRENT_STATE.md`.*
+> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)**: validar stack backend, proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #8 de `PROMPTS.md`.*
 
 ---
 

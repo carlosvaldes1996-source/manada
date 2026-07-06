@@ -22,7 +22,7 @@ import {
 import { useCart, useSession, usePet } from "@/components/providers";
 import { SITE } from "@/config/site";
 import { DEMO_USER, DEMO_SHIPPING } from "@/lib/demo-data";
-import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
+import { formatCLP, formatDeliveryDate, pluralize, subscriptionPrice } from "@/lib/format";
 
 /** Direcciones guardadas demo (AUDIT U071): selección, no inputs sueltos. */
 const SAVED_ADDRESSES = [
@@ -74,8 +74,8 @@ export default function CheckoutPage() {
 
   const threshold = SITE.commerce.freeShippingThreshold;
   const effective = (i: (typeof items)[number]) =>
-    i.subscriptionWeeks && i.product.subscriptionDiscount
-      ? Math.round(i.product.price.current * (1 - i.product.subscriptionDiscount / 100))
+    i.subscriptionWeeks
+      ? subscriptionPrice(i.product.price.current, i.product.subscriptionDiscount)
       : i.product.price.current;
 
   const regularSubtotal = items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);

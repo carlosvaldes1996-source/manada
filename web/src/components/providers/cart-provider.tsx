@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { subscriptionPrice } from "@/lib/format";
 import type { CartItem, Product, SubscriptionFrequencyWeeks } from "@/types";
 
 /**
@@ -31,8 +32,8 @@ const CartContext = createContext<CartContextValue | null>(null);
 /** Precio unitario efectivo: aplica el descuento de suscripción si corresponde. */
 function unitPrice(item: CartItem): number {
   const base = item.product.price.current;
-  if (item.subscriptionWeeks && item.product.subscriptionDiscount) {
-    return Math.round(base * (1 - item.product.subscriptionDiscount / 100));
+  if (item.subscriptionWeeks) {
+    return subscriptionPrice(base, item.product.subscriptionDiscount);
   }
   return base;
 }

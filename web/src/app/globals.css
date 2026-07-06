@@ -37,7 +37,9 @@
   /* ---- Neutros cálidos (DESIGN_SYSTEM §3.2) ---- */
   --neutral-0: #ffffff;   --neutral-50: #faf6f0;  /* Arena */
   --neutral-100: #f0eae1; --neutral-200: #e0d8cc; --neutral-300: #c4baab;
-  --neutral-400: #9e9486; --neutral-500: #7a7064; --neutral-600: #5a5249;
+  /* neutral-500 oscurecido #7a7064 → #6f665a (U028): como --text-muted debe
+     cumplir AA 4.5:1 también sobre Arena (5.2:1) y neutral-100 (4.7:1). */
+  --neutral-400: #9e9486; --neutral-500: #6f665a; --neutral-600: #5a5249;
   --neutral-700: #403a33; --neutral-800: #2a2722; /* Carbón */ --neutral-900: #1a1814;
 
   /* ---- Semánticos: superficies (§3.3) ---- */
@@ -270,26 +272,33 @@
 /* ------------------------------------------------------------------ */
 /* 4. ESCALA TIPOGRÁFICA (DESIGN_SYSTEM §4.1)                         */
 /* Clases utilitarias; el componente <Text> (Etapa 2) las consumirá.  */
+/* Rangos sin solape entre niveles a todo viewport (U010):            */
+/*   h1 28–36 < display-l 36–48 < display-xl 44–60.                   */
+/* Eje óptico de Fraunces (U009): los display usan el corte editorial */
+/* de alto contraste (opsz alto); hacia abajo el corte se suaviza.    */
 /* ------------------------------------------------------------------ */
 @layer components {
   .display-xl {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(2.5rem, 6vw, 3.75rem); /* 40 → 60 */
+    font-size: clamp(2.75rem, 6vw, 3.75rem); /* 44 → 60 */
+    font-variation-settings: "opsz" 144;
     line-height: 1.05;
     letter-spacing: -0.01em;
   }
   .display-l {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(2.0625rem, 5vw, 3rem); /* 33 → 48 */
+    font-size: clamp(2.25rem, 5vw, 3rem); /* 36 → 48 */
+    font-variation-settings: "opsz" 120;
     line-height: 1.08;
     letter-spacing: -0.01em;
   }
   .heading-1 {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(1.75rem, 4vw, 2.5rem); /* 28 → 40 */
+    font-size: clamp(1.75rem, 4vw, 2.25rem); /* 28 → 36 */
+    font-variation-settings: "opsz" 72;
     line-height: 1.15;
     letter-spacing: -0.01em;
   }
@@ -297,12 +306,14 @@
     font-family: var(--font-display);
     font-weight: 500;
     font-size: clamp(1.5rem, 3vw, 2rem); /* 24 → 32 */
+    font-variation-settings: "opsz" 48;
     line-height: 1.2;
   }
   .heading-3 {
     font-family: var(--font-display);
     font-weight: 500;
     font-size: clamp(1.25rem, 2.4vw, 1.5rem); /* 20 → 24 */
+    font-variation-settings: "opsz" 32;
     line-height: 1.25;
   }
   .heading-4 {
@@ -351,10 +362,12 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
   }
-  /* El nombre de la mascota como acento (§4.2) */
+  /* El nombre de la mascota como acento (§4.2) — corte de texto de
+     Fraunces (opsz bajo): cálido y legible en cuerpos chicos. */
   .pet-name {
     font-family: var(--font-display);
     font-weight: 500;
+    font-variation-settings: "opsz" 18;
     color: var(--text-brand);
   }
 }
@@ -368,13 +381,12 @@
   }
 }
 
-/* Pulso único en Miel para la cápsula de anticipación (§10) */
-@keyframes pulse-soft {
-  0% {
-    box-shadow: 0 0 0 0 rgba(229, 162, 60, 0.5);
-  }
-  100% {
-    box-shadow: 0 0 0 14px rgba(229, 162, 60, 0);
+/* Llenado de la barra de anticipación al entrar (U085·U087): reemplaza al
+   pulso tipo alerta — la atención se gana mostrando el dato llenándose con
+   calma, no con un destello de urgencia. El destino lo da el width inline. */
+@keyframes progress-fill {
+  from {
+    width: 0%;
   }
 }
 

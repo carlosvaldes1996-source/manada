@@ -14,6 +14,12 @@ export interface ProgressProps {
   size?: "sm" | "md";
   /** Etiqueta accesible (p. ej. "Perfil de Toby completo al 75%"). */
   label?: string;
+  /**
+   * Anima el llenado 0 → value al montar (U085). Para los momentos de
+   * anticipación; las barras utilitarias (free-shipping) quedan estáticas.
+   * `prefers-reduced-motion` la neutraliza vía la regla global.
+   */
+  animateIn?: boolean;
   className?: string;
 }
 
@@ -21,7 +27,7 @@ export interface ProgressProps {
  * Barra de progreso (completitud de perfil, free-shipping, días de comida).
  * Expone role="progressbar" + aria-valuenow para lectores de pantalla.
  */
-export function Progress({ value, tone = "miel", size = "md", label, className }: ProgressProps) {
+export function Progress({ value, tone = "miel", size = "md", label, animateIn = false, className }: ProgressProps) {
   const clamped = Math.max(0, Math.min(100, value));
   return (
     <div
@@ -37,7 +43,11 @@ export function Progress({ value, tone = "miel", size = "md", label, className }
       )}
     >
       <div
-        className={cn("h-full rounded-[var(--radius-pill)] transition-[width] duration-[var(--duration-standard)]", tones[tone])}
+        className={cn(
+          "h-full rounded-[var(--radius-pill)] transition-[width] duration-[var(--duration-standard)]",
+          animateIn && "animate-[progress-fill_0.9s_var(--ease-out-soft)_0.2s_both]",
+          tones[tone],
+        )}
         style={{ width: `${clamped}%` }}
       />
     </div>

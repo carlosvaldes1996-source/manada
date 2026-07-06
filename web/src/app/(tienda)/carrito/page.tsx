@@ -16,6 +16,7 @@ import {
 } from "@/components/commerce";
 import { useCart, usePet } from "@/components/providers";
 import { SITE } from "@/config/site";
+import { subscriptionPrice } from "@/lib/format";
 import { PRODUCTS, DEMO_SHIPPING } from "@/lib/demo-data";
 
 /**
@@ -37,8 +38,8 @@ export default function CarritoPage() {
 
   // Precio efectivo (con descuento de suscripción) y ahorro por línea.
   const effective = (i: (typeof items)[number]) =>
-    i.subscriptionWeeks && i.product.subscriptionDiscount
-      ? Math.round(i.product.price.current * (1 - i.product.subscriptionDiscount / 100))
+    i.subscriptionWeeks
+      ? subscriptionPrice(i.product.price.current, i.product.subscriptionDiscount)
       : i.product.price.current;
 
   const regularSubtotal = items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);

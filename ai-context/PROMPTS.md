@@ -6,7 +6,7 @@
 > | **Purpose** | Prompts reutilizables (onboarding, cierre de fase, voz de marca, continuación por etapa). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-06-29 |
+> | **Last Updated** | 2026-07-05 |
 > | **Depends On** | — |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *prompts operativos*. |
@@ -60,7 +60,11 @@ con la mascota demo "Toby". No hace falta leer otros archivos.
 > y con styleguide en `/dev/components`. Se conserva como referencia; para continuar
 > usa el prompt #7.
 
-## 7. Continuar Fase 3 · Etapa 3 — Pantallas en `web/` (chat nuevo) ← ACTUAL
+## 7. (Histórico) Continuar Fase 3 · Etapa 3 — Pantallas en `web/`
+> ✅ **Hecha y cerrada** (D17; Polish lote 1 D18). La Fase 3 queda funcionalmente completa;
+> el Polish 3.4 restante está ⏸ en pausa (D19). Se conserva como referencia; para
+> retomar el Polish cuando existan las fotos, este prompt sigue siendo la base
+> (cambiando el objetivo a los ítems de Fase 3.4 de `AUDIT_UI_UX.md`).
 ```
 Continuamos el frontend de Manada (Fase 3) en la carpeta web/.
 Lee primero ai-context/CURRENT_STATE.md, COMPONENT_LIBRARY.md (catálogo de
@@ -97,5 +101,31 @@ pnpm exec tsc --noEmit
 pnpm lint
 ```
 
-## Pendiente
-- Agregar prompt de backend (Fase 4) cuando se inicie.
+## 8. Iniciar Fase 4 — Arquitectura técnica (chat nuevo) ← ACTUAL
+```
+Iniciamos la Fase 4 de Manada: Arquitectura técnica (D19).
+Lee primero ai-context/CURRENT_STATE.md, ROADMAP.md (detalle Fase 4),
+PROJECT_MASTER.md (visión y modelo de negocio), ARCHITECTURE.md (stack de alto
+nivel ya decidido), DATABASE.md y API.md (borradores a completar) y DECISIONS.md
+(D2, D5, D17, D19 — no re-litigar). El frontend (Fase 3) ya está: app Next.js
+funcional en web/ con datos demo; NO es objetivo de esta fase tocarlo, solo
+entender sus contratos (providers usePet/useCart/SessionProvider en
+web/src/components/providers, tipos en web/src/types, motor en web/src/lib).
+
+Objetivo de la fase — arquitectura y validación, NO desarrollo (el MVP es Fase 5):
+1. Validar stack backend: Medusa.js vs alternativas (Vendure, Saleor, custom
+   Next + Postgres/Supabase). Criterios rectores: suscripciones custom
+   (diferenciador), Perfil de Mascota como entidad central (el moat, D5),
+   costo/operación viable para una startup de una persona en Chile.
+2. Proveedores Chile: pagos (Webpay Plus/MercadoPago/Khipu), courier
+   (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale),
+   WhatsApp Business API.
+3. Modelo de datos → completar DATABASE.md (perfil de mascota + motor de
+   anticipación + suscripciones).
+4. Contratos API → completar API.md (pensando en cómo se hidratan los
+   providers del frontend).
+
+Estrategia antes que código: presenta comparativas con recomendación y espera
+mi aprobación en las decisiones estratégicas. Registra cada decisión en
+DECISIONS.md con rationale y actualiza ARCHITECTURE.md como fuente de verdad.
+```

@@ -37,14 +37,26 @@
 - [x] **Auditoría crítica de UI/UX del prototipo → backlog priorizado** (D14) → `AUDIT_UI_UX.md` (108 ítems `U001`–`U122`, clasificados en Fase 3.2 / 3.3 / 3.4 / Futura, con impacto·esfuerzo·prioridad·estado·archivos). **Fuente de verdad de mejoras de frontend.**
 - [x] **Etapa 2 — Componentes reutilizables** (D15): ~70 componentes en `ui → layout → commerce → pet` + `hooks/` + `lib/`, con TS estricto, a11y AA (Radix), responsive, estados (loading/empty/error/hover/focus/disabled) y motion. **Documentado en `COMPONENT_LIBRARY.md` + styleguide navegable en `/dev/components`.** Resueltos los 3 P0 de Fase 3.2 de `AUDIT_UI_UX.md` (+ mayoría de P1; estados por ítem actualizados allí). **Build + type-check + lint + smoke-test ✅.** ⏸ Espera aprobación.
 - [x] **Etapa 3 — Pantallas** (D16/D17, **cerrada 2026-07-03**): Home → Categoría → Producto → Carrito → Checkout → Mi Cuenta ensambladas solo con la Component Library, + **embudo de activación 3.3B** (Landing → alta → recomendación → registro → checkout → bienvenida) + **revisión visual final** con dos rondas de mejoras y el **modelo de compra de invitado** (tienda anónima navegable, guest checkout punta a punta, gate honesto de suscripción, registro valor-primero post-compra). **27/33 ítems de Fase 3.3 de `AUDIT_UI_UX.md` Hechos** (U066 → Polish; U070 → Futura). **Build + type-check + lint + smoke ✅.**
-- [ ] **Etapa 4 — Polish (Fase 3.4)** ← **siguiente:** dirección de arte aplicada, microinteracciones y refinamiento premium según ítems de Fase 3.4 de `AUDIT_UI_UX.md` + diferidos (U003, U009, U010, U028, U029, U066). Los ítems fotográficos (U080/U081/U082/U084/U091/U092) dependen de fotografía real `U090`; puede arrancarse por lo no-fotográfico (opsz, sombras cálidas, contrastes AA, motion).
+- [ ] **Etapa 4 — Polish (Fase 3.4)** ← **⏸ EN PAUSA (D19, 2026-07-05):** se adelanta la Fase 4 (Backend); el Polish se retoma cuando existan los assets fotográficos.
+  - [x] **Lote 1 — track no-fotográfico** (2026-07-05, D18): U009 opsz · U010 escala sin solape · U028 contraste text-muted · U029 verificado · U066 redondeo CLP (`subscriptionPrice()` fuente única) · U085 barra animada · U087 pulso eliminado · U088 afordancia · U089 banda editorial · U101 verificado. **Build + type-check + lint + smoke ✅.**
+  - [ ] **Lote 2 — no-fotográfico restante (pausado):** U086 vuelo al carrito · U100 home con clímax · U096/U097 confianza realzada · U094 deleite cumpleaños · U095 tono salud · U098/U099 acento/texturas · U104 urgencia · U003 color suscripción (**decisión de marca pendiente**).
+  - [ ] **Track fotográfico (pausado, bloqueado por assets)** (U080/U081/U082/U084/U091/U092): Carlos tiene **imágenes IA de ChatGPT para probar** + shot list por pantalla (propuesta Claude-Chrome). Política IA vs. fotografía real (U090) **sin decidir**.
+
+## ▶️ Fase 4 — Arquitectura técnica (ACTIVA desde 2026-07-05, D19)
+- [ ] **Validar stack backend:** Medusa.js vs alternativas (Vendure, Saleor, custom Next.js + Postgres/Supabase). Criterio: módulo de **suscripciones custom** (diferenciador) y perfil de mascota como entidad central.
+- [ ] **Proveedores Chile:** pagos (Webpay Plus/MercadoPago/Khipu), courier (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale), WhatsApp Business API.
+- [ ] **Modelo de datos** → completar `DATABASE.md` (entidad crítica: Perfil de Mascota, el moat).
+- [ ] **Contratos API** → completar `API.md`.
+- [ ] Registrar decisiones en `DECISIONS.md`; actualizar `ARCHITECTURE.md` como fuente de verdad.
+> Para arrancar en un chat nuevo: **prompt #8 de `PROMPTS.md`**.
 
 > **Backlog vivo:** el progreso fino de UI/UX se registra ítem a ítem en `AUDIT_UI_UX.md` (columna *estado*). Los ítems de "Fase futura (Backend/CRO)" alimentan Fases 4–7.
 
 ### Histórico Fase 3 (referencia)
 - [x] **Plan del sistema de componentes Next.js** (D12) → `FRONTEND_ARCHITECTURE.md`.
-- [ ] **Fase 4 (Arquitectura):** validar Medusa.js vs alternativas; definir proveedores de pago (Webpay/MercadoPago/Khipu), courier (Blue Express/Starken/Chilexpress) y boleta SII (LibreDTE/Bsale); modelo de datos (DATABASE.md) y API (API.md).
-- [ ] **Fase 5 (MVP):** desarrollo.
+
+### Fases siguientes
+- [ ] **Fase 5 (MVP):** desarrollo del e-commerce funcional sobre la arquitectura de Fase 4.
 
 ## 🟢 Investigación pendiente
 - [ ] Benchmarking visual fino de DrPet y Chewy (quedaron bloqueados en scraping).

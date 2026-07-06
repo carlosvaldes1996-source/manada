@@ -92,6 +92,7 @@ export function LandingView() {
                   value={TOBY_ANTICIPATION.percentLeft}
                   tone="miel"
                   label={`Queda ~${TOBY_ANTICIPATION.percentLeft}% del saco`}
+                  animateIn
                   className="h-2.5 max-w-[200px] bg-neutral-300"
                 />
                 <span className="price text-[13px] font-semibold text-urgency">
@@ -171,7 +172,13 @@ export function LandingView() {
       </Section>
 
       {/* ── La tranquilidad que vendemos ── */}
-      <Section spacing="md" tone="inverse">
+      {/* Banda editorial inset con esquinas redondeadas (U089): el bloque
+          oscuro entra como pieza intencional, no como corte abrupto. */}
+      <Section
+        spacing="md"
+        tone="inverse"
+        className="mx-3 my-4 rounded-[var(--radius-xl)] sm:mx-6 lg:mx-10"
+      >
         <div className="grid items-center gap-8 lg:grid-cols-[1fr_1fr]">
           <Stack gap={4}>
             <span className="overline text-miel-300">La promesa</span>
