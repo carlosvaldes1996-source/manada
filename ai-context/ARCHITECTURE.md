@@ -5,13 +5,15 @@
 > |---|---|
 > | **Purpose** | Stack técnico, estructura física del repositorio, reglas arquitectónicas, infraestructura e integraciones Chile (pagos, despacho, SII). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟡 Estructura física LOCKED (D20); stack backend a validar en Fase 4. |
+> | **Status** | 🟡 Estructura física LOCKED (D20) · stack backend LOCKED: Medusa v2 (D21); proveedores CL + DATABASE + API pendientes. |
 > | **Last Updated** | 2026-07-06 |
-> | **Depends On** | PROJECT_MASTER.md, DECISIONS.md (D2, D12, D13, D20) |
+> | **Depends On** | PROJECT_MASTER.md, DECISIONS.md (D2, D12, D13, D20, D21) |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ del *stack/estructura/infra/integraciones*. Detalle de frontend → FRONTEND_ARCHITECTURE.md. Modelo de datos → DATABASE.md. Contratos → API.md. |
 
-> *Estado: estructura física del repo ✅ (D20); stack de alto nivel decidido; detalle backend pendiente (Fase 4).*
+> *Estado: estructura física del repo ✅ (D20) · **stack backend decidido: Medusa.js v2 (D21)**; restan proveedores CL, `DATABASE.md` y `API.md` (Fase 4).*
+>
+> **Principio rector de producto (D21):** Manada es **e-commerce primero**. Perfil de mascota, suscripciones, recomendaciones y anticipación existen para mejorar la experiencia de compra, no para convertir el producto en una plataforma de gestión de mascotas. Toda recomendación de arquitectura prioriza, en orden: velocidad de MVP · simplicidad operativa para fundador único · bajo costo de mantenimiento · escalar sin sobreingeniería.
 >
 > **Frontend / sistema de componentes:** plan e inventario en **`FRONTEND_ARCHITECTURE.md`** (árbol `src/`, ~70 componentes, tokens, lib/hooks) y catálogo de uso en **`COMPONENT_LIBRARY.md`** — ver D12/D13/D15.
 
@@ -51,7 +53,9 @@ manada/
 
 ## 3. Stack (alto nivel — decidido)
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui (re-estilizado a la marca). **Ejecutado en `apps/web/`** (Fase 3 · Etapa 1, D13; movido de `web/` a `apps/web/` por D20): Next 16 + React 19 + **Tailwind v4 (CSS-first vía `@theme`, sin `tailwind.config.ts`)** + shadcn (*new-york*) + framer-motion + lucide-react. Tokens en `src/app/globals.css`.
-- **Backend e-commerce:** Medusa.js (headless, open-source) — **a validar** vs alternativas en Fase 4. Módulo de **suscripciones custom** (diferenciador). Vivirá en `apps/backend` (regla 2).
+- **Backend e-commerce:** ✅ **Medusa.js v2 (DECIDIDO, D21)** en `apps/backend` (regla 2; scaffold en Fase 5, versión exacta se fija ahí). El core cubre catálogo/carrito/checkout/órdenes/clientes/promos/inventario **+ Admin operativo incluido**; el frontend consume su **API REST store** (encaja con los providers `usePet`/`useCart`/`SessionProvider`, diseñados para hidratarse — D19). **Todo lo propio de Manada se construye como extensiones, sin fork del core:**
+  - **Módulos custom** (tablas propias en la misma Postgres + module links a entidades core): `pet-profile` (el moat), `subscription` (recipe oficial de Medusa: workflow de compra + scheduled jobs de renovación/expiración), `anticipation` (motor de frecuencia de recompra).
+  - **Integraciones CL como providers/hooks:** payment provider custom **Webpay** (no hay oficial; SDK Node de Transbank) + plugin comunitario Mercado Pago como segundo medio · fulfillment providers para courier · subscriber post-orden → boleta SII · scheduled jobs → recordatorios WhatsApp.
 - **DB:** PostgreSQL. **Cache/sesiones:** Redis.
 - **Buscador:** Meilisearch / Algolia (autocompletar tolerante a typos).
 - **Infra:** Vercel (frontend) + Railway/Fly (backend) + Cloudflare CDN.
@@ -64,7 +68,7 @@ manada/
 - **Mensajería:** WhatsApp Business API (recordatorios de recompra — diferenciador).
 
 ## 5. Decisiones pendientes (Fase 4)
-- Validar Medusa.js vs alternativas (Vendure, Saleor, o build propio).
-- Elegir proveedor de pago primario y de boleta.
-- Estrategia de cálculo de "frecuencia de recompra" (motor de anticipación).
-- Arquitectura de datos del **Perfil de Mascota** (ver DATABASE.md).
+- ~~Validar Medusa.js vs alternativas~~ → ✅ **Medusa.js v2 (D21)**.
+- Elegir proveedor de pago primario y de boleta (+ courier y estrategia WhatsApp).
+- Estrategia de cálculo de "frecuencia de recompra" (motor de anticipación) → módulo `anticipation` (D21); detalle en `DATABASE.md`.
+- Arquitectura de datos del **Perfil de Mascota** → módulo `pet-profile` (D21); esquema en `DATABASE.md`.

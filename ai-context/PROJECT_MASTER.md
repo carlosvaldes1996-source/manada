@@ -14,7 +14,7 @@
 > **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
 > Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)** — estructura física del repo ✅ **D20** (monorepo pnpm: `apps/web` + `apps/backend` reservado + reglas arquitectónicas en `ARCHITECTURE.md §2`); resta validar stack backend, proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #8 de `PROMPTS.md`.*
+> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)** — estructura física ✅ **D20** (monorepo pnpm: `apps/web` + `apps/backend` reservado + reglas arquitectónicas en `ARCHITECTURE.md §2`) · stack backend ✅ **D21: Medusa.js v2** bajo el principio "e-commerce primero"; resta proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #8 de `PROMPTS.md`.*
 
 ---
 
@@ -79,7 +79,7 @@ Benchmark mundial (norte de calidad): Chewy (cariño + autoship), Zooplus (reten
 ## 9. Arquitectura (marca + técnica)
 
 - **De marca:** ver §8.
-- **Técnica (decidida a alto nivel):** frontend Next.js (App Router) + TypeScript; backend e-commerce headless (Medusa.js, a validar); PostgreSQL; buscador Meilisearch/Algolia; pagos Webpay/MercadoPago/Khipu; despacho Blue Express/Starken/Chilexpress; boleta SII (LibreDTE/Bsale). Detalle en ARCHITECTURE.md.
+- **Técnica:** frontend Next.js (App Router) + TypeScript; backend e-commerce headless **Medusa.js v2 (decidido, D21)** con módulos custom para el moat; PostgreSQL + Redis; buscador Meilisearch/Algolia; pagos Webpay/MercadoPago/Khipu; despacho Blue Express/Starken/Chilexpress; boleta SII (LibreDTE/Bsale). **Principio rector (D21): e-commerce primero.** Detalle en ARCHITECTURE.md.
 
 ## 10. Paleta
 
@@ -108,7 +108,7 @@ Benchmark mundial (norte de calidad): Chewy (cariño + autoship), Zooplus (reten
 
 - **Estructura del repo (D20):** monorepo pnpm workspaces — `apps/web` (frontend) · `apps/backend` (reservado; scaffold en Fase 5 tras validar stack) · `packages/shared` solo cuando exista el primer contrato aprobado en `API.md`. **Reglas arquitectónicas permanentes en `ARCHITECTURE.md §2`** (frontend sin lógica de negocio ni DB; backend solo en `apps/backend`; comunicación solo vía `API.md`).
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui (re-estilizado).
-- **Backend:** Medusa.js (a validar) con módulo de suscripciones custom.
+- **Backend:** ✅ **Medusa.js v2 (decidido, D21)** en `apps/backend` — core commerce + Admin incluido; módulos custom `pet-profile` · `subscription` (recipe oficial) · `anticipation`; Webpay como payment provider custom.
 - **Infra:** Vercel (front) + Railway/Fly (backend) + Cloudflare CDN.
 - **Analytics:** GA4 + eventos e-commerce + PostHog/Hotjar.
 
@@ -142,6 +142,7 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D18 | Fase 3.4 · Polish lote 1 (track no-fotográfico) + política de redondeo CLP (piso a múltiplo de $10) |
 | D19 | Se adelanta la Fase 4 (Arquitectura técnica); Polish 3.4 restante ⏸ en pausa hasta tener fotos |
 | D20 | Fase 4 · Estructura física: monorepo pnpm (`apps/web` + `apps/backend` reservado) + reglas arquitectónicas permanentes (`ARCHITECTURE.md §2`) |
+| D21 | Fase 4 · Stack backend: **Medusa.js v2** + principio de producto "e-commerce primero" (moat como módulos custom, sin fork del core) |
 
 ## 17. Pendientes
 

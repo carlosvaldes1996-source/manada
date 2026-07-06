@@ -107,7 +107,7 @@ Iniciamos la Fase 4 de Manada: Arquitectura técnica (D19).
 Lee primero ai-context/CURRENT_STATE.md, ROADMAP.md (detalle Fase 4),
 PROJECT_MASTER.md (visión y modelo de negocio), ARCHITECTURE.md (stack de alto
 nivel ya decidido), DATABASE.md y API.md (borradores a completar) y DECISIONS.md
-(D2, D5, D17, D19, D20 — no re-litigar). La estructura física ya está (D20):
+(D2, D5, D17, D19, D20, D21 — no re-litigar). La estructura física ya está (D20):
 monorepo pnpm con el frontend en apps/web, apps/backend RESERVADO (sin código
 hasta validar stack) y reglas arquitectónicas permanentes en ARCHITECTURE.md §2
 (backend solo en apps/backend; comunicación solo vía API.md; contrato primero).
@@ -117,10 +117,9 @@ usePet/useCart/SessionProvider en apps/web/src/components/providers, tipos en
 apps/web/src/types, motor en apps/web/src/lib).
 
 Objetivo de la fase — arquitectura y validación, NO desarrollo (el MVP es Fase 5):
-1. Validar stack backend: Medusa.js vs alternativas (Vendure, Saleor, custom
-   Next + Postgres/Supabase). Criterios rectores: suscripciones custom
-   (diferenciador), Perfil de Mascota como entidad central (el moat, D5),
-   costo/operación viable para una startup de una persona en Chile.
+1. ✅ HECHO (D21): stack backend = Medusa.js v2 en apps/backend, principio
+   "e-commerce primero" (no re-litigar). Moat como módulos custom
+   (pet-profile/subscription/anticipation); Webpay = payment provider custom.
 2. Proveedores Chile: pagos (Webpay Plus/MercadoPago/Khipu), courier
    (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale),
    WhatsApp Business API.

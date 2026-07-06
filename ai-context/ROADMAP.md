@@ -11,7 +11,7 @@
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *las fases y su orden*. El detalle táctico está en TODO.md y AUDIT_UI_UX.md. |
 
-> *Actualizado: 2026-07-06 (D20: estructura física del repo ✅ — monorepo pnpm `apps/` + reglas arquitectónicas)*
+> *Actualizado: 2026-07-06 (D20: estructura física ✅ · D21: stack backend ✅ **Medusa.js v2** + principio "e-commerce primero")*
 
 | Fase | Nombre | Entregable principal | Estado |
 |---|---|---|---|
@@ -57,7 +57,7 @@
 
 ## Detalle Fase 4 (orden de trabajo) ← **aquí**
 0. ✅ **Estructura física del repositorio (D20, 2026-07-06):** monorepo pnpm workspaces — `web/` → **`apps/web`** (intacta, verificada idéntica: `tsc`+`eslint`+`build` 22 rutas+smoke ✅) · **`apps/backend` reservado** (`src/`+`docs/`+README, sin código hasta validar stack) · `packages/shared` **solo** con el primer contrato compartido aprobado en `API.md` · **reglas arquitectónicas permanentes** en `ARCHITECTURE.md §2` (backend jamás dentro del frontend; comunicación solo vía `API.md`; contrato primero, código después).
-1. ⬜ **Validar stack backend:** Medusa.js vs alternativas (Vendure, Saleor, custom Next + Postgres/Supabase). Criterios: suscripciones custom (diferenciador), perfil de mascota como entidad central, costo/operación para una startup de una persona.
+1. ✅ **Stack backend (D21, 2026-07-06): Medusa.js v2.** Elegido por Carlos bajo el principio **"e-commerce primero"** y criterios: velocidad MVP > simplicidad fundador único > bajo mantenimiento > escala sin sobreingeniería (regla 80–90%). Validado vs Vendure/Saleor/custom; el moat va en **módulos custom** (`pet-profile`/`subscription`/`anticipation`), Webpay como payment provider custom. Rationale y riesgos en D21.
 2. ⬜ **Proveedores Chile:** pagos (Webpay Plus / MercadoPago / Khipu), courier (Blue Express / Starken / Chilexpress), boleta SII (LibreDTE / Bsale), WhatsApp Business API.
 3. ⬜ **Modelo de datos** → `DATABASE.md` (moat: Perfil de Mascota + motor de anticipación).
 4. ⬜ **Contratos API** → `API.md`.

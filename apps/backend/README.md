@@ -7,16 +7,17 @@
 
 ## Qué va a vivir aquí
 
-La aplicación backend independiente de Manada: e-commerce headless +
-módulo de suscripciones custom + motor de anticipación (el moat, D5) +
-integraciones Chile (Webpay, courier, boleta SII, WhatsApp Business API).
+La aplicación backend independiente de Manada: **Medusa.js v2 (decidido, D21)** —
+core commerce + Admin — extendido con módulos custom `pet-profile` (el moat, D5),
+`subscription` (recipe oficial) y `anticipation`, más las integraciones Chile
+(Webpay como payment provider custom, courier, boleta SII, WhatsApp Business API).
 
 ## Qué falta antes de escribir código
 
-1. **Validar el stack** (Fase 4, punto 1): Medusa.js vs alternativas
-   (Vendure / Saleor / custom Next + Postgres/Supabase). Ver `ai-context/ARCHITECTURE.md`.
-2. **Modelo de datos** aprobado → `ai-context/DATABASE.md`.
-3. **Contratos API** aprobados → `ai-context/API.md`.
+1. ~~Validar el stack~~ → ✅ **Medusa.js v2** (D21; la versión exacta se fija al scaffold).
+2. **Proveedores Chile** elegidos (pagos/courier/boleta/WhatsApp) → `ai-context/ARCHITECTURE.md §4`.
+3. **Modelo de datos** aprobado → `ai-context/DATABASE.md`.
+4. **Contratos API** aprobados → `ai-context/API.md`.
 
 El scaffold de la app elegida se genera **en Fase 5 (MVP)**, dentro de esta
 carpeta, con su propio `package.json` (workspace `apps/*`).

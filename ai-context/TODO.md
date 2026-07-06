@@ -44,7 +44,7 @@
 
 ## ▶️ Fase 4 — Arquitectura técnica (ACTIVA desde 2026-07-05, D19)
 - [x] **Estructura física del repositorio** (D20, 2026-07-06): monorepo pnpm — `web/` → `apps/web` (`@manada/web`, verificada idéntica) · `apps/backend` **reservado sin código** · `packages/shared` solo con el primer contrato aprobado en `API.md` · **reglas arquitectónicas permanentes** → `ARCHITECTURE.md §2`. **Build + type-check + lint + smoke ✅.**
-- [ ] **Validar stack backend:** Medusa.js vs alternativas (Vendure, Saleor, custom Next.js + Postgres/Supabase). Criterio: módulo de **suscripciones custom** (diferenciador) y perfil de mascota como entidad central.
+- [x] **Stack backend** (D21, 2026-07-06): ✅ **Medusa.js v2** — decidido por Carlos con principio "e-commerce primero" + criterios (velocidad MVP · fundador único · bajo mantenimiento · escala sin sobreingeniería; regla 80–90%). Moat como módulos custom (`pet-profile`/`subscription`/`anticipation`); Webpay = payment provider custom. Versión exacta se fija al scaffold (Fase 5).
 - [ ] **Proveedores Chile:** pagos (Webpay Plus/MercadoPago/Khipu), courier (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale), WhatsApp Business API.
 - [ ] **Modelo de datos** → completar `DATABASE.md` (entidad crítica: Perfil de Mascota, el moat).
 - [ ] **Contratos API** → completar `API.md`.
