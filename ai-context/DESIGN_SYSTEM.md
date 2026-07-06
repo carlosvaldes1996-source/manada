@@ -5,11 +5,11 @@
 > |---|---|
 > | **Purpose** | Sistema visual: dirección, paleta, tipografía, iconografía, grid, motion, tokens y specs de componentes base. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | ✅ Fase 1 confirmada (D9·D10·D11). Tokens implementados en `web/` (D13). |
+> | **Status** | ✅ Fase 1 confirmada (D9·D10·D11). Tokens implementados en `apps/web/` (D13). |
 > | **Last Updated** | 2026-06-29 |
 > | **Depends On** | BRANDING.md |
 > | **Supersedes** | — |
-> | **Source of Truth** | ✅ de *tokens y reglas visuales*. La implementación viva está en `web/src/app/globals.css`. |
+> | **Source of Truth** | ✅ de *tokens y reglas visuales*. La implementación viva está en `apps/web/src/app/globals.css`. |
 
 > *Estado: ✅ Fase 1 confirmada (D9·D10·D11, 2026-06-27).* Documento operativo: listo para construir el producto.
 > Concepto rector que todo esto debe probar: **"Manada te conoce como nadie y se anticipa a lo que tu mascota necesita."**

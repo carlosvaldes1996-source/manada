@@ -1,0 +1,12 @@
+# Manada — monorepo pnpm (D20)
+# apps/*     → aplicaciones desplegables (web, backend)
+# packages/* → código compartido; packages/shared nace SOLO cuando exista el
+#              primer contrato compartido aprobado en API.md (regla D20).
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Settings de pnpm (antes en web/pnpm-workspace.yaml)
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

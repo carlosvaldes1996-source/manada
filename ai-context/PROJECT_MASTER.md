@@ -6,7 +6,7 @@
 > | **Purpose** | Documento maestro: visión, estrategia y resumen de decisiones del proyecto. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-05 |
+> | **Last Updated** | 2026-07-06 |
 > | **Depends On** | DECISIONS.md (fuente), CURRENT_STATE.md, ROADMAP.md |
 > | **Supersedes** | `history/PROJECT_MASTER_v0.md` |
 > | **Source of Truth** | ✅ de la *visión y estrategia*. El detalle vive en los archivos temáticos. |
@@ -14,7 +14,7 @@
 > **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
 > Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)**: validar stack backend, proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #8 de `PROMPTS.md`.*
+> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)** — estructura física del repo ✅ **D20** (monorepo pnpm: `apps/web` + `apps/backend` reservado + reglas arquitectónicas en `ARCHITECTURE.md §2`); resta validar stack backend, proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #8 de `PROMPTS.md`.*
 
 ---
 
@@ -102,10 +102,11 @@ Benchmark mundial (norte de calidad): Chewy (cariño + autoship), Zooplus (reten
 ✅ Sistema visual completo (D9·D10·D11). Detalle en DESIGN_SYSTEM.md.
 - **Dirección (D9):** cálido pero preciso · personal, no genérico · anticipatorio · premium-accesible · distintivo en CL (huir del rojo retail). Lo visual debe *probar* que la marca conoce y se anticipa.
 - **Incluye:** logo "huella-manada", paleta con escalas 50–900 + tokens semánticos, sistema tipográfico, iconografía (línea, trazo 1.75px, base Lucide), dirección fotográfica (mascotas reales, luz cálida, foco selectivo), ilustración (flat orgánica), composición (aire, una jerarquía por vista), grid (12 col, máx 1280) + espaciado (base 4/ritmo 8pt) + radios + sombras cálidas, motion anticipatorio (150/250/400ms, ease-out), componentes base y ejemplos de UI.
-- **Implementación:** Tailwind v4 CSS-first (`@theme`) + Radix UI re-estilizado a la marca. Tokens vivos en `web/src/app/globals.css` (D13); copia original en `prototype/assets/styles.css`.
+- **Implementación:** Tailwind v4 CSS-first (`@theme`) + Radix UI re-estilizado a la marca. Tokens vivos en `apps/web/src/app/globals.css` (D13; ruta actualizada por D20); copia original en `prototype/assets/styles.css`.
 
 ## 14. Stack
 
+- **Estructura del repo (D20):** monorepo pnpm workspaces — `apps/web` (frontend) · `apps/backend` (reservado; scaffold en Fase 5 tras validar stack) · `packages/shared` solo cuando exista el primer contrato aprobado en `API.md`. **Reglas arquitectónicas permanentes en `ARCHITECTURE.md §2`** (frontend sin lógica de negocio ni DB; backend solo en `apps/backend`; comunicación solo vía `API.md`).
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui (re-estilizado).
 - **Backend:** Medusa.js (a validar) con módulo de suscripciones custom.
 - **Infra:** Vercel (front) + Railway/Fly (backend) + Cloudflare CDN.
@@ -138,18 +139,21 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D15 | Fase 3 · Etapa 2 — Component Library construida (~70 componentes) + styleguide `/dev/components` |
 | D16 | Fase 3 · Etapa 3.3B — New User Experience & Activation Flow + modelo de sesión (Landing→onboarding→recomendación→registro→checkout→bienvenida) — *revisado y cerrado por D17* |
 | D17 | Fase 3 · Cierre Etapa 3.3 — revisión visual aplicada + modelo **"e-commerce como piso, perfil como camino destacado"** (tienda anónima navegable, checkout de invitado, gate honesto de suscripción, registro valor-primero post-compra) |
+| D18 | Fase 3.4 · Polish lote 1 (track no-fotográfico) + política de redondeo CLP (piso a múltiplo de $10) |
+| D19 | Se adelanta la Fase 4 (Arquitectura técnica); Polish 3.4 restante ⏸ en pausa hasta tener fotos |
+| D20 | Fase 4 · Estructura física: monorepo pnpm (`apps/web` + `apps/backend` reservado) + reglas arquitectónicas permanentes (`ARCHITECTURE.md §2`) |
 
 ## 17. Pendientes
 
-Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–3 ✅ (pantallas + embudo de activación + revisión visual, D16/D17). **Inmediato:** **Etapa 4 — Polish (Fase 3.4)** según los ítems Fase 3.4 de `AUDIT_UI_UX.md` (+ diferidos U003/U009/U010/U028/U029/U066); los ítems fotográficos dependen de **U090 (fotografía real)**. **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo. *(Las fuentes Fraunces/Hanken ya se cargan vía `next/font` en `web/`.)*
+Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–3 ✅ + Polish lote 1 ✅ (D18); Polish restante ⏸ en pausa (D19). **Inmediato (Fase 4):** validar stack backend (Medusa vs alternativas), proveedores CL, `DATABASE.md` y `API.md` — la estructura física ya está (D20). **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo. *(Las fuentes Fraunces/Hanken ya se cargan vía `next/font` en `apps/web/`.)*
 
 ## 18. Roadmap
 
 Ver `ROADMAP.md`.
 ```
 ✅ Fase 0.1 Estrategia negocio  ✅ Fase 0.2 Benchmarking  ✅ Fase 0.3 Estrategia marca
-✅ Fase 1 Identidad de marca    ✅ Fase 2 UX    🔄 Fase 3 Frontend/Design System
-⬜ Fase 4 Arquitectura técnica  ⬜ Fase 5 MVP
+✅ Fase 1 Identidad de marca    ✅ Fase 2 UX    🟡 Fase 3 Frontend (Polish ⏸)
+🔄 Fase 4 Arquitectura técnica  ⬜ Fase 5 MVP
 ```
 
 ## 19. Prompts importantes

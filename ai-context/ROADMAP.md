@@ -6,12 +6,12 @@
 > | **Purpose** | Fases del proyecto (0–8) y su estado. Vista estratégica de alto nivel. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-05 |
+> | **Last Updated** | 2026-07-06 |
 > | **Depends On** | DECISIONS.md, CURRENT_STATE.md |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *las fases y su orden*. El detalle táctico está en TODO.md y AUDIT_UI_UX.md. |
 
-> *Actualizado: 2026-07-05 (D19: se adelanta la Fase 4; el Polish 3.4 queda en pausa hasta tener assets fotográficos)*
+> *Actualizado: 2026-07-06 (D20: estructura física del repo ✅ — monorepo pnpm `apps/` + reglas arquitectónicas)*
 
 | Fase | Nombre | Entregable principal | Estado |
 |---|---|---|---|
@@ -56,6 +56,7 @@
 > Stack y deviations en D13; inventario de componentes en FRONTEND_ARCHITECTURE.md §4; backlog de mejoras en **AUDIT_UI_UX.md** (ítems "Fase futura" → Fases 4–7).
 
 ## Detalle Fase 4 (orden de trabajo) ← **aquí**
+0. ✅ **Estructura física del repositorio (D20, 2026-07-06):** monorepo pnpm workspaces — `web/` → **`apps/web`** (intacta, verificada idéntica: `tsc`+`eslint`+`build` 22 rutas+smoke ✅) · **`apps/backend` reservado** (`src/`+`docs/`+README, sin código hasta validar stack) · `packages/shared` **solo** con el primer contrato compartido aprobado en `API.md` · **reglas arquitectónicas permanentes** en `ARCHITECTURE.md §2` (backend jamás dentro del frontend; comunicación solo vía `API.md`; contrato primero, código después).
 1. ⬜ **Validar stack backend:** Medusa.js vs alternativas (Vendure, Saleor, custom Next + Postgres/Supabase). Criterios: suscripciones custom (diferenciador), perfil de mascota como entidad central, costo/operación para una startup de una persona.
 2. ⬜ **Proveedores Chile:** pagos (Webpay Plus / MercadoPago / Khipu), courier (Blue Express / Starken / Chilexpress), boleta SII (LibreDTE / Bsale), WhatsApp Business API.
 3. ⬜ **Modelo de datos** → `DATABASE.md` (moat: Perfil de Mascota + motor de anticipación).

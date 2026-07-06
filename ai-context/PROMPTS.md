@@ -92,9 +92,9 @@ Verifica con pnpm build + tsc + lint. Al terminar: actualiza la documentación y
 ESPERA aprobación antes de la Etapa 4 (Polish, Fase 3.4).
 ```
 
-## Cómo correr / verificar `web/`
+## Cómo correr / verificar `apps/web/`
 ```
-cd web
+cd apps/web    # o desde la raíz: pnpm dev / pnpm build / pnpm lint / pnpm typecheck
 pnpm dev            # http://localhost:3000 → / · /dev/components (librería) · /dev/tokens
 pnpm build          # build de producción (debe quedar verde)
 pnpm exec tsc --noEmit
@@ -107,10 +107,14 @@ Iniciamos la Fase 4 de Manada: Arquitectura técnica (D19).
 Lee primero ai-context/CURRENT_STATE.md, ROADMAP.md (detalle Fase 4),
 PROJECT_MASTER.md (visión y modelo de negocio), ARCHITECTURE.md (stack de alto
 nivel ya decidido), DATABASE.md y API.md (borradores a completar) y DECISIONS.md
-(D2, D5, D17, D19 — no re-litigar). El frontend (Fase 3) ya está: app Next.js
-funcional en web/ con datos demo; NO es objetivo de esta fase tocarlo, solo
-entender sus contratos (providers usePet/useCart/SessionProvider en
-web/src/components/providers, tipos en web/src/types, motor en web/src/lib).
+(D2, D5, D17, D19, D20 — no re-litigar). La estructura física ya está (D20):
+monorepo pnpm con el frontend en apps/web, apps/backend RESERVADO (sin código
+hasta validar stack) y reglas arquitectónicas permanentes en ARCHITECTURE.md §2
+(backend solo en apps/backend; comunicación solo vía API.md; contrato primero).
+El frontend (Fase 3) ya está: app Next.js funcional en apps/web con datos demo;
+NO es objetivo de esta fase tocarlo, solo entender sus contratos (providers
+usePet/useCart/SessionProvider en apps/web/src/components/providers, tipos en
+apps/web/src/types, motor en apps/web/src/lib).
 
 Objetivo de la fase — arquitectura y validación, NO desarrollo (el MVP es Fase 5):
 1. Validar stack backend: Medusa.js vs alternativas (Vendure, Saleor, custom

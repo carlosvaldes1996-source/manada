@@ -9,11 +9,11 @@
 > | **Last Updated** | 2026-06-29 |
 > | **Depends On** | DESIGN_SYSTEM.md, FRONTEND_ARCHITECTURE.md |
 > | **Supersedes** | — |
-> | **Source of Truth** | ✅ del *uso de componentes*. El código vive en `web/src/components/**`; styleguide en `/dev/components`. |
+> | **Source of Truth** | ✅ del *uso de componentes*. El código vive en `apps/web/src/components/**`; styleguide en `/dev/components`. |
 
 > **Catálogo y guía de uso de todos los componentes reutilizables.** Fuente de verdad de *cómo y cuándo* usar cada pieza del frontend. Construido sobre los design tokens (DESIGN_SYSTEM.md) y la arquitectura de FRONTEND_ARCHITECTURE.md.
 >
-> - **Código:** `web/src/components/{ui,layout,commerce,pet}` + `web/src/hooks` + `web/src/lib`.
+> - **Código:** `apps/web/src/components/{ui,layout,commerce,pet}` + `apps/web/src/hooks` + `apps/web/src/lib`.
 > - **Styleguide vivo y navegable:** `/dev/components` (todas las variantes, interactivo). Tokens en `/dev/tokens`.
 > - **Estado:** ✅ Etapa 2 completa (2026-06-28 · D15). `tsc` + `eslint` + `next build` + smoke-test en verde. **Pendiente de aprobación del usuario** antes de Etapa 3 (pantallas).
 > - **Regla:** las pantallas (Etapa 3) se ensamblan **solo** con estos componentes. Si falta algo, se agrega aquí primero (token → componente → página), nunca markup suelto en una página.

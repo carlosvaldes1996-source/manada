@@ -6,12 +6,12 @@
 > | **Purpose** | Lista táctica de pendientes y decisiones abiertas, por fase. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-03 |
+> | **Last Updated** | 2026-07-06 |
 > | **Depends On** | ROADMAP.md, AUDIT_UI_UX.md (backlog fino de FE) |
 > | **Supersedes** | — |
 > | **Source of Truth** | Derivado de ROADMAP/AUDIT. El backlog UI/UX fino vive en AUDIT_UI_UX.md. |
 
-> *Actualizado: 2026-07-03*
+> *Actualizado: 2026-07-06*
 
 ## ✅ Fase 1 (Identidad de marca) — COMPLETA
 - [x] Nombre definitivo → **Manada · `tumanada.cl`** (D8).
@@ -43,6 +43,7 @@
   - [ ] **Track fotográfico (pausado, bloqueado por assets)** (U080/U081/U082/U084/U091/U092): Carlos tiene **imágenes IA de ChatGPT para probar** + shot list por pantalla (propuesta Claude-Chrome). Política IA vs. fotografía real (U090) **sin decidir**.
 
 ## ▶️ Fase 4 — Arquitectura técnica (ACTIVA desde 2026-07-05, D19)
+- [x] **Estructura física del repositorio** (D20, 2026-07-06): monorepo pnpm — `web/` → `apps/web` (`@manada/web`, verificada idéntica) · `apps/backend` **reservado sin código** · `packages/shared` solo con el primer contrato aprobado en `API.md` · **reglas arquitectónicas permanentes** → `ARCHITECTURE.md §2`. **Build + type-check + lint + smoke ✅.**
 - [ ] **Validar stack backend:** Medusa.js vs alternativas (Vendure, Saleor, custom Next.js + Postgres/Supabase). Criterio: módulo de **suscripciones custom** (diferenciador) y perfil de mascota como entidad central.
 - [ ] **Proveedores Chile:** pagos (Webpay Plus/MercadoPago/Khipu), courier (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale), WhatsApp Business API.
 - [ ] **Modelo de datos** → completar `DATABASE.md` (entidad crítica: Perfil de Mascota, el moat).

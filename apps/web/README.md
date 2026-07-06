@@ -1,8 +1,10 @@
-# web/ — Frontend de Manada (Next.js)
+# apps/web — Frontend de Manada (Next.js)
 
-App real del e-commerce **Manada** (Fase 3). La fuente de verdad de producto/marca/diseño vive en **`../ai-context/`** — léela antes de tocar código.
+App real del e-commerce **Manada** (Fase 3), package `@manada/web` del monorepo (D20). La fuente de verdad de producto/marca/diseño vive en **`../../ai-context/`** — léela antes de tocar código.
 
-> ⚠️ **Este Next.js tiene breaking changes** respecto a versiones previas. Lee `web/AGENTS.md` y los docs en `node_modules/next/dist/docs/` antes de escribir código.
+> ⚠️ **Este Next.js tiene breaking changes** respecto a versiones previas. Lee `apps/web/AGENTS.md` y los docs en `node_modules/next/dist/docs/` antes de escribir código.
+>
+> 🧱 **Regla arquitectónica (D20, `ai-context/ARCHITECTURE.md §2`):** esta app **nunca** contiene lógica de negocio ni acceso a base de datos. El backend vive **solo** en `apps/backend` y se habla con él únicamente vía la API de `ai-context/API.md`.
 
 ## Stack (D13/D15)
 
@@ -15,8 +17,9 @@ App real del e-commerce **Manada** (Fase 3). La fuente de verdad de producto/mar
 ## Empezar
 
 ```bash
-pnpm install
-pnpm dev          # http://localhost:3000
+pnpm install      # en la RAÍZ del repo (lockfile único del workspace)
+pnpm dev          # desde apps/web, o desde la raíz (delega vía --filter)
+                  # http://localhost:3000
 ```
 
 Rutas útiles en dev:
@@ -46,8 +49,8 @@ src/
 
 ## Documentación
 
-- **Catálogo de componentes:** `../ai-context/COMPONENT_LIBRARY.md`
-- **Arquitectura del frontend:** `../ai-context/FRONTEND_ARCHITECTURE.md`
-- **Backlog UI/UX:** `../ai-context/AUDIT_UI_UX.md`
-- **Estado y siguiente paso:** `../ai-context/CURRENT_STATE.md`
-- **Cómo continuar (Etapa 3):** prompt #7 de `../ai-context/PROMPTS.md`
+- **Catálogo de componentes:** `../../ai-context/COMPONENT_LIBRARY.md`
+- **Arquitectura del frontend:** `../../ai-context/FRONTEND_ARCHITECTURE.md`
+- **Backlog UI/UX:** `../../ai-context/AUDIT_UI_UX.md`
+- **Estado y siguiente paso:** `../../ai-context/CURRENT_STATE.md`
+- **Cómo continuar (Fase 4):** prompt #8 de `../../ai-context/PROMPTS.md`

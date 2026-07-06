@@ -30,7 +30,7 @@ Esta carpeta es la **fuente única y oficial de verdad** del proyecto. No depend
 | `UX.md` | Arquitectura de información, journeys, wireframes. |
 | `ARCHITECTURE.md` | Stack, infraestructura, integraciones CL. |
 | `DESIGN_SYSTEM.md` | Tokens, paleta, tipografía, componentes. |
-| `FRONTEND_ARCHITECTURE.md` | Plan e inventario del sistema de componentes Next.js (`web/`); estado de ejecución por etapa. |
+| `FRONTEND_ARCHITECTURE.md` | Plan e inventario del sistema de componentes Next.js (`apps/web/`); estado de ejecución por etapa. |
 | `COMPONENT_LIBRARY.md` | **Catálogo de la librería de componentes (Etapa 2) y cuándo usar cada uno.** Styleguide vivo en `/dev/components`. |
 | `AUDIT_UI_UX.md` | Backlog priorizado de mejoras de UI/UX (108 ítems). Fuente de verdad de frontend; se actualiza por etapa. |
 | `DATABASE.md` | Modelo de datos, entidades, relaciones (borrador Fase 4). |
@@ -41,7 +41,8 @@ Esta carpeta es la **fuente única y oficial de verdad** del proyecto. No depend
 
 > **Código del proyecto** (fuera de `/ai-context`):
 > - `prototype/` — prototipo HTML estático de Fase 2 (referencia visual y de copy/voz; `assets/styles.css` con los tokens).
-> - `web/` — **app Next.js real** (Fase 3 en curso). Tiene su propia guía operativa en `web/AGENTS.md`. Los tokens vivos están en `web/src/app/globals.css` (`@theme`), ya no en `styles.css`.
+> - `apps/web/` — **app Next.js real** (Fase 3, funcional; movida de `web/` por D20). Tiene su propia guía operativa en `apps/web/AGENTS.md`. Los tokens vivos están en `apps/web/src/app/globals.css` (`@theme`), ya no en `styles.css`.
+> - `apps/backend/` — **RESERVADO sin código** (D20): el backend vivirá solo aquí; scaffold en Fase 5 tras validar stack. Reglas arquitectónicas en `ARCHITECTURE.md §2`.
 
 ## 🔄 Reglas de mantenimiento
 

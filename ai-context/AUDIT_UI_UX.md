@@ -21,7 +21,7 @@
 ## Cómo leer este backlog
 
 **Clasificación por fase**
-- **Fase 3.2 — Component Library:** se resuelve en el sistema de diseño / componentes reutilizables (`web/src/components/**`, tokens). Arreglar aquí propaga a todas las páginas.
+- **Fase 3.2 — Component Library:** se resuelve en el sistema de diseño / componentes reutilizables (`apps/web/src/components/**`, tokens). Arreglar aquí propaga a todas las páginas.
 - **Fase 3.3 — Product Experience:** decisiones de flujo, IA, jerarquía de página y conversión que se materializan al ensamblar pantallas.
 - **Fase 3.4 — Frontend Polish:** dirección de arte aplicada, microinteracciones, movimiento, refinamiento premium y copy.
 - **Fase futura (Backend / CRO):** requiere datos reales, integraciones, contenido (fotografía, reseñas), o experimentación A/B. No bloquea el frontend, pero se documenta para no perderlo.
@@ -163,7 +163,7 @@
 | U098 | **Color de acento reservado al "momento mágico"** (anticipación) distinto del miel genérico del resto. | 3 | 2 | **P2** | Pendiente | `globals.css`, `pet/anticipation-capsule.tsx` |
 | U099 | **Texturas / detalle editorial cálido** que justifique el posicionamiento premium (hoy "limpio" pero anónimo). | 3 | 3 | **P2** | Pendiente | `globals.css`, `app/page.tsx` |
 | U100 | **Foco en una sola home con clímax** (hoy 6 secciones apiladas sin jerarquía ni acción dominante). | 4 | 3 | **P1** | Pendiente | `app/page.tsx` |
-| U101 | **Reparar el ritmo vertical** (`.section` 40/72px anulado con `padding-top:0` + overrides inline). | 2 | 2 | **P2** | **Hecho (3.4·lote 1, verificado — deuda del prototipo)** · en `web/` el ritmo lo da `<Section>` (40/72); único override: colapso deliberado entre dos secciones canvas contiguas del dashboard | `ui/section.tsx` |
+| U101 | **Reparar el ritmo vertical** (`.section` 40/72px anulado con `padding-top:0` + overrides inline). | 2 | 2 | **P2** | **Hecho (3.4·lote 1, verificado — deuda del prototipo)** · en `apps/web/` el ritmo lo da `<Section>` (40/72); único override: colapso deliberado entre dos secciones canvas contiguas del dashboard | `ui/section.tsx` |
 | U102 | **Distinguir explícitamente formato de alimento** (los sacos son verticales; el media 1:1 desperdicia altura). Depende de U080. | 2 | 2 | **P3** | Pendiente | `commerce/product-card.tsx` |
 | U103 | **Pulido del logo / marca de huella** (huella de 4 círculos = cliché #1 de marcas de mascotas; diferenciación nula). | 2 | 3 | **P3** | Pendiente | `layout/logo.tsx`, branding |
 | U104 | **Equilibrar uso de urgencia** ("Últimas unidades", pulse): sin escasez verificable se percibe como truco. | 2 | 1 | **P3** | Pendiente | `commerce/badges.tsx`, `pet/anticipation-capsule.tsx` |

@@ -3,7 +3,7 @@
 > **📋 Metadata**
 > | Campo | Valor |
 > |---|---|
-> | **Purpose** | Arquitectura del frontend `web/`: estructura `src/`, inventario, puente de tokens y orden de construcción + bitácora de ejecución por etapa. |
+> | **Purpose** | Arquitectura del frontend `apps/web/`: estructura `src/`, inventario, puente de tokens y orden de construcción + bitácora de ejecución por etapa. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟡 En ejecución — Etapas 1–2 ✅ (§9); Etapa 3 (pantallas) siguiente. |
 > | **Last Updated** | 2026-06-29 |
@@ -20,7 +20,7 @@
 > - **Stack confirmado:** `ai-context/ARCHITECTURE.md §1` + decisión **D12** (este giro).
 > - *Generado: 2026-06-27. Etapa 1 ejecutada: 2026-06-28 (ver §9 y D13).*
 >
-> **⚙️ Estado de ejecución:** Etapa 1 (fundaciones) **completa** en `web/`. Tres ajustes sobre este plan, ya aplicados (detalle en §9 y D13): (1) **Tailwind v4 = CSS-first** → tokens en `globals.css` con `@theme`, **no** `tailwind.config.ts`; (2) **rutas semánticas** `/categoria/[slug]`, `/producto/[slug]`, `/cuenta/mascotas` (no `plp/pdp/mascota`); (3) **estado con Context Providers** (`usePet`/`useCart`), `localStorage` diferido a Etapa 2.
+> **⚙️ Estado de ejecución:** Etapa 1 (fundaciones) **completa** en `apps/web/`. Tres ajustes sobre este plan, ya aplicados (detalle en §9 y D13): (1) **Tailwind v4 = CSS-first** → tokens en `globals.css` con `@theme`, **no** `tailwind.config.ts`; (2) **rutas semánticas** `/categoria/[slug]`, `/producto/[slug]`, `/cuenta/mascotas` (no `plp/pdp/mascota`); (3) **estado con Context Providers** (`usePet`/`useCart`), `localStorage` diferido a Etapa 2.
 
 ---
 
