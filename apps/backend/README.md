@@ -1,39 +1,78 @@
-# apps/backend — espacio RESERVADO (D20)
+> ⚠️ This repository is now deprecated. Use the [dtc-starter](https://github.com/medusajs/dtc-starter) instead.
 
-> **Estado: ⬜ reservado, sin código.** Esta carpeta existe para fijar la
-> arquitectura física del proyecto (D20): el backend de Manada vivirá aquí y
-> **solo aquí** — nunca dentro de `apps/web` (ni `web/src/app/api`, ni
-> `web/server`, ni variantes).
+<p align="center">
+  <a href="https://www.medusajs.com">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
+    <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
+    </picture>
+  </a>
+</p>
+<h1 align="center">
+  Medusa
+</h1>
 
-## Qué va a vivir aquí
+<h4 align="center">
+  <a href="https://docs.medusajs.com">Documentation</a> |
+  <a href="https://www.medusajs.com">Website</a>
+</h4>
 
-La aplicación backend independiente de Manada: **Medusa.js v2 (decidido, D21)** —
-core commerce + Admin — extendido con módulos custom `pet-profile` (el moat, D5),
-`subscription` (recipe oficial) y `anticipation`, más las integraciones Chile
-(Webpay como payment provider custom, courier, boleta SII, WhatsApp Business API).
+<p align="center">
+  Building blocks for digital commerce
+</p>
+<p align="center">
+  <a href="https://github.com/medusajs/medusa/blob/master/CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
+  </a>
+    <a href="https://www.producthunt.com/posts/medusa"><img src="https://img.shields.io/badge/Product%20Hunt-%231%20Product%20of%20the%20Day-%23DA552E" alt="Product Hunt"></a>
+  <a href="https://discord.gg/xpCwq3Kfn8">
+    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
+  </a>
+  <a href="https://twitter.com/intent/follow?screen_name=medusajs">
+    <img src="https://img.shields.io/twitter/follow/medusajs.svg?label=Follow%20@medusajs" alt="Follow @medusajs" />
+  </a>
+</p>
 
-## Qué falta antes de escribir código
+## Compatibility
 
-1. ~~Validar el stack~~ → ✅ **Medusa.js v2** (D21; la versión exacta se fija al scaffold).
-2. **Proveedores Chile** elegidos (pagos/courier/boleta/WhatsApp) → `ai-context/ARCHITECTURE.md §4`.
-3. **Modelo de datos** aprobado → `ai-context/DATABASE.md`.
-4. **Contratos API** aprobados → `ai-context/API.md`.
+This starter is compatible with versions >= 2 of `@medusajs/medusa`. 
 
-El scaffold de la app elegida se genera **en Fase 5 (MVP)**, dentro de esta
-carpeta, con su propio `package.json` (workspace `apps/*`).
+## Getting Started
 
-## Reglas (resumen de ARCHITECTURE.md § Reglas arquitectónicas)
+Visit the [Quickstart Guide](https://docs.medusajs.com/learn/installation) to set up a server.
 
-- `apps/web` nunca contiene lógica de negocio ni acceso directo a la base de datos.
-- La comunicación entre `apps/web` y `apps/backend` es **solo** vía la API
-  documentada en `ai-context/API.md`.
-- Todo contrato nuevo se define primero en `API.md` antes de implementarse.
+Visit the [Docs](https://docs.medusajs.com/learn/installation#get-started) to learn more about our system requirements.
 
-## Estructura reservada
+## What is Medusa
 
-```
-apps/backend/
-├── README.md   ← este archivo
-├── docs/       ← documentación operativa propia del backend (cuando exista)
-└── src/        ← código fuente (vacío hasta Fase 5)
-```
+Medusa is a set of commerce modules and tools that allow you to build rich, reliable, and performant commerce applications without reinventing core commerce logic. The modules can be customized and used to build advanced ecommerce stores, marketplaces, or any product that needs foundational commerce primitives. All modules are open-source and freely available on npm.
+
+Learn more about [Medusa’s architecture](https://docs.medusajs.com/learn/introduction/architecture) and [commerce modules](https://docs.medusajs.com/learn/fundamentals/modules/commerce-modules) in the Docs.
+
+## Build with AI Agents
+
+### Claude Code Plugin
+
+If you use AI agents like Claude Code, check out the [medusa-dev Claude Code plugin](https://github.com/medusajs/medusa-claude-plugins).
+
+### Other Agents
+
+If you use AI agents other than Claude Code, copy the [skills directory](https://github.com/medusajs/medusa-claude-plugins/tree/main/plugins/medusa-dev/skills) into your agent's relevant `skills` directory.
+
+### MCP Server
+
+You can also add the MCP server `https://docs.medusajs.com/mcp` to your AI agents to answer questions related to Medusa. The `medusa-dev` Claude Code plugin includes this MCP server by default.
+
+## Community & Contributions
+
+The community and core team are available in [GitHub Discussions](https://github.com/medusajs/medusa/discussions), where you can ask for support, discuss roadmap, and share ideas.
+
+Join our [Discord server](https://discord.com/invite/medusajs) to meet other community members.
+
+## Other channels
+
+- [GitHub Issues](https://github.com/medusajs/medusa/issues)
+- [Twitter](https://twitter.com/medusajs)
+- [LinkedIn](https://www.linkedin.com/company/medusajs)
+- [Medusa Blog](https://medusajs.com/blog/)

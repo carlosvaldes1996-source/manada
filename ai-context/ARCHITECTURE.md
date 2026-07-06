@@ -5,7 +5,7 @@
 > |---|---|
 > | **Purpose** | Stack técnico, estructura física del repositorio, reglas arquitectónicas, infraestructura e integraciones Chile (pagos, despacho, SII). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟡 Estructura física LOCKED (D20) · stack backend LOCKED: Medusa v2 (D21); proveedores CL + DATABASE + API pendientes. |
+> | **Status** | 🟡 Estructura física LOCKED (D20) · stack backend LOCKED: Medusa v2 (D21) · **MVP-first LOCKED (D22): alternativa manual por defecto; solo el medio de pago es integración obligatoria. Modelo de datos mínimo se define durante la construcción (Fase 5).** |
 > | **Last Updated** | 2026-07-06 |
 > | **Depends On** | PROJECT_MASTER.md, DECISIONS.md (D2, D12, D13, D20, D21) |
 > | **Supersedes** | — |
@@ -61,14 +61,17 @@ manada/
 - **Infra:** Vercel (frontend) + Railway/Fly (backend) + Cloudflare CDN.
 - **Analytics:** GA4 + eventos e-commerce + PostHog/Hotjar.
 
-## 4. Integraciones Chile (pendiente elegir proveedor final)
-- **Pagos:** Webpay Plus (Transbank), Mercado Pago, Khipu/transferencia.
-- **Despacho:** Blue Express, Starken, Chilexpress (cotización por API).
-- **Boleta/factura SII:** LibreDTE o Bsale.
-- **Mensajería:** WhatsApp Business API (recordatorios de recompra — diferenciador).
+## 4. Integraciones Chile (MVP-first — D22)
 
-## 5. Decisiones pendientes (Fase 4)
+> **Regla D22:** para el MVP se asume la **alternativa manual** por defecto. Solo el **medio de pago** es integración obligatoria para lanzar; despacho, boleta y mensajería se operan **manualmente desde el Admin de Medusa** hasta que exista tracción.
+
+- **Pagos** *(único bloqueante del MVP)*: Webpay Plus (Transbank) objetivo; Mercado Pago / Khipu / **transferencia (pago manual)** como alternativas. Decidir el primario para lanzar — la transferencia/pago manual es el **piso** si acelera el lanzamiento.
+- **Despacho** *(manual en el MVP)*: los envíos se gestionan a mano (etiqueta/coordinación con el courier fuera del sistema). Integración por API con Blue Express / Starken / Chilexpress → **diferida a Fase 7** (con tracción).
+- **Boleta/factura SII** *(manual en el MVP)*: emisión manual. Integración LibreDTE / Bsale → **diferida a Fase 7**.
+- **Mensajería** *(diferida)*: WhatsApp Business API (recordatorios de recompra — diferenciador) → **Fase 7**.
+
+## 5. Decisiones pendientes (recortadas por D22 al mínimo del MVP)
 - ~~Validar Medusa.js vs alternativas~~ → ✅ **Medusa.js v2 (D21)**.
-- Elegir proveedor de pago primario y de boleta (+ courier y estrategia WhatsApp).
-- Estrategia de cálculo de "frecuencia de recompra" (motor de anticipación) → módulo `anticipation` (D21); detalle en `DATABASE.md`.
-- Arquitectura de datos del **Perfil de Mascota** → módulo `pet-profile` (D21); esquema en `DATABASE.md`.
+- **Medio de pago primario para lanzar** (Webpay Plus / transferencia manual / Mercado Pago) — única decisión de "proveedores CL" que bloquea el MVP.
+- **Modelo de datos mínimo del checkout** → `DATABASE.md` (catálogo/carrito/orden + **dirección de despacho** + lo mínimo de perfil/suscripción que ya usa el front).
+- *(Diferidas — no bloquean el MVP, D22):* courier/boleta/WhatsApp; motor de "frecuencia de recompra" (módulo `anticipation`); arquitectura completa del **Perfil de Mascota** (módulo `pet-profile`). Se retoman con tracción (Fases 6–7).

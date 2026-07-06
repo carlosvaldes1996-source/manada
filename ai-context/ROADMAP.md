@@ -11,7 +11,7 @@
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *las fases y su orden*. El detalle táctico está en TODO.md y AUDIT_UI_UX.md. |
 
-> *Actualizado: 2026-07-06 (D20: estructura física ✅ · D21: stack backend ✅ **Medusa.js v2** + principio "e-commerce primero")*
+> *Actualizado: 2026-07-06 (D22: **mandato MVP-first** — Fase 4 cerrada por lo esencial; **Fase 5 (MVP) activa**, alternativa manual por defecto)*
 
 | Fase | Nombre | Entregable principal | Estado |
 |---|---|---|---|
@@ -21,10 +21,10 @@
 | 1 | Identidad de marca | Naming, logo, paleta, tipografía, sistema visual, iconografía, fotografía, ilustración, componentes | ✅ |
 | 2 | UX | Arquitectura de información, journeys, wireframes, **prototipo HTML** | ✅ |
 | 3 | Frontend / Design System | App Next.js: tokens + librería de componentes + pantallas | 🟡 funcional completa; **Polish 3.4 ⏸ en pausa** (lote 1 ✅ D18; resto espera fotos U090) |
-| **4** | **Arquitectura técnica** | Stack validado, modelo de datos, API, integraciones | 🔄 **activa (D19)** |
-| 5 | MVP | E-commerce funcional (catálogo, carrito, checkout, Webpay, despacho) | ⬜ |
+| 4 | Arquitectura técnica | Stack validado, modelo de datos, API, integraciones | ✅ **cerrada por lo esencial (D20/D21); el resto se define dentro del MVP (D22)** |
+| **5** | **MVP** | E-commerce funcional (catálogo, carrito, checkout, pago, orden + dirección) — **envíos y boleta manuales (D22)** | 🔄 **activa (D22) — MVP-first** |
 | 6 | Diferenciador | Perfil de mascota + suscripción inteligente | ⬜ |
-| 7 | Inteligencia | Recomendación, recordatorios WhatsApp, farmacia | ⬜ |
+| 7 | Inteligencia + automatización | Recomendación, recordatorios WhatsApp, courier/SII automáticos, farmacia | ⬜ |
 | 8 | Escala | SEO, marketing, fidelización, membresía | ⬜ |
 
 ## Detalle Fase 1 (✅ completa — D8·D9·D10·D11)
@@ -55,10 +55,21 @@
 5. ⏸ **Etapa 4 — Polish / "Frontend Polish"** — **en pausa (D19)**. Lote 1 no-fotográfico ✅ (D18, 2026-07-05: opsz, escala, contrastes AA, redondeo CLP, motion calmado). Restan lote 2 no-fotográfico y el track fotográfico (bloqueado por assets `U090`; fotos IA de ChatGPT por probar). Se retoma cuando existan las fotos, en paralelo o después de la Fase 4.
 > Stack y deviations en D13; inventario de componentes en FRONTEND_ARCHITECTURE.md §4; backlog de mejoras en **AUDIT_UI_UX.md** (ítems "Fase futura" → Fases 4–7).
 
-## Detalle Fase 4 (orden de trabajo) ← **aquí**
-0. ✅ **Estructura física del repositorio (D20, 2026-07-06):** monorepo pnpm workspaces — `web/` → **`apps/web`** (intacta, verificada idéntica: `tsc`+`eslint`+`build` 22 rutas+smoke ✅) · **`apps/backend` reservado** (`src/`+`docs/`+README, sin código hasta validar stack) · `packages/shared` **solo** con el primer contrato compartido aprobado en `API.md` · **reglas arquitectónicas permanentes** en `ARCHITECTURE.md §2` (backend jamás dentro del frontend; comunicación solo vía `API.md`; contrato primero, código después).
-1. ✅ **Stack backend (D21, 2026-07-06): Medusa.js v2.** Elegido por Carlos bajo el principio **"e-commerce primero"** y criterios: velocidad MVP > simplicidad fundador único > bajo mantenimiento > escala sin sobreingeniería (regla 80–90%). Validado vs Vendure/Saleor/custom; el moat va en **módulos custom** (`pet-profile`/`subscription`/`anticipation`), Webpay como payment provider custom. Rationale y riesgos en D21.
-2. ⬜ **Proveedores Chile:** pagos (Webpay Plus / MercadoPago / Khipu), courier (Blue Express / Starken / Chilexpress), boleta SII (LibreDTE / Bsale), WhatsApp Business API.
-3. ⬜ **Modelo de datos** → `DATABASE.md` (moat: Perfil de Mascota + motor de anticipación).
-4. ⬜ **Contratos API** → `API.md`.
-> Entregable de la fase: `ARCHITECTURE.md` completo + decisiones en `DECISIONS.md`. Es fase de **arquitectura y validación**, el desarrollo del MVP es Fase 5. Prompt de continuación: **#9 en `PROMPTS.md`** (el #8 de arranque quedó ejecutado con D20/D21).
+## Detalle Fase 4 (cerrada por lo esencial — D22)
+0. ✅ **Estructura física del repositorio (D20, 2026-07-06):** monorepo pnpm workspaces — `web/` → **`apps/web`** (intacta, verificada idéntica: `tsc`+`eslint`+`build` 22 rutas+smoke ✅) · **`apps/backend` reservado** · `packages/shared` **solo** con el primer contrato compartido aprobado en `API.md` · **reglas arquitectónicas permanentes** en `ARCHITECTURE.md §2`.
+1. ✅ **Stack backend (D21, 2026-07-06): Medusa.js v2.** Principio **"e-commerce primero"**; moat en **módulos custom** (`pet-profile`/`subscription`/`anticipation`), Webpay como payment provider custom. Rationale y riesgos en D21.
+2. ✅ **Cierre por MVP-first (D22, 2026-07-06):** con D20/D21 la arquitectura base es suficiente para lanzar. Lo que resta de la Fase 4 (modelo de datos + contratos API) **se recorta a lo mínimo del MVP y se define durante la construcción**, no antes. De "proveedores Chile" solo se decide el **medio de pago**; courier, boleta SII y WhatsApp quedan **manuales**.
+> Detalle del mandato en **D22**. Ya no hay una fase de "arquitectura/validación" separada del MVP.
+
+## Detalle Fase 5 — MVP (orden de trabajo) ← **aquí** (D22, MVP-first)
+> **Regla de la fase:** cada decisión se evalúa por *¿acerca o retrasa el lanzamiento?* Alternativa manual por defecto. Sin nuevas capas de arquitectura salvo que sean indispensables.
+
+**Backend — ✅ hecho y verificado (2026-07-06):**
+1. ✅ **Scaffold de Medusa v2** en `apps/backend` (starter bare, integrado al workspace pnpm; NO el template DTC). Setup en `apps/backend/DEV.md`.
+2. ✅ **Medio de pago:** decisión de Carlos → Webpay **no** se integra aún; MVP usa **pago manual `pp_system_default`** (transferencia) como método real. Webpay = fast-follow.
+3. ✅ **Modelo mínimo + seed Chile:** tienda CLP, región Chile, despacho manual, catálogo (6 productos alineados con el front), sales channel + publishable key.
+4. ✅ **Checkout punta a punta verificado** por Store API → orden real registrada (dirección + pago manual). Fulfillment y boleta manuales desde el Admin.
+
+**Frontend — ⬜ conectar `apps/web` al backend (por etapas; prompt #10):**
+5. ⬜ **Fundación** (SDK Medusa + `.env.local` + capa `lib/medusa/` → tipo `Product`) → **Catálogo** (PLP/PDP reales) → **Carrito** → **Checkout** → **Cuenta/sesión**. Next 16 con cambios de ruptura: leer `apps/web/AGENTS.md` + docs antes de tocar el front; mapear a los tipos/componentes existentes.
+> Diferido a **Fases 6–7 (con tracción):** integración Webpay; automatización de courier, boleta SII, WhatsApp; motor de anticipación completo; suscripción inteligente. Prompt de continuación: **#10 en `PROMPTS.md`**.

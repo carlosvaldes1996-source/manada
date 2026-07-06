@@ -10,3 +10,11 @@ packages:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# Build scripts nativos que SÍ deben ejecutarse (Medusa v2 backend).
+onlyBuiltDependencies:
+  - "@swc/core"
+  - esbuild
+  - "@medusajs/telemetry"
+  - msgpackr-extract
+  - protobufjs

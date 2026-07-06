@@ -8,6 +8,11 @@
     "build": "pnpm --filter @manada/web build",
     "start": "pnpm --filter @manada/web start",
     "lint": "pnpm --filter @manada/web lint",
-    "typecheck": "pnpm --filter @manada/web exec tsc --noEmit"
+    "typecheck": "pnpm --filter @manada/web exec tsc --noEmit",
+    "dev:web": "pnpm --filter @manada/web dev",
+    "dev:backend": "pnpm --filter @manada/backend dev",
+    "build:backend": "pnpm --filter @manada/backend build",
+    "migrate:backend": "pnpm --filter @manada/backend exec medusa db:migrate",
+    "seed:backend": "pnpm --filter @manada/backend exec medusa exec ./src/scripts/seed.ts"
   }
 }

@@ -42,22 +42,38 @@
   - [ ] **Lote 2 — no-fotográfico restante (pausado):** U086 vuelo al carrito · U100 home con clímax · U096/U097 confianza realzada · U094 deleite cumpleaños · U095 tono salud · U098/U099 acento/texturas · U104 urgencia · U003 color suscripción (**decisión de marca pendiente**).
   - [ ] **Track fotográfico (pausado, bloqueado por assets)** (U080/U081/U082/U084/U091/U092): Carlos tiene **imágenes IA de ChatGPT para probar** + shot list por pantalla (propuesta Claude-Chrome). Política IA vs. fotografía real (U090) **sin decidir**.
 
-## ▶️ Fase 4 — Arquitectura técnica (ACTIVA desde 2026-07-05, D19)
-- [x] **Estructura física del repositorio** (D20, 2026-07-06): monorepo pnpm — `web/` → `apps/web` (`@manada/web`, verificada idéntica) · `apps/backend` **reservado sin código** · `packages/shared` solo con el primer contrato aprobado en `API.md` · **reglas arquitectónicas permanentes** → `ARCHITECTURE.md §2`. **Build + type-check + lint + smoke ✅.**
-- [x] **Stack backend** (D21, 2026-07-06): ✅ **Medusa.js v2** — decidido por Carlos con principio "e-commerce primero" + criterios (velocidad MVP · fundador único · bajo mantenimiento · escala sin sobreingeniería; regla 80–90%). Moat como módulos custom (`pet-profile`/`subscription`/`anticipation`); Webpay = payment provider custom. Versión exacta se fija al scaffold (Fase 5).
-- [ ] **Proveedores Chile:** pagos (Webpay Plus/MercadoPago/Khipu), courier (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale), WhatsApp Business API.
-- [ ] **Modelo de datos** → completar `DATABASE.md` (entidad crítica: Perfil de Mascota, el moat).
-- [ ] **Contratos API** → completar `API.md`.
-- [ ] Registrar decisiones en `DECISIONS.md`; actualizar `ARCHITECTURE.md` como fuente de verdad.
-> Para continuar en un chat nuevo: **prompt #9 de `PROMPTS.md`** (proveedores CL → DATABASE.md → API.md).
+## ✅ Fase 4 — Arquitectura técnica (cerrada por lo esencial — D22)
+- [x] **Estructura física del repositorio** (D20, 2026-07-06): monorepo pnpm — `web/` → `apps/web` (`@manada/web`, verificada idéntica) · `apps/backend` **reservado sin código** · `packages/shared` solo con el primer contrato aprobado en `API.md` · **reglas arquitectónicas permanentes** → `ARCHITECTURE.md §2`.
+- [x] **Stack backend** (D21, 2026-07-06): ✅ **Medusa.js v2** — principio "e-commerce primero" + criterios (velocidad MVP · fundador único · bajo mantenimiento · escala sin sobreingeniería; regla 80–90%). Moat como módulos custom; Webpay = payment provider custom.
+- [x] **Cierre MVP-first** (D22, 2026-07-06): la arquitectura base es suficiente para lanzar; **el modelo de datos y los contratos API se recortan al mínimo del MVP y se definen durante la construcción** (Fase 5). De proveedores Chile solo bloquea el **medio de pago**; courier/SII/WhatsApp = manual.
 
-> **Backlog vivo:** el progreso fino de UI/UX se registra ítem a ítem en `AUDIT_UI_UX.md` (columna *estado*). Los ítems de "Fase futura (Backend/CRO)" alimentan Fases 4–7.
+## ▶️ Fase 5 — MVP (ACTIVA desde 2026-07-06, D22 · MVP-first)
+> **Regla:** cada decisión se evalúa por *¿acerca o retrasa el lanzamiento?* Alternativa manual por defecto. Sin nuevas capas de arquitectura salvo que sean indispensables.
+
+### Backend — ✅ hecho y verificado (2026-07-06)
+- [x] **Scaffold de Medusa v2** en `apps/backend` (starter bare `@medusajs/medusa` 2.16.0, integrado al workspace pnpm; NO el template DTC). Config: root `.npmrc` (hoist) + `onlyBuiltDependencies`. Setup en `apps/backend/DEV.md`.
+- [x] **BD + migraciones + admin** (`medusa_manada`, `admin@tumanada.cl`).
+- [x] **Seed Chile** (`src/scripts/seed.ts`): tienda **CLP**, región Chile, despacho manual (Estándar $3.990/Express $5.990), **pago manual `pp_system_default`**, sales channel "Manada Web" + publishable key (1↔1), **6 productos** alineados con `apps/web/.../catalog.ts`.
+- [x] **Checkout punta a punta verificado** por Store API → **orden #1 registrada** ($28.980 CLP, dirección almacenada).
+- [x] **Medio de pago (decisión Carlos):** Webpay **NO** se integra aún; MVP usa el **pago manual** como método real. Webpay = fast-follow.
+
+### Frontend — ⬜ conectar `apps/web` al backend (por etapas; prompt #10)
+- [ ] **1. Fundación:** SDK Medusa (`@medusajs/js-sdk`) + `apps/web/.env.local` (URL backend + publishable key) + capa `lib/medusa/` (mapea producto Medusa → tipo `Product`).
+- [ ] **2. Catálogo:** home/PLP (`categoria/[slug]`) + PDP (`producto/[slug]`) con productos reales.
+- [ ] **3. Carrito:** `cart-provider` sobre carritos de Medusa (CLP).
+- [ ] **4. Checkout:** `/checkout` real (dirección → despacho → **pago manual** → orden).
+- [ ] **5. Cuenta/sesión:** `session-provider` sobre auth de cliente de Medusa.
+> Restricción: Next 16 con cambios de ruptura — leer `apps/web/AGENTS.md` + `apps/web/node_modules/next/dist/docs` antes de tocar el front. Mapear a los tipos/componentes existentes, no reescribir.
+> Para continuar en un chat nuevo: **prompt #10 de `PROMPTS.md`**.
+
+### Diferido a Fases 6–7 (con tracción)
+- [ ] Automatización de courier (Blue Express/Starken/Chilexpress), boleta SII (LibreDTE/Bsale), WhatsApp Business API.
+- [ ] Motor de anticipación completo + suscripción inteligente (módulos `pet-profile`/`subscription`/`anticipation`).
+
+> **Backlog vivo:** el progreso fino de UI/UX se registra ítem a ítem en `AUDIT_UI_UX.md` (columna *estado*). Los ítems de "Fase futura (Backend/CRO)" alimentan Fases 5–7.
 
 ### Histórico Fase 3 (referencia)
 - [x] **Plan del sistema de componentes Next.js** (D12) → `FRONTEND_ARCHITECTURE.md`.
-
-### Fases siguientes
-- [ ] **Fase 5 (MVP):** desarrollo del e-commerce funcional sobre la arquitectura de Fase 4.
 
 ## 🟢 Investigación pendiente
 - [ ] Benchmarking visual fino de DrPet y Chewy (quedaron bloqueados en scraping).
