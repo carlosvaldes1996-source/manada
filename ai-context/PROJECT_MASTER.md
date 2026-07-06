@@ -14,7 +14,7 @@
 > **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
 > Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)** — estructura física ✅ **D20** (monorepo pnpm: `apps/web` + `apps/backend` reservado + reglas arquitectónicas en `ARCHITECTURE.md §2`) · stack backend ✅ **D21: Medusa.js v2** bajo el principio "e-commerce primero"; resta proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #8 de `PROMPTS.md`.*
+> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase activa: 4 — Arquitectura técnica (D19)** — estructura física ✅ **D20** (monorepo pnpm: `apps/web` + `apps/backend` reservado + reglas arquitectónicas en `ARCHITECTURE.md §2`) · stack backend ✅ **D21: Medusa.js v2** bajo el principio "e-commerce primero"; resta proveedores CL, modelo de datos y API. Ver `CURRENT_STATE.md` y prompt #9 de `PROMPTS.md`.*
 
 ---
 

@@ -49,7 +49,7 @@
 - [ ] **Modelo de datos** → completar `DATABASE.md` (entidad crítica: Perfil de Mascota, el moat).
 - [ ] **Contratos API** → completar `API.md`.
 - [ ] Registrar decisiones en `DECISIONS.md`; actualizar `ARCHITECTURE.md` como fuente de verdad.
-> Para arrancar en un chat nuevo: **prompt #8 de `PROMPTS.md`**.
+> Para continuar en un chat nuevo: **prompt #9 de `PROMPTS.md`** (proveedores CL → DATABASE.md → API.md).
 
 > **Backlog vivo:** el progreso fino de UI/UX se registra ítem a ítem en `AUDIT_UI_UX.md` (columna *estado*). Los ítems de "Fase futura (Backend/CRO)" alimentan Fases 4–7.
 

@@ -6,7 +6,7 @@
 > | **Purpose** | Prompts reutilizables (onboarding, cierre de fase, voz de marca, continuación por etapa). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-05 |
+> | **Last Updated** | 2026-07-06 |
 > | **Depends On** | — |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *prompts operativos*. |
@@ -101,7 +101,8 @@ pnpm exec tsc --noEmit
 pnpm lint
 ```
 
-## 8. Iniciar Fase 4 — Arquitectura técnica (chat nuevo) ← ACTUAL
+## 8. (Histórico) Iniciar Fase 4 — Arquitectura técnica
+> ✅ **Ejecutado en sus dos primeros hitos** (D20 estructura física del repo · D21 stack backend = Medusa.js v2). Se conserva como referencia; para continuar la Fase 4 usa el **prompt #9**.
 ```
 Iniciamos la Fase 4 de Manada: Arquitectura técnica (D19).
 Lee primero ai-context/CURRENT_STATE.md, ROADMAP.md (detalle Fase 4),
@@ -131,4 +132,48 @@ Objetivo de la fase — arquitectura y validación, NO desarrollo (el MVP es Fas
 Estrategia antes que código: presenta comparativas con recomendación y espera
 mi aprobación en las decisiones estratégicas. Registra cada decisión en
 DECISIONS.md con rationale y actualiza ARCHITECTURE.md como fuente de verdad.
+```
+
+## 9. Continuar Fase 4 — Proveedores Chile → DATABASE.md → API.md (chat nuevo) ← ACTUAL
+```
+Continuamos la Fase 4 de Manada: Arquitectura técnica.
+Actúa como Software Architect, no como programador.
+Lee primero ai-context/CURRENT_STATE.md, ROADMAP.md (detalle Fase 4),
+ARCHITECTURE.md (estructura del repo §1, reglas arquitectónicas §2, stack §3),
+DATABASE.md y API.md (borradores a completar) y DECISIONS.md
+(D2, D5, D17, D19, D20, D21 — no re-litigar).
+
+Ya está decidido y NO se reabre: monorepo pnpm (apps/web = frontend ·
+apps/backend = RESERVADO, sin código hasta Fase 5 · packages/shared solo
+cuando exista el primer contrato compartido aprobado en API.md) y stack
+backend = Medusa.js v2, con el moat como módulos custom (pet-profile /
+subscription / anticipation) y Webpay como payment provider custom.
+
+Principio rector (D21): Manada es E-COMMERCE PRIMERO. Perfil, suscripciones,
+recomendaciones y anticipación existen para mejorar la experiencia de compra;
+no somos una plataforma de gestión de mascotas. Prioriza siempre: velocidad
+de MVP > simplicidad operativa para un fundador único > bajo costo de
+mantenimiento > escalar sin sobreingeniería. Regla 80–90%: extensión simple
+antes que desarrollo desde cero.
+
+Trabajo restante de la fase (arquitectura y validación, NO desarrollo; el MVP
+es Fase 5 — no escribas código en apps/backend ni toques apps/web):
+1. Proveedores Chile, con comparativa y recomendación ÚNICA por categoría:
+   pagos (Webpay Plus / MercadoPago / Khipu — definir el primario), courier
+   (Blue Express / Starken / Chilexpress), boleta SII (LibreDTE / Bsale) y
+   WhatsApp Business API. Verifica precios/condiciones vigentes con búsqueda
+   web, no de memoria.
+2. Modelo de datos → completar DATABASE.md en clave Medusa-native: módulos
+   custom con tablas propias + module links a entidades core (Perfil de
+   Mascota + motor de anticipación + suscripciones).
+3. Contratos API → completar API.md: REST store de Medusa + rutas custom
+   /store/*, pensados para hidratar los providers reales del frontend
+   (usePet/useCart/SessionProvider en apps/web/src/components/providers,
+   tipos en apps/web/src/types).
+
+Estrategia antes que código: presenta comparativas con recomendación y espera
+mi aprobación en las decisiones estratégicas. Registra cada decisión en
+DECISIONS.md con rationale y actualiza ARCHITECTURE.md como fuente de verdad.
+Cierre de fase: ARCHITECTURE.md completo + DATABASE.md + API.md aprobados
+→ recién entonces Fase 5 (scaffold de Medusa en apps/backend).
 ```

@@ -61,4 +61,4 @@
 2. ⬜ **Proveedores Chile:** pagos (Webpay Plus / MercadoPago / Khipu), courier (Blue Express / Starken / Chilexpress), boleta SII (LibreDTE / Bsale), WhatsApp Business API.
 3. ⬜ **Modelo de datos** → `DATABASE.md` (moat: Perfil de Mascota + motor de anticipación).
 4. ⬜ **Contratos API** → `API.md`.
-> Entregable de la fase: `ARCHITECTURE.md` completo + decisiones en `DECISIONS.md`. Es fase de **arquitectura y validación**, el desarrollo del MVP es Fase 5. Prompt de arranque: **#8 en `PROMPTS.md`**.
+> Entregable de la fase: `ARCHITECTURE.md` completo + decisiones en `DECISIONS.md`. Es fase de **arquitectura y validación**, el desarrollo del MVP es Fase 5. Prompt de continuación: **#9 en `PROMPTS.md`** (el #8 de arranque quedó ejecutado con D20/D21).
