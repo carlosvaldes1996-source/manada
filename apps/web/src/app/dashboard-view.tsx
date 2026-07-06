@@ -19,10 +19,10 @@ import {
   DEMO_NUDGE,
   DEMO_SHIPPING,
   TOBY_ANTICIPATION,
-  CATEGORIES,
-  PRODUCTS,
   PRODUCT_BY_ID,
 } from "@/lib/demo-data";
+import { CATEGORIES } from "@/lib/catalog";
+import type { Product } from "@/types";
 
 /**
  * Panel personal del dueño con sesión iniciada (la "app" de Manada).
@@ -33,7 +33,7 @@ import {
  * (U068). La cápsula de anticipación se aísla con aire (U069); un solo riel de
  * cross-sell (U052); el nombre se alterna con "tu compañero" (U053).
  */
-export function DashboardView() {
+export function DashboardView({ products }: { products: Product[] }) {
   const { activePet } = usePet();
   const { user } = useSession();
   const router = useRouter();
@@ -53,10 +53,10 @@ export function DashboardView() {
   const speciesNoun =
     activePet?.species === "gato" ? "tu gato" : activePet?.species === "perro" ? "tu perro" : "tu compañero";
 
-  // Riel único: pensado para la especie de la mascota activa (cross-sell suave).
+  // Riel único (catálogo REAL): pensado para la especie de la mascota activa.
   const railProducts = activePet
-    ? PRODUCTS.filter((p) => p.species.includes(activePet.species)).slice(0, 6)
-    : PRODUCTS.slice(0, 6);
+    ? products.filter((p) => p.species.includes(activePet.species)).slice(0, 6)
+    : products.slice(0, 6);
 
   return (
     <AppShell>

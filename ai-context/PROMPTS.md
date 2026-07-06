@@ -192,6 +192,9 @@ definidos, arranca el scaffold de Medusa en apps/backend (implementación del MV
 ```
 
 ## 10. Continuar Fase 5 — Conectar el frontend al backend (chat nuevo) ← ACTUAL
+
+> **Progreso:** Etapa 1 (Fundación, `lib/medusa`) ✅ · Etapa 2 (Catálogo Home/PLP/PDP + metadata + `subscription_price`, **D23**) ✅ · Etapa 3 (Carrito real + checkout → **orden real con pago manual**, **D24**) ✅. **▶️ Continuar en Etapa 4: Mercado Pago (Checkout Pro)** — payment provider module + webhook + habilitar en región + redirect/confirmación; y transferencia carrito→cliente al login (`transferCart`). Decidido: Checkout Pro (redirect), "construir todo, credenciales de prueba después". Contratos en `API.md §6` (carrito+checkout) y `§5` (catálogo); modelo en `DATABASE.md §5`.
+
 ```
 Continuamos el MVP de Manada (Fase 5, MVP-first — D22). Actúa como full-stack
 que DESBLOQUEA lanzamiento, no que sobre-diseña.

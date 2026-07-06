@@ -25,13 +25,9 @@ import { usePet, useCart } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
-import {
-  PRODUCTS_BY_SLUG,
-  PRODUCTS,
-  REVIEWS,
-  DEMO_SHIPPING,
-  categoryLabel,
-} from "@/lib/demo-data";
+import { REVIEWS, DEMO_SHIPPING } from "@/lib/demo-data";
+import { categoryLabel } from "@/lib/catalog";
+import type { Product } from "@/types";
 
 /**
  * PDP — ficha de producto.
@@ -46,8 +42,7 @@ import {
  * - U052: un ÚNICO riel de cross-sell ("Suele combinarse con").
  * - U064: el criterio de "para tu mascota" es transparente en el copy.
  */
-export function ProductView({ slug }: { slug: string }) {
-  const product = PRODUCTS_BY_SLUG.get(slug)!;
+export function ProductView({ product, products }: { product: Product; products: Product[] }) {
   const { activePet } = usePet();
   const { addItem } = useCart();
   const { toast } = useToast();
@@ -68,12 +63,14 @@ export function ProductView({ slug }: { slug: string }) {
 
   // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
   // categoría (complemento, no otro saco igual) → "completar su rutina".
-  const related = PRODUCTS.filter(
-    (p) =>
-      p.id !== product.id &&
-      p.species.some((s) => product.species.includes(s)) &&
-      p.category !== product.category,
-  ).slice(0, 6);
+  const related = products
+    .filter(
+      (p) =>
+        p.id !== product.id &&
+        p.species.some((s) => product.species.includes(s)) &&
+        p.category !== product.category,
+    )
+    .slice(0, 6);
 
   const productReviews = REVIEWS;
   const ratingAvg = product.rating?.value;

@@ -1,3 +1,5 @@
+import type { Product } from "@/types";
+
 /**
  * Formateadores para el mercado chileno (CLP, fechas).
  * Los precios se muestran con separador de miles y sin decimales (regla CLP).
@@ -71,9 +73,28 @@ export function roundCLP(amount: number): number {
 
 /**
  * Precio de suscripción: base − descuento %, con la política de redondeo CLP.
- * Única fuente del cálculo (la consumen carrito, checkout y PDP).
+ *
+ * ⚠️ NO es el camino principal: el precio de suscripción lo calcula el **backend**
+ * (Medusa, campo `subscription_price`) y llega ya resuelto en `Product.subscriptionPrice`.
+ * Esta función queda solo como **fallback de compatibilidad** para datos que aún no
+ * traen el valor del backend (p. ej. el catálogo demo). El backend usa exactamente
+ * esta misma fórmula/redondeo, así que ambos coinciden.
  */
 export function subscriptionPrice(base: number, discountPct?: number): number {
   if (!discountPct) return base;
   return roundCLP(base * (1 - discountPct / 100));
+}
+
+/**
+ * Precio unitario de suscripción a mostrar. Prefiere SIEMPRE el valor calculado por
+ * el backend (`product.subscriptionPrice`); si falta (datos demo/legacy), lo deriva
+ * como compatibilidad. El frontend nunca aplica reglas de negocio: solo consume.
+ */
+export function effectiveSubscriptionPrice(
+  product: Pick<Product, "price" | "subscriptionDiscount" | "subscriptionPrice">,
+): number {
+  return (
+    product.subscriptionPrice ??
+    subscriptionPrice(product.price.current, product.subscriptionDiscount)
+  );
 }

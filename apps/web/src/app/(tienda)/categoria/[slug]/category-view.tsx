@@ -20,11 +20,11 @@ import {
 } from "@/components/commerce";
 import { usePet } from "@/components/providers";
 import {
-  FILTER_GROUPS,
-  productsForSlug,
+  buildFilterGroups,
   categoryLabel,
-  DEMO_SHIPPING,
-} from "@/lib/demo-data";
+  filterProductsForSlug,
+} from "@/lib/catalog";
+import { DEMO_SHIPPING } from "@/lib/demo-data";
 import { SITE } from "@/config/site";
 import { pluralize } from "@/lib/format";
 import type { Product } from "@/types";
@@ -55,7 +55,7 @@ function applyCatalogFilters(products: Product[], filters: FilterSelection): Pro
  * - U067: descubrimiento por paginación con conteo claro.
  * - U062: breadcrumb coherente con el nav (Inicio › Comprar › categoría).
  */
-export function CategoryView({ slug }: { slug: string }) {
+export function CategoryView({ slug, products }: { slug: string; products: Product[] }) {
   const { activePet } = usePet();
   const [filters, setFilters] = useState<FilterSelection>({});
   const [personalized, setPersonalized] = useState(false);
@@ -67,7 +67,7 @@ export function CategoryView({ slug }: { slug: string }) {
   // Facetas con conteos REALES sobre el catálogo de esta categoría (U055/consistencia):
   // el número de cada filtro coincide con lo que mostraría; se ocultan los que dan 0.
   const facetGroups = useMemo(() => {
-    const base = productsForSlug(slug);
+    const base = filterProductsForSlug(products, slug);
     const countFor = (groupId: string, value: string) =>
       base.filter((p) =>
         groupId === "especie"
@@ -78,23 +78,25 @@ export function CategoryView({ slug }: { slug: string }) {
               ? p.brand.slug === value
               : false,
       ).length;
-    return FILTER_GROUPS.map((g) => ({
-      ...g,
-      options: g.options
-        .map((o) => ({ ...o, count: countFor(g.id, o.value) }))
-        .filter((o) => o.count > 0),
-    })).filter((g) => g.options.length > 0);
-  }, [slug]);
+    return buildFilterGroups(products)
+      .map((g) => ({
+        ...g,
+        options: g.options
+          .map((o) => ({ ...o, count: countFor(g.id, o.value) }))
+          .filter((o) => o.count > 0),
+      }))
+      .filter((g) => g.options.length > 0);
+  }, [slug, products]);
 
   const filtered = useMemo(() => {
-    let list = productsForSlug(slug);
+    let list = filterProductsForSlug(products, slug);
     if (personalized && activePet) {
       list = list.filter(
         (p) => p.species.includes(activePet.species) && (!activePet.stage || p.stage?.includes(activePet.stage)),
       );
     }
     return applyCatalogFilters(list, filters);
-  }, [slug, personalized, activePet, filters]);
+  }, [products, slug, personalized, activePet, filters]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const safePage = Math.min(page, totalPages);

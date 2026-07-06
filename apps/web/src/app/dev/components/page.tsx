@@ -91,11 +91,14 @@ import {
   DEMO_NUDGE,
   DEMO_PETS,
   DEMO_SHIPPING,
-  FILTER_GROUPS,
+  buildFilterGroups,
   PRODUCTS,
   REVIEWS,
 } from "@/lib/demo-data";
 import { Demo, GuideSection, Labeled, type SectionDef } from "./parts";
+
+/** Facetas demo para el styleguide, derivadas del catálogo demo. */
+const FILTER_GROUPS = buildFilterGroups(PRODUCTS);
 
 const SECTIONS: SectionDef[] = [
   { id: "layout", label: "Layout" },

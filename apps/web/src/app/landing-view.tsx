@@ -22,7 +22,9 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { CategoryCard } from "@/components/commerce/category-card";
 import { ReviewCard } from "@/components/commerce/review-card";
 import { ProductRail } from "@/components/commerce/product-rail";
-import { CATEGORIES, REVIEWS, PRODUCTS, DEMO_SHIPPING, TOBY_ANTICIPATION } from "@/lib/demo-data";
+import { CATEGORIES } from "@/lib/catalog";
+import { REVIEWS, DEMO_SHIPPING, TOBY_ANTICIPATION } from "@/lib/demo-data";
+import type { Product } from "@/types";
 
 /**
  * Landing del visitante anónimo (Fase 3.3B · resuelve U041/U058).
@@ -32,7 +34,7 @@ import { CATEGORIES, REVIEWS, PRODUCTS, DEMO_SHIPPING, TOBY_ANTICIPATION } from 
  * primaria ("Crear el perfil de tu mascota") repetida; "Ingresar" como salida
  * secundaria. Voz de marca: cálida, experta, tuteo chileno (BRANDING §4).
  */
-export function LandingView() {
+export function LandingView({ products }: { products: Product[] }) {
   return (
     <AppShell variant="marketing">
       {/* ── Hero: propuesta de valor + prueba del "se anticipa" ── */}
@@ -115,7 +117,7 @@ export function LandingView() {
         <ProductRail
           overline="La vitrina"
           title="Lo que más recompran las familias"
-          products={PRODUCTS.filter((p) => p.stock > 0).slice(0, 6)}
+          products={products.filter((p) => p.stock > 0).slice(0, 6)}
           shipping={DEMO_SHIPPING}
           href="/categoria/todo"
           linkLabel="Ver toda la tienda"

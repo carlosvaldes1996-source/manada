@@ -2,7 +2,7 @@
 
 import { RefreshCw, Trash2 } from "lucide-react";
 import type { CartItem as CartLine } from "@/types";
-import { formatCLP, subscriptionPrice } from "@/lib/format";
+import { formatCLP, effectiveSubscriptionPrice } from "@/lib/format";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
 import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
@@ -17,13 +17,12 @@ export interface CartItemProps {
   className?: string;
 }
 
-/** Precio unitario efectivo (aplica descuento de suscripción si la línea lo es). */
+/** Precio unitario efectivo (usa el precio de suscripción del backend si la línea lo es). */
 function unitPrice(line: CartLine): number {
-  const base = line.product.price.current;
   if (line.subscriptionWeeks) {
-    return subscriptionPrice(base, line.product.subscriptionDiscount);
+    return effectiveSubscriptionPrice(line.product);
   }
-  return base;
+  return line.product.price.current;
 }
 
 /**

@@ -1,84 +1,156 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { subscriptionPrice } from "@/lib/format";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { CartItem, Product, SubscriptionFrequencyWeeks } from "@/types";
+import {
+  addLineItem,
+  createCart,
+  findLineIdByProduct,
+  mapCartItems,
+  type MedusaCart,
+  removeLineItem,
+  retrieveCart,
+  setLineItemQuantity,
+} from "@/lib/medusa/cart";
 
 /**
- * Estado del carrito. Las pantallas y los componentes de comercio consumen este
- * contexto. El precio efectivo (con descuento de suscripción) se calcula aquí
- * para mantener una sola fuente de verdad.
+ * Estado del carrito sobre carritos REALES de Medusa (Fase 5 · Etapa 3, D24).
  *
- * Fase 3.3B: arranca **vacío** (el visitante nuevo construye su primer carrito
- * desde la recomendación). El demo-login lo siembra vía `seedItems`.
+ * El carrito de Medusa es la fuente de verdad; este provider lo envuelve y persiste
+ * su `id` en `localStorage` para sobrevivir entre sesiones. Las mutaciones son
+ * asíncronas (Store API) y devuelven el carrito actualizado. Compra única (sin
+ * suscripción: el motor recurrente es el moat, posterior al MVP).
+ *
+ * Se conserva la superficie pública (`items`/`count`/`subtotal`/`addItem`/
+ * `removeItem`/`updateQuantity`) para no romper los componentes existentes; además
+ * expone el carrito crudo y `applyCart`/`refresh`/`clear` para el checkout real.
  */
+const CART_ID_KEY = "manada_cart_id";
+
 interface CartContextValue {
+  cart: MedusaCart | null;
   items: CartItem[];
   count: number;
   subtotal: number;
+  /** Carga inicial del carrito persistido. */
+  isLoading: boolean;
   addItem: (
     product: Product,
     opts?: { quantity?: number; subscriptionWeeks?: SubscriptionFrequencyWeeks },
-  ) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  /** Reemplaza el carrito completo (demo-login). */
+  ) => Promise<void>;
+  removeItem: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  /** Reemplaza el carrito con la respuesta de una operación de checkout. */
+  applyCart: (cart: MedusaCart) => void;
+  /** Re-lee el carrito desde el backend. */
+  refresh: () => Promise<void>;
+  /** Vacía: arranca un carrito nuevo (tras completar la orden). */
+  clear: () => Promise<void>;
+  /** @deprecated Con carritos reales no se siembran ítems demo. No-op. */
   seedItems: (items: CartItem[]) => void;
-  clear: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-/** Precio unitario efectivo: aplica el descuento de suscripción si corresponde. */
-function unitPrice(item: CartItem): number {
-  const base = item.product.price.current;
-  if (item.subscriptionWeeks) {
-    return subscriptionPrice(base, item.product.subscriptionDiscount);
-  }
-  return base;
-}
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  // Arranca vacío: el visitante nuevo arma su primer carrito desde la
-  // recomendación; el demo-login lo siembra. En Fase 4 se hidrata desde backend.
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [cart, setCartState] = useState<MedusaCart | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  // Ref para operar con el carrito actual sin closures obsoletos en clics rápidos.
+  const cartRef = useRef<MedusaCart | null>(null);
 
-  const addItem = useCallback<CartContextValue["addItem"]>((product, opts) => {
-    const quantity = opts?.quantity ?? 1;
-    setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id
-            ? { ...i, quantity: i.quantity + quantity, subscriptionWeeks: opts?.subscriptionWeeks ?? i.subscriptionWeeks }
-            : i,
-        );
+  const setCart = useCallback((next: MedusaCart | null) => {
+    cartRef.current = next;
+    setCartState(next);
+    if (typeof window !== "undefined") {
+      if (next?.id) window.localStorage.setItem(CART_ID_KEY, next.id);
+      else window.localStorage.removeItem(CART_ID_KEY);
+    }
+  }, []);
+
+  // Hidrata el carrito persistido al montar.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const stored = typeof window !== "undefined" ? window.localStorage.getItem(CART_ID_KEY) : null;
+      if (stored) {
+        const existing = await retrieveCart(stored);
+        if (active && existing && !existing.completed_at) setCart(existing);
+        else if (active) setCart(null);
       }
-      return [...prev, { product, quantity, subscriptionWeeks: opts?.subscriptionWeeks }];
-    });
+      if (active) setIsLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [setCart]);
+
+  /** Devuelve el carrito actual o crea uno nuevo (perezoso: solo al primer ítem). */
+  const ensureCart = useCallback(async (): Promise<MedusaCart> => {
+    if (cartRef.current) return cartRef.current;
+    const created = await createCart();
+    setCart(created);
+    return created;
+  }, [setCart]);
+
+  const addItem = useCallback<CartContextValue["addItem"]>(
+    async (product, opts) => {
+      if (!product.variantId) {
+        console.warn(`[cart] "${product.name}" no tiene variantId; no se puede agregar al carrito real.`);
+        return;
+      }
+      const current = await ensureCart();
+      const updated = await addLineItem(current.id, product.variantId, opts?.quantity ?? 1);
+      setCart(updated);
+    },
+    [ensureCart, setCart],
+  );
+
+  const updateQuantity = useCallback<CartContextValue["updateQuantity"]>(
+    async (productId, quantity) => {
+      const current = cartRef.current;
+      const lineId = findLineIdByProduct(current, productId);
+      if (!current || !lineId) return;
+      const updated =
+        quantity <= 0
+          ? await removeLineItem(current.id, lineId)
+          : await setLineItemQuantity(current.id, lineId, quantity);
+      setCart(updated ?? null);
+    },
+    [setCart],
+  );
+
+  const removeItem = useCallback<CartContextValue["removeItem"]>(
+    async (productId) => {
+      const current = cartRef.current;
+      const lineId = findLineIdByProduct(current, productId);
+      if (!current || !lineId) return;
+      const updated = await removeLineItem(current.id, lineId);
+      setCart(updated ?? null);
+    },
+    [setCart],
+  );
+
+  const applyCart = useCallback<CartContextValue["applyCart"]>((next) => setCart(next), [setCart]);
+
+  const refresh = useCallback(async () => {
+    const id = cartRef.current?.id;
+    if (id) setCart(await retrieveCart(id));
+  }, [setCart]);
+
+  const clear = useCallback(async () => {
+    setCart(await createCart());
+  }, [setCart]);
+
+  const seedItems = useCallback(() => {
+    // Con carritos reales de Medusa no se siembran ítems demo. Compat no-op.
   }, []);
-
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.product.id !== productId));
-  }, []);
-
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    setItems((prev) =>
-      quantity <= 0
-        ? prev.filter((i) => i.product.id !== productId)
-        : prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i)),
-    );
-  }, []);
-
-  const seedItems = useCallback((next: CartItem[]) => setItems(next), []);
-
-  const clear = useCallback(() => setItems([]), []);
 
   const value = useMemo<CartContextValue>(() => {
+    const items = mapCartItems(cart);
     const count = items.reduce((sum, i) => sum + i.quantity, 0);
-    const subtotal = items.reduce((sum, i) => sum + unitPrice(i) * i.quantity, 0);
-    return { items, count, subtotal, addItem, removeItem, updateQuantity, seedItems, clear };
-  }, [items, addItem, removeItem, updateQuantity, seedItems, clear]);
+    const subtotal = cart?.item_subtotal ?? items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
+    return { cart, items, count, subtotal, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, seedItems };
+  }, [cart, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, seedItems]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

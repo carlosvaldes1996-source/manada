@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { subscriptionPrice } from "@/lib/format";
+import { effectiveSubscriptionPrice } from "@/lib/format";
 import type { Product, SubscriptionFrequencyWeeks } from "@/types";
 
 /** Frecuencias ofrecidas, con su etiqueta legible. */
@@ -20,7 +20,9 @@ export const SUBSCRIPTION_FREQUENCIES: {
  * Calcula precio con descuento y ahorro a partir de `subscriptionDiscount`.
  * Una sola fuente de verdad para la cápsula de suscripción y el CTA.
  */
-export function useSubscription(product: Pick<Product, "price" | "subscriptionDiscount">) {
+export function useSubscription(
+  product: Pick<Product, "price" | "subscriptionDiscount" | "subscriptionPrice">,
+) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(4);
 
@@ -29,7 +31,8 @@ export function useSubscription(product: Pick<Product, "price" | "subscriptionDi
   return useMemo(() => {
     const discountPct = product.subscriptionDiscount ?? 0;
     const base = product.price.current;
-    const subscribedPrice = subscriptionPrice(base, discountPct);
+    // Precio de suscripción calculado por el backend (fallback demo en el helper).
+    const subscribedPrice = effectiveSubscriptionPrice(product);
     const savings = base - subscribedPrice;
     const effectivePrice = isSubscribed ? subscribedPrice : base;
     return {

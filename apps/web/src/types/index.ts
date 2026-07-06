@@ -70,6 +70,8 @@ export interface Price {
 
 export interface Product {
   id: string;
+  /** ID de la variante primaria en Medusa — necesario para agregar al carrito. */
+  variantId?: string;
   slug: string;
   name: string;
   brand: Brand;
@@ -83,8 +85,14 @@ export interface Product {
   imageUrl?: string;
   /** ¿Admite suscripción? Si sí, se muestra el ahorro. */
   subscribable: boolean;
-  /** % de ahorro al suscribirse (ej. 15). */
+  /** % de ahorro al suscribirse (ej. 15) — para el badge "Ahorra 15%". */
   subscriptionDiscount?: number;
+  /**
+   * Precio unitario de suscripción en CLP, **calculado por el backend** a partir
+   * del precio base y `subscriptionDiscount` (nunca se almacena un segundo precio).
+   * El frontend lo consume tal cual, sin recalcular (ver lib/format.ts).
+   */
+  subscriptionPrice?: number;
   stock: number;
 }
 

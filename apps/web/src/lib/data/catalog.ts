@@ -1,10 +1,21 @@
-import type { Brand, LifeStage, Product, ProductCategory, Species } from "@/types";
+import type { Brand, Product, Species } from "@/types";
 
 /**
- * Catálogo demo para componentes y pantallas (hasta conectar backend en Fase 4).
- * Datos coherentes con la marca y el mercado chileno; precios en CLP.
- * Media = emoji placeholder (igual que el prototipo) hasta tener packshots reales.
+ * Catálogo DEMO — solo para superficies aún NO conectadas al backend: el carrito,
+ * el checkout y el dashboard personalizado (sesión demo). Las pantallas de catálogo
+ * real (Home/PLP/PDP) se hidratan desde el backend (`lib/medusa`) y usan la
+ * taxonomía y la lógica pura de `@/lib/catalog`.
+ *
+ * La taxonomía y las facetas viven en el módulo puro; se re-exportan aquí (y vía
+ * `demo-data`) por compatibilidad con los consumidores existentes.
  */
+export {
+  CATEGORIES,
+  categoryLabel,
+  filterProductsForSlug,
+  buildFilterGroups,
+} from "@/lib/catalog";
+export type { CategoryMeta, FilterGroup } from "@/lib/catalog";
 
 export const BRANDS: Brand[] = [
   { id: "b_royal_canin", name: "Royal Canin", slug: "royal-canin" },
@@ -12,23 +23,6 @@ export const BRANDS: Brand[] = [
   { id: "b_hills", name: "Hill's", slug: "hills" },
   { id: "b_acana", name: "Acana", slug: "acana" },
   { id: "b_nexgard", name: "NexGard", slug: "nexgard" },
-];
-
-export interface CategoryMeta {
-  id: ProductCategory | "todo";
-  slug: string;
-  label: string;
-  /** Emoji placeholder hasta tener el set de íconos custom (DESIGN_SYSTEM §5). */
-  emoji: string;
-  description: string;
-}
-
-export const CATEGORIES: CategoryMeta[] = [
-  { id: "alimento", slug: "alimento", label: "Alimento", emoji: "🍖", description: "Seco, húmedo y dietas especiales" },
-  { id: "accesorios", slug: "accesorios", label: "Accesorios", emoji: "🦴", description: "Camas, juguetes, paseo" },
-  { id: "farmacia", slug: "farmacia", label: "Farmacia", emoji: "💊", description: "Antiparasitarios y salud" },
-  { id: "higiene", slug: "higiene", label: "Higiene", emoji: "🧼", description: "Baño, arena, cuidado" },
-  { id: "snacks", slug: "snacks", label: "Snacks", emoji: "🍪", description: "Premios y golosinas" },
 ];
 
 const brand = (slug: string) => BRANDS.find((b) => b.slug === slug)!;
@@ -131,38 +125,6 @@ export const PRODUCTS: Product[] = [
 export const PRODUCTS_BY_SLUG = new Map(PRODUCTS.map((p) => [p.slug, p]));
 export const PRODUCT_BY_ID = new Map(PRODUCTS.map((p) => [p.id, p]));
 
-/** Etapas de vida válidas como slug de PLP. */
-const STAGE_SLUGS = new Set(["cachorro", "adulto", "senior"]);
-/** Mapea slugs de especie de la URL al valor del dominio. */
-const SPECIES_BY_SLUG: Record<string, Species> = { perro: "perro", gato: "gato", otros: "otro", otro: "otro" };
-
-/** Etiqueta legible para el encabezado/breadcrumb de la PLP a partir del slug. */
-export function categoryLabel(slug: string): string {
-  if (slug === "todo") return "Todo el catálogo";
-  if (slug === "ofertas") return "Ofertas";
-  if (slug === "marcas") return "Marcas";
-  const cat = CATEGORIES.find((c) => c.slug === slug);
-  if (cat) return cat.label;
-  if (SPECIES_BY_SLUG[slug]) return slug === "otros" ? "Otros" : slug[0].toUpperCase() + slug.slice(1);
-  if (STAGE_SLUGS.has(slug)) return slug[0].toUpperCase() + slug.slice(1);
-  return slug[0].toUpperCase() + slug.slice(1);
-}
-
-/**
- * Productos base de una PLP según el slug de la URL (categoría, especie, etapa,
- * ofertas o todo). No aplica personalización ni filtros de catálogo: eso lo
- * resuelve la pantalla, manteniendo el catálogo completo visible (AUDIT U043).
- */
-export function productsForSlug(slug: string): Product[] {
-  if (slug === "todo" || slug === "marcas") return PRODUCTS;
-  if (slug === "ofertas") return PRODUCTS.filter((p) => p.price.compareAt);
-  if (CATEGORIES.some((c) => c.slug === slug)) return PRODUCTS.filter((p) => p.category === slug);
-  const species = SPECIES_BY_SLUG[slug];
-  if (species) return PRODUCTS.filter((p) => p.species.includes(species));
-  if (STAGE_SLUGS.has(slug)) return PRODUCTS.filter((p) => p.stage?.includes(slug as LifeStage));
-  return PRODUCTS;
-}
-
 export interface Review {
   id: string;
   author: string;
@@ -205,39 +167,6 @@ export const REVIEWS: Review[] = [
     body: "Lo mejor fue el recordatorio: me avisaron justo cuando se estaba acabando. Magia.",
     verified: true,
     petName: "Luna",
-  },
-];
-
-/** Opciones de filtro demo para PLP (FiltersPanel). */
-export interface FilterGroup {
-  id: string;
-  label: string;
-  options: { value: string; label: string; count?: number }[];
-}
-
-export const FILTER_GROUPS: FilterGroup[] = [
-  {
-    id: "especie",
-    label: "Mascota",
-    options: [
-      { value: "perro", label: "Perro", count: 124 },
-      { value: "gato", label: "Gato", count: 86 },
-      { value: "otro", label: "Otros", count: 12 },
-    ],
-  },
-  {
-    id: "etapa",
-    label: "Etapa de vida",
-    options: [
-      { value: "cachorro", label: "Cachorro", count: 38 },
-      { value: "adulto", label: "Adulto", count: 142 },
-      { value: "senior", label: "Senior", count: 27 },
-    ],
-  },
-  {
-    id: "marca",
-    label: "Marca",
-    options: BRANDS.map((b) => ({ value: b.slug, label: b.name })),
   },
 ];
 

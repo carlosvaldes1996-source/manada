@@ -294,6 +294,27 @@ export default async function seedManadaData({ container }: ExecArgs) {
 
   logger.info("Seeding product data (catálogo Manada)...");
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Metadata propia de Manada (atributos de merchandising que no son nativos de
+  // Medusa). Viven en `product.metadata` para que sean 100% administrables desde
+  // el Admin de Medusa (sección Metadata del producto) SIN tocar código: agregar
+  // productos nuevos = crearlos en el Admin y llenar estas claves. El frontend
+  // NO infiere nada; lee estos valores tal cual (ver apps/web/src/lib/medusa/map-product.ts).
+  //
+  // Convención de claves (documentada en ai-context/DATABASE.md):
+  //   brand                            → string   (marca visible; ej. "Royal Canin")
+  //   species                          → "perro" | "gato" | "otro", separadas por coma
+  //   stage                            → "cachorro" | "adulto" | "senior", separadas por coma
+  //   subscribable                     → boolean  (¿admite suscripción?)
+  //   subscription_discount_percentage → number   (% de ahorro; el precio de suscripción
+  //                                                 lo CALCULA el backend, no se guarda)
+  //   rating                           → number   (0–5)
+  //   review_count                     → number
+  //
+  // Nota: el Admin guarda metadata como strings; tanto el mapper como el
+  // middleware de precio aceptan string o valor nativo (boolean/number).
+  // ─────────────────────────────────────────────────────────────────────────
+
   const { result: categoryResult } = await createProductCategoriesWorkflow(
     container
   ).run({
@@ -322,6 +343,15 @@ export default async function seedManadaData({ container }: ExecArgs) {
           category_ids: [cat("Alimento")],
           description:
             "Alimento seco para perros adultos de razas pequeñas. Nutrición precisa para el día a día.",
+          metadata: {
+            brand: "Royal Canin",
+            species: "perro",
+            stage: "adulto",
+            subscribable: true,
+            subscription_discount_percentage: 15,
+            rating: 4.8,
+            review_count: 212,
+          },
           weight: 3000,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
@@ -342,6 +372,15 @@ export default async function seedManadaData({ container }: ExecArgs) {
           category_ids: [cat("Alimento")],
           description:
             "Alimento seco para perros adultos. Formato familiar de 15 kg, gran rendimiento.",
+          metadata: {
+            brand: "Pro Plan",
+            species: "perro",
+            stage: "adulto",
+            subscribable: true,
+            subscription_discount_percentage: 12,
+            rating: 4.7,
+            review_count: 489,
+          },
           weight: 15000,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
@@ -362,6 +401,15 @@ export default async function seedManadaData({ container }: ExecArgs) {
           category_ids: [cat("Alimento")],
           description:
             "Dieta veterinaria para gatos con soporte renal. Formato 2 kg.",
+          metadata: {
+            brand: "Hill's",
+            species: "gato",
+            stage: "adulto,senior",
+            subscribable: true,
+            subscription_discount_percentage: 10,
+            rating: 4.9,
+            review_count: 76,
+          },
           weight: 2000,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
@@ -382,6 +430,15 @@ export default async function seedManadaData({ container }: ExecArgs) {
           category_ids: [cat("Alimento")],
           description:
             "Alimento para cachorros con ingredientes biológicamente apropiados. Formato 2 kg.",
+          metadata: {
+            brand: "Acana",
+            species: "perro",
+            stage: "cachorro",
+            subscribable: true,
+            subscription_discount_percentage: 12,
+            rating: 4.6,
+            review_count: 134,
+          },
           weight: 2000,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
@@ -402,6 +459,13 @@ export default async function seedManadaData({ container }: ExecArgs) {
           category_ids: [cat("Farmacia")],
           description:
             "Antiparasitario masticable para perros de 4 a 10 kg. Caja de 3 comprimidos.",
+          metadata: {
+            brand: "NexGard",
+            species: "perro",
+            subscribable: false,
+            rating: 4.5,
+            review_count: 58,
+          },
           weight: 50,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,
@@ -422,6 +486,13 @@ export default async function seedManadaData({ container }: ExecArgs) {
           category_ids: [cat("Accesorios")],
           description:
             "Cama ortopédica acolchada para perros y gatos. Talla M.",
+          metadata: {
+            brand: "Manada",
+            species: "perro,gato",
+            subscribable: false,
+            rating: 4.4,
+            review_count: 41,
+          },
           weight: 1200,
           status: ProductStatus.PUBLISHED,
           shipping_profile_id: shippingProfile.id,

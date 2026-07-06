@@ -16,7 +16,7 @@ import {
 } from "@/components/commerce";
 import { useCart, usePet } from "@/components/providers";
 import { SITE } from "@/config/site";
-import { subscriptionPrice } from "@/lib/format";
+import { effectiveSubscriptionPrice } from "@/lib/format";
 import { PRODUCTS, DEMO_SHIPPING } from "@/lib/demo-data";
 
 /**
@@ -36,11 +36,9 @@ export default function CarritoPage() {
 
   const threshold = SITE.commerce.freeShippingThreshold;
 
-  // Precio efectivo (con descuento de suscripción) y ahorro por línea.
+  // Precio efectivo (con descuento de suscripción del backend) y ahorro por línea.
   const effective = (i: (typeof items)[number]) =>
-    i.subscriptionWeeks
-      ? subscriptionPrice(i.product.price.current, i.product.subscriptionDiscount)
-      : i.product.price.current;
+    i.subscriptionWeeks ? effectiveSubscriptionPrice(i.product) : i.product.price.current;
 
   const regularSubtotal = items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
   const savings = items.reduce((s, i) => s + (i.product.price.current - effective(i)) * i.quantity, 0);

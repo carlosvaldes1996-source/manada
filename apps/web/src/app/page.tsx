@@ -1,18 +1,14 @@
-"use client";
-
-import { useSession } from "@/components/providers";
-import { LandingView } from "./landing-view";
-import { DashboardView } from "./dashboard-view";
+import { listProducts } from "@/lib/medusa";
+import { HomeSwitch } from "./home-switch";
 
 /**
- * Home según el estado de sesión (Fase 3.3B · resuelve la "doble identidad",
- * AUDIT_UI_UX U041/U058):
- * - Visitante anónimo → <LandingView> (landing de marca, embudo de activación).
- * - Con sesión iniciada → <DashboardView> (la "app" personal: Carlos + Toby).
- *
- * Una sola superficie en `/`, sin mezclar modelos mentales.
+ * Home. Server component: hidrata el catálogo real desde el backend en cada request
+ * y delega en <HomeSwitch> la elección landing (anónimo) vs. dashboard (con sesión),
+ * que depende del estado de sesión (cliente). Una sola superficie en `/`.
  */
-export default function HomePage() {
-  const { status } = useSession();
-  return status === "authenticated" ? <DashboardView /> : <LandingView />;
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const products = await listProducts();
+  return <HomeSwitch products={products} />;
 }
