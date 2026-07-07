@@ -1,20 +1,19 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { User } from "@/types";
-import { DEMO_USER } from "@/lib/demo-data";
+import { getCurrentCustomer, logoutCustomer } from "@/lib/medusa";
 
 /**
- * Estado de sesión / cuenta de Manada (Fase 3.3B — New User Experience).
+ * Sesión / cuenta de Manada sobre el Customer + Auth Module de Medusa
+ * (Fase 5 · Etapa A). La sesión es **real y persistente**: el SDK guarda el JWT
+ * en localStorage (client.ts), así que al montar se re-hidrata el cliente con
+ * `getCurrentCustomer()`. El visitante sin token es **anónimo** (embudo de
+ * activación + compra de invitado intactos).
  *
- * Habilita el embudo de activación: por defecto el visitante es **anónimo**
- * (no hay cuenta ni mascota sembrada), lo que destraba la landing, el alta de
- * mascota y el registro "valor primero" (la cuenta se crea para GUARDAR el
- * perfil ya construido). Sin backend: el estado vive en memoria (coherente con
- * D13; la persistencia y la auth real entran en Fase 4).
- *
- * La coordinación con el carrito y la mascota (sembrar el demo al "ingresar",
- * limpiar al salir) vive en `useAuthActions()` para no acoplar providers.
+ * Este provider NO orquesta el carrito ni las mascotas: el login/registro y la
+ * transferencia del carrito viven en `useAuthActions` (que llama a `refresh`),
+ * para no acoplar los providers entre sí.
  */
 export type SessionStatus = "anonymous" | "authenticated";
 
@@ -27,51 +26,46 @@ export interface GuestInfo {
 interface SessionContextValue {
   user: User | null;
   status: SessionStatus;
+  /** `true` mientras se resuelve la sesión inicial (evita parpadeos en `/cuenta`). */
+  isLoading: boolean;
   /**
-   * Comprador invitado de la última compra sin cuenta. Permite que
-   * `/bienvenida` confirme el pedido y ofrezca crear la cuenta con el email
-   * ya escrito (registro "valor primero" post-compra). Null si no aplica.
+   * Comprador invitado de la última compra sin cuenta (registro "valor primero"
+   * post-compra). En memoria; `null` si no aplica.
    */
   guest: GuestInfo | null;
   setGuest: (guest: GuestInfo | null) => void;
-  /** Crea la cuenta (registro mínimo) y deja la sesión iniciada. */
-  signUp: (data: { firstName: string; email: string }) => User;
-  /** Entra como el usuario demo (Carlos) — pensado para revisar la app logueada. */
-  signInDemo: () => User;
-  /** Cierra la sesión (vuelve a anónimo). */
-  signOut: () => void;
+  /** Re-lee el cliente autenticado desde el backend (tras login/registro). */
+  refresh: () => Promise<void>;
+  /** Cierra la sesión real (token del SDK) y vuelve a anónimo. */
+  signOut: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [guest, setGuest] = useState<GuestInfo | null>(null);
 
-  const signUp = useCallback<SessionContextValue["signUp"]>((data) => {
-    const next: User = {
-      id: `u_${Date.now()}`,
-      firstName: data.firstName.trim(),
-      email: data.email.trim(),
+  // Re-hidrata la sesión persistida al montar.
+  useEffect(() => {
+    let active = true;
+    getCurrentCustomer()
+      .then((u) => active && setUser(u))
+      .finally(() => active && setIsLoading(false));
+    return () => {
+      active = false;
     };
-    setUser(next);
-    setGuest(null); // la cuenta absorbe al invitado
-    return next;
   }, []);
 
-  const signInDemo = useCallback<SessionContextValue["signInDemo"]>(() => {
-    const next: User = {
-      id: DEMO_USER.id,
-      firstName: DEMO_USER.firstName,
-      email: "carlos@ejemplo.cl",
-      comuna: DEMO_USER.comuna,
-      region: DEMO_USER.region,
-    };
-    setUser(next);
-    return next;
+  const refresh = useCallback(async () => {
+    const u = await getCurrentCustomer();
+    setUser(u);
+    if (u) setGuest(null); // la cuenta absorbe al invitado
   }, []);
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
+    await logoutCustomer();
     setUser(null);
     setGuest(null);
   }, []);
@@ -80,13 +74,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       status: user ? "authenticated" : "anonymous",
+      isLoading,
       guest,
       setGuest,
-      signUp,
-      signInDemo,
+      refresh,
       signOut,
     }),
-    [user, guest, signUp, signInDemo, signOut],
+    [user, isLoading, guest, refresh, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

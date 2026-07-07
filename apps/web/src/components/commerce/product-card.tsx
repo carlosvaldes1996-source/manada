@@ -3,21 +3,17 @@
 import * as React from "react";
 import Link from "next/link";
 import { RefreshCw, ShoppingBag } from "lucide-react";
-import type { Product, ShippingEstimate } from "@/types";
+import type { Product } from "@/types";
 import { discountPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Price } from "@/components/ui/price";
-import { Rating } from "@/components/ui/rating";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers";
 import { useToast } from "@/components/ui/toast";
 import { DiscountBadge, SubscriptionBadge } from "./badges";
-import { HonestShippingBlock } from "./honest-shipping-block";
 
 export interface ProductCardProps {
   product: Product;
-  /** Estimación de despacho honesto (siempre visible si se provee). */
-  shipping?: ShippingEstimate;
   /** Muestra el CTA de suscripción junto a "Agregar" (si el producto la admite). */
   showSubscribe?: boolean;
   className?: string;
@@ -25,11 +21,15 @@ export interface ProductCardProps {
 
 /**
  * Tarjeta de producto — unidad central del catálogo (DESIGN_SYSTEM §12.1).
- * Packshot sobre Arena · badge de suscripción · marca/nombre · rating · precio ·
- * despacho honesto · CTAs (Agregar + Suscribir). Conecta con el carrito y emite
- * un toast al agregar. El media es emoji placeholder hasta tener packshots.
+ * Packshot sobre Arena · badge de suscripción · marca/nombre · precio · CTAs
+ * (Agregar + Suscribir). Conecta con el carrito y emite un toast al agregar.
+ * El media es emoji placeholder hasta tener packshots.
+ *
+ * (Etapa B) No muestra fecha/costo de despacho por tarjeta —el envío es manual y
+ * sin fecha por comuna todavía; la política honesta ("gratis sobre $X") vive en
+ * la PDP y el carrito. Rating oculto hasta tener reseñas reales.
  */
-export function ProductCard({ product, shipping, showSubscribe = true, className }: ProductCardProps) {
+export function ProductCard({ product, showSubscribe = true, className }: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
   const href = `/producto/${product.slug}`;
@@ -77,10 +77,7 @@ export function ProductCard({ product, shipping, showSubscribe = true, className
           </Link>
           {product.format && <span className="font-normal text-text-secondary"> · {product.format}</span>}
         </h3>
-        {product.rating && <Rating value={product.rating.value} count={product.rating.count} />}
         <Price now={product.price.current} was={product.price.compareAt} size="md" className="mt-0.5" />
-
-        {shipping && <HonestShippingBlock date={shipping.date} cost={shipping.cost} comuna={shipping.comuna} className="mt-1" />}
 
         <div className="mt-auto flex gap-2 pt-3">
           <Button

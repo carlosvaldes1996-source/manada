@@ -34,13 +34,15 @@ export interface Pet {
 /* ----------------------------- Usuario / sesión -------------------------- */
 
 /**
- * Usuario de la cuenta. Mínimo intencional (fricción baja, UX.md §1): la cuenta
- * se crea para GUARDAR el perfil de la mascota ya construido. Sin backend aún:
- * la sesión vive en memoria (Fase 3); el modelo real entra en Fase 4.
+ * Usuario de la cuenta = cliente real de Medusa (Fase 5 · Etapa A). Mínimo
+ * intencional (fricción baja, UX.md §1). El mapeo Medusa `StoreCustomer` → `User`
+ * vive en `lib/medusa/auth.ts` (`mapCustomer`); la sesión persiste vía el JWT del SDK.
  */
 export interface User {
   id: string;
   firstName: string;
+  /** Apellido (Medusa `last_name`) — usado en el prellenado del checkout. */
+  lastName?: string;
   email: string;
   comuna?: string;
   region?: string;

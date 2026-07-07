@@ -9,25 +9,40 @@ import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert } from "@/components/ui/alert";
 import { PetAvatar } from "@/components/pet/pet-avatar";
+import { useToast } from "@/components/ui/toast";
 import { useSession, usePet } from "@/components/providers";
+import { useAuthActions } from "@/hooks";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD = 8;
 
 /**
- * Registro "valor primero" (Fase 3.3B): se pide la cuenta DESPUÉS de construir
- * el perfil y ver la recomendación, enmarcado como **guardar** lo ya logrado
- * (pico de motivación, mínima fricción). Solo nombre + email; explica el
- * beneficio de la cuenta. "Ya tengo cuenta" lleva al login.
+ * Registro "valor primero" (Fase 3.3B) con auth REAL de Medusa (Fase 5 · Etapa A):
+ * se pide la cuenta enmarcada como **guardar** lo ya logrado (pico de motivación).
+ * Crea un cliente real (emailpass), transfiere el carrito de invitado y deja la
+ * sesión iniciada. "Ya tengo cuenta" lleva al login.
  */
-export function RegisterView() {
+export function RegisterView({
+  defaultEmail = "",
+  defaultName = "",
+}: {
+  defaultEmail?: string;
+  defaultName?: string;
+}) {
   const router = useRouter();
-  const { status, signUp } = useSession();
+  const { toast } = useToast();
+  const { status } = useSession();
+  const { register } = useAuthActions();
   const { activePet } = usePet();
 
-  const [firstName, setFirstName] = useState("");
-  const [email, setEmail] = useState("");
-  const [errors, setErrors] = useState<{ firstName?: string; email?: string }>({});
+  const [firstName, setFirstName] = useState(defaultName);
+  const [email, setEmail] = useState(defaultEmail);
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ firstName?: string; email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Si ya hay sesión, no tiene sentido registrarse: al carrito.
   useEffect(() => {
@@ -35,15 +50,26 @@ export function RegisterView() {
   }, [status, router]);
   if (status === "authenticated") return null;
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+    setFormError(null);
     const next: typeof errors = {};
     if (!firstName.trim()) next.firstName = "Cuéntanos tu nombre";
     if (!EMAIL_RE.test(email)) next.email = "Revisa tu correo";
+    if (password.length < MIN_PASSWORD) next.password = `Mínimo ${MIN_PASSWORD} caracteres`;
     setErrors(next);
     if (Object.keys(next).length > 0) return;
-    signUp({ firstName, email });
-    router.push("/carrito");
+
+    setLoading(true);
+    const { ok, error } = await register({ firstName, email, password });
+    if (ok) {
+      toast({ title: "¡Cuenta creada!", description: "Ya eres parte de la manada.", variant: "success" });
+      router.push("/carrito");
+    } else {
+      setFormError(error ?? "No pudimos crear tu cuenta.");
+      setLoading(false);
+    }
   }
 
   const petName = activePet?.name;
@@ -63,6 +89,8 @@ export function RegisterView() {
                 que podamos anticiparnos a lo que necesita. Es gratis y toma 1 minuto.
               </p>
             </Stack>
+
+            {formError && <Alert variant="error">{formError}</Alert>}
 
             <form onSubmit={submit} noValidate>
               <Stack gap={4}>
@@ -86,7 +114,18 @@ export function RegisterView() {
                   error={errors.email}
                   required
                 />
-                <Button type="submit" size="lg" block>
+                <Input
+                  type="password"
+                  label="Contraseña"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  hint={`Mínimo ${MIN_PASSWORD} caracteres.`}
+                  error={errors.password}
+                  required
+                />
+                <Button type="submit" size="lg" block loading={loading}>
                   Crear cuenta y continuar
                 </Button>
               </Stack>

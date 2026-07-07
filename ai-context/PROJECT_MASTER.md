@@ -14,7 +14,7 @@
 > **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
 > Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase 4 (Arquitectura) cerrada por lo esencial** — estructura física ✅ **D20** (monorepo pnpm: `apps/web` + `apps/backend` reservado + reglas en `ARCHITECTURE.md §2`) · stack backend ✅ **D21: Medusa.js v2** ("e-commerce primero"). **Fase activa: 5 — MVP (D22, MVP-first)** — la arquitectura base queda cerrada; cada decisión se evalúa por *¿acerca o retrasa el lanzamiento?* con **alternativa manual por defecto** (envíos y boleta manuales; sin courier/SII/WhatsApp hasta tracción). Foco inmediato: scaffold de Medusa + modelo de datos mínimo + medio de pago + checkout. Ver `CURRENT_STATE.md` y prompt #9 de `PROMPTS.md`.*
+> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase 4 (Arquitectura) cerrada por lo esencial** — estructura física ✅ **D20** · stack backend ✅ **D21: Medusa.js v2** ("e-commerce primero"). **Fase activa: 5 — MVP (D22, MVP-first).** El **flujo propio del MVP está CERRADO**: backend Medusa arrancado (D22) + catálogo (D23) + carrito/checkout→orden con pago manual (D24) + **cuentas y sesión reales** (Etapa A, D26) + **tienda coherente y honesta** (Etapa B, D28), todo real sobre Medusa; frontend desplegado en Vercel como staging (D27). **Lo único que resta = terceros + infra:** Mercado Pago, email transaccional, deploy del backend + env vars + dominio; SII/courier/WhatsApp y el moat, post-tracción. Ver `CURRENT_STATE.md` y prompt #10 de `PROMPTS.md`.*
 
 ---
 
@@ -143,10 +143,17 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D19 | Se adelanta la Fase 4 (Arquitectura técnica); Polish 3.4 restante ⏸ en pausa hasta tener fotos |
 | D20 | Fase 4 · Estructura física: monorepo pnpm (`apps/web` + `apps/backend` reservado) + reglas arquitectónicas permanentes (`ARCHITECTURE.md §2`) |
 | D21 | Fase 4 · Stack backend: **Medusa.js v2** + principio de producto "e-commerce primero" (moat como módulos custom, sin fork del core) |
+| D22 | Fase 4→5 · Mandato **MVP-first**: alternativa manual por defecto; backend Medusa arrancado + checkout→orden real con pago manual |
+| D23 | Fase 5 · Etapa 2 — Catálogo Medusa-native (backend = fuente de verdad; `subscription_price` calculado; catálogo administrable sin código) |
+| D24 | Fase 5 · Etapa 3 — Carrito real + checkout → **orden real** con pago manual (todo nativo) |
+| D25 | Fase 5 · Auditoría de MVP + plan de cierre del flujo propio en 2 etapas (cuentas SÍ, moat diferido) |
+| D26 | Fase 5 · Etapa A — **Cuentas y sesión reales** (auth nativo Medusa: registro/login/logout/recuperación + JWT persistente, `transferCart`, pedidos, direcciones) |
+| D27 | Fase 5 · Infra — Frontend desplegado en **Vercel** (staging sin backend; monorepo verificado; `main`=prod provisional) → `DEPLOYMENT.md` |
+| D28 | Fase 5 · Etapa B — **Tienda coherente y honesta** (buscador real, cross-sell real, regla única de envío del backend + promoción automática de envío gratis, auditoría de copy) → **flujo propio del MVP cerrado** |
 
 ## 17. Pendientes
 
-Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–3 ✅ + Polish lote 1 ✅ (D18); Polish restante ⏸ en pausa (D19). **Inmediato (Fase 4):** validar stack backend (Medusa vs alternativas), proveedores CL, `DATABASE.md` y `API.md` — la estructura física ya está (D20). **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo. *(Las fuentes Fraunces/Hanken ya se cargan vía `next/font` en `apps/web/`.)*
+Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–3 ✅ + Polish lote 1 ✅ (D18); Polish restante ⏸ en pausa (D19). **Fase 5 — MVP:** el **flujo propio del MVP está CERRADO** — backend Medusa (D22) + catálogo (D23) + carrito/checkout→orden (D24) + cuentas/sesión reales (Etapa A, D26) + tienda coherente (Etapa B, D28), todo real sobre Medusa. **Inmediato = solo terceros + infra:** Mercado Pago (pago automático), email transaccional, deploy del backend (Railway/Postgres/Redis) + env vars en Vercel (D27) + dominio; SII/courier/WhatsApp y el moat, post-tracción. **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo.
 
 ## 18. Roadmap
 

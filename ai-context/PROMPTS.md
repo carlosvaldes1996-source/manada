@@ -191,9 +191,10 @@ como fuente de verdad. Cierre: con el modelo de datos mínimo + proveedor de pag
 definidos, arranca el scaffold de Medusa en apps/backend (implementación del MVP).
 ```
 
-## 10. Continuar Fase 5 — Conectar el frontend al backend (chat nuevo) ← ACTUAL
+## 10. Continuar Fase 5 — Conectar el frontend al backend (chat nuevo)
 
-> **Progreso:** Etapa 1 (Fundación, `lib/medusa`) ✅ · Etapa 2 (Catálogo Home/PLP/PDP + metadata + `subscription_price`, **D23**) ✅ · Etapa 3 (Carrito real + checkout → **orden real con pago manual**, **D24**) ✅. **▶️ Continuar en Etapa 4: Mercado Pago (Checkout Pro)** — payment provider module + webhook + habilitar en región + redirect/confirmación; y transferencia carrito→cliente al login (`transferCart`). Decidido: Checkout Pro (redirect), "construir todo, credenciales de prueba después". Contratos en `API.md §6` (carrito+checkout) y `§5` (catálogo); modelo en `DATABASE.md §5`.
+> ✅ **Ejecutado y CERRADO (2026-07-07).** El **flujo propio del MVP está completo**: Etapa 1 (Fundación `lib/medusa`) · Etapa 2 (Catálogo, **D23**) · Etapa 3 (Carrito + checkout→orden con pago manual, **D24**) · **Etapa A** (Cuentas y sesión reales: registro/login/logout/recuperación + JWT persistente + `transferCart` + pedidos + direcciones, **D26**) · **Etapa B** (Buscador real `q`, cross-sell real, regla única de envío del backend con promoción automática de envío gratis, auditoría de copy, **D28**). Contratos: `API.md §5–§8`; modelo: `DATABASE.md §5–§7`.
+> **▶️ Lo único que resta = terceros + infra (NO código propio):** **Mercado Pago** Checkout Pro (payment provider module + webhook + habilitar en región + redirect/confirmación; decidido: Checkout Pro redirect, "construir todo, credenciales de prueba después") → **email transaccional** (entrega del enlace de recuperación + confirmaciones/boleta) → infra de lanzamiento (deploy backend Railway/Postgres/Redis + env vars en Vercel [D27] + dominio + gatear `/dev`) → post-tracción SII/courier/WhatsApp + moat. *Nota: la UI de suscripción existe pero agrega línea única — decidir cablear (recipe Medusa) o atenuar copy antes de lanzar.*
 
 ```
 Continuamos el MVP de Manada (Fase 5, MVP-first — D22). Actúa como full-stack

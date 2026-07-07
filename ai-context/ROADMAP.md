@@ -70,6 +70,10 @@
 3. ✅ **Modelo mínimo + seed Chile:** tienda CLP, región Chile, despacho manual, catálogo (6 productos alineados con el front), sales channel + publishable key.
 4. ✅ **Checkout punta a punta verificado** por Store API → orden real registrada (dirección + pago manual). Fulfillment y boleta manuales desde el Admin.
 
-**Frontend — ⬜ conectar `apps/web` al backend (por etapas; prompt #10):**
-5. ⬜ **Fundación** (SDK Medusa + `.env.local` + capa `lib/medusa/` → tipo `Product`) → **Catálogo** (PLP/PDP reales) → **Carrito** → **Checkout** → **Cuenta/sesión**. Next 16 con cambios de ruptura: leer `apps/web/AGENTS.md` + docs antes de tocar el front; mapear a los tipos/componentes existentes.
-> Diferido a **Fases 6–7 (con tracción):** integración Webpay; automatización de courier, boleta SII, WhatsApp; motor de anticipación completo; suscripción inteligente. Prompt de continuación: **#10 en `PROMPTS.md`**.
+**Frontend — conectar `apps/web` al backend (por etapas; prompt #10):**
+5. ✅ **Fundación + Catálogo + Carrito + Checkout** (D23/D24): PLP/PDP reales, carrito real de Medusa, checkout invitado → orden real con pago manual.
+6. ✅ **Auditoría de MVP + plan de cierre** (D25): flujo propio en 2 etapas (A cuentas · B tienda coherente); cuentas SÍ, moat diferido.
+7. ✅ **Etapa A — Cuentas y sesión reales** (D26): auth nativo de Medusa (registro/login/logout/recuperación + sesión persistente JWT), `transferCart` carrito→cliente, historial de pedidos y direcciones reales; compra de invitado intacta. `tsc`+`eslint`+`build` (28 rutas) + smoke punta a punta ✅.
+8. ✅ **Etapa B — Tienda coherente y honesta** (D28): buscador real (`q` Store API), cross-sell real, **regla única de envío** (backend: opción $3.990 + promoción automática de envío gratis ≥ $30.000, ruta `/store/shipping-policy`), **auditoría de copy** (sin Webpay/SII/"pago protegido"/fechas falsas), reseñas y ratings ocultos. `tsc`+`eslint`+`build` (25 rutas) + smoke (envío free/pago en orden real) ✅. **Flujo propio del MVP cerrado.**
+9. ⬜ **Solo terceros + infra:** **Mercado Pago** (Checkout Pro) → email transaccional (recuperación + confirmaciones/boleta) → SII/courier/WhatsApp (post-tracción); **infra**: deploy backend (Railway/Postgres/Redis) + env vars en Vercel (D27) + dominio + gatear `/dev`.
+> Next 16 con cambios de ruptura: leer `apps/web/AGENTS.md` + docs antes de tocar el front; mapear a los tipos/componentes existentes. Diferido a **Fases 6–7 (con tracción):** integración Webpay; automatización de courier, boleta SII, WhatsApp; **moat** (motor de anticipación + suscripción inteligente). Prompt de continuación: **#10 en `PROMPTS.md`**.

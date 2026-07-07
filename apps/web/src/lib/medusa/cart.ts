@@ -70,6 +70,16 @@ export async function removeLineItem(cartId: string, lineId: string): Promise<Me
   return retrieveCart(cartId);
 }
 
+/**
+ * Asocia el carrito de invitado al cliente autenticado (Fase 5 · Etapa A).
+ * Nativo (`store.cart.transferCart`): tras el login, el carrito que traía el
+ * visitante pasa a pertenecer a su cuenta, de modo que la orden que complete
+ * queda ligada al cliente y aparece en su historial de pedidos.
+ */
+export async function transferCartToCustomer(cartId: string): Promise<MedusaCart> {
+  return unwrap(medusa.store.cart.transferCart(cartId, { fields: CART_FIELDS }));
+}
+
 /** Líneas del carrito → `CartItem[]` que consume la UI (orden estable de creación). */
 export function mapCartItems(cart: MedusaCart | null): CartItem[] {
   const items = [...(cart?.items ?? [])];

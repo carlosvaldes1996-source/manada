@@ -9,24 +9,22 @@ import { Stack, Row } from "@/components/ui/stack";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
-import { Rating } from "@/components/ui/rating";
 import { Separator } from "@/components/ui/separator";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import {
   SubscriptionBox,
-  HonestShippingBlock,
+  ShippingPolicyNote,
   ProductRail,
-  ReviewCard,
   StockBadge,
 } from "@/components/commerce";
 import { usePet, useCart } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
-import { REVIEWS, DEMO_SHIPPING } from "@/lib/demo-data";
 import { categoryLabel } from "@/lib/catalog";
+import type { ShippingPolicy } from "@/lib/medusa";
 import type { Product } from "@/types";
 
 /**
@@ -42,7 +40,15 @@ import type { Product } from "@/types";
  * - U052: un ÚNICO riel de cross-sell ("Suele combinarse con").
  * - U064: el criterio de "para tu mascota" es transparente en el copy.
  */
-export function ProductView({ product, products }: { product: Product; products: Product[] }) {
+export function ProductView({
+  product,
+  products,
+  policy,
+}: {
+  product: Product;
+  products: Product[];
+  policy: ShippingPolicy;
+}) {
   const { activePet } = usePet();
   const { addItem } = useCart();
   const { toast } = useToast();
@@ -71,9 +77,6 @@ export function ProductView({ product, products }: { product: Product; products:
         p.category !== product.category,
     )
     .slice(0, 6);
-
-  const productReviews = REVIEWS;
-  const ratingAvg = product.rating?.value;
 
   function add() {
     addItem(product, {
@@ -123,9 +126,6 @@ export function ProductView({ product, products }: { product: Product; products:
             <Stack gap={2}>
               <span className="overline text-text-secondary">{product.brand.name}</span>
               <h1 className="heading-1 text-text-primary">{product.name}</h1>
-              {ratingAvg != null && (
-                <Rating value={ratingAvg} count={product.rating?.count} />
-              )}
             </Stack>
 
             <Row gap={3} wrap>
@@ -196,12 +196,7 @@ export function ProductView({ product, products }: { product: Product; products:
               </Button>
             </Row>
 
-            <HonestShippingBlock
-              date={DEMO_SHIPPING.date}
-              cost={DEMO_SHIPPING.cost}
-              comuna={DEMO_SHIPPING.comuna}
-              size="md"
-            />
+            <ShippingPolicyNote policy={policy} size="md" />
 
             <Row gap={2} className="gap-2 text-[13px] text-text-secondary">
               <Truck className="size-4 text-text-brand" aria-hidden />
@@ -215,7 +210,6 @@ export function ProductView({ product, products }: { product: Product; products:
           <TabsList>
             <TabsTrigger value="descripcion">Descripción</TabsTrigger>
             <TabsTrigger value="detalle">Ficha técnica</TabsTrigger>
-            <TabsTrigger value="opiniones">Opiniones ({productReviews.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="descripcion">
@@ -242,14 +236,6 @@ export function ProductView({ product, products }: { product: Product; products:
               )}
             </dl>
           </TabsContent>
-
-          <TabsContent value="opiniones">
-            <Stack gap={4} className="max-w-2xl">
-              {productReviews.map((r) => (
-                <ReviewCard key={r.id} review={r} />
-              ))}
-            </Stack>
-          </TabsContent>
         </Tabs>
 
         {/* Cross-sell ÚNICO (U052) */}
@@ -258,7 +244,6 @@ export function ProductView({ product, products }: { product: Product; products:
             overline="Suele combinarse con"
             title="Para completar su rutina"
             products={related}
-            shipping={DEMO_SHIPPING}
           />
         )}
       </Stack>

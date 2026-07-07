@@ -24,7 +24,6 @@ import {
   categoryLabel,
   filterProductsForSlug,
 } from "@/lib/catalog";
-import { DEMO_SHIPPING } from "@/lib/demo-data";
 import { SITE } from "@/config/site";
 import { pluralize } from "@/lib/format";
 import type { Product } from "@/types";
@@ -205,7 +204,6 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
           <Stack gap={6}>
             <ProductGrid
               products={visible}
-              shipping={DEMO_SHIPPING}
               emptyState={
                 <EmptyState
                   icon={<span className="text-5xl">🔍</span>}

@@ -5,7 +5,7 @@ import { ShoppingBag, Lock, User } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { SearchBar } from "@/components/ui/search-bar";
+import { HeaderSearch } from "./header-search";
 import { useCart } from "@/components/providers";
 import { PetSwitcher } from "@/components/pet/pet-switcher";
 import { Logo } from "./logo";
@@ -37,7 +37,7 @@ export function Header({ variant = "default" }: HeaderProps) {
           <MobileNav />
           <Logo />
           <div className="hidden flex-1 md:block">
-            <SearchBar />
+            <HeaderSearch />
           </div>
           <div className="ml-auto flex items-center gap-1.5 md:ml-0">
             <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
@@ -50,7 +50,7 @@ export function Header({ variant = "default" }: HeaderProps) {
           </div>
         </Container>
         <div className="border-t border-border-default px-4 py-2 md:hidden">
-          <SearchBar />
+          <HeaderSearch />
         </div>
         <Navbar />
       </header>
@@ -64,7 +64,7 @@ export function Header({ variant = "default" }: HeaderProps) {
           <Logo />
           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-text-secondary">
             <Lock className="size-4 text-[var(--success)]" aria-hidden />
-            Pago seguro
+            Conexión segura
           </span>
         </Container>
       </header>
@@ -77,7 +77,7 @@ export function Header({ variant = "default" }: HeaderProps) {
         <MobileNav />
         <Logo />
         <div className="hidden flex-1 md:block">
-          <SearchBar />
+          <HeaderSearch />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
           <PetSwitcher />
@@ -94,7 +94,7 @@ export function Header({ variant = "default" }: HeaderProps) {
       {/* Buscador en móvil: el header lo expone siempre (<md) ya que el
           bottom-nav dejó de incluir "Buscar" (AUDIT U059/U060). */}
       <div className="border-t border-border-default px-4 py-2 md:hidden">
-        <SearchBar />
+        <HeaderSearch />
       </div>
       <Navbar />
     </header>

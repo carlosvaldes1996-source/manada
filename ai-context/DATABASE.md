@@ -5,7 +5,7 @@
 > |---|---|
 > | **Purpose** | Modelo de datos: entidades, relaciones, y el diseño del moat (Perfil de Mascota). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟡 Catálogo MVP implementado (Fase 5 · Etapa 2, §5); moat (§1) aún borrador. |
+> | **Status** | 🟡 Implementado: catálogo (§5) + cuentas/sesión (§6), Medusa-native. Moat (§1) aún borrador. |
 > | **Last Updated** | 2026-07-06 |
 > | **Depends On** | ARCHITECTURE.md, UX.md (§3 personalización) |
 > | **Supersedes** | — |
@@ -91,3 +91,46 @@ frontend ya la refleja automáticamente (`original_amount` > `calculated_amount`
 ### 5.5 Fuera del MVP (post-tracción)
 Perfil de Mascota (§1), suscripción como entidad, motor de anticipación, boleta SII
 → módulos custom de Medusa **después** del MVP (D21/D22). El catálogo actual es el piso.
+
+---
+
+## 6. Cuentas y sesión — IMPLEMENTADO (Fase 5 · Etapa A, D26) · Medusa-native
+
+Las cuentas de cliente usan **entidades nativas de Medusa** (Auth + Customer +
+Order Modules); **cero tablas propias, cero módulos custom**. El frontend solo
+consume la Store API (ver `API.md §7`); mapea a `User` en `lib/medusa/auth.ts`.
+
+| Concepto Manada | Entidad / mecanismo nativo de Medusa | Notas |
+|---|---|---|
+| identidad de acceso | **Auth Module** (`auth_identity`, provider `emailpass`) | email + contraseña; JWT emitido por el backend |
+| cliente / cuenta | **Customer** (`customer`: `email`, `first_name`, `last_name`) | `mapCustomer` → `User` (`firstName`/`lastName`/`email`) |
+| sesión | **JWT** persistido por el SDK en `localStorage` (browser) | `auth:{type:"jwt"}`; SSR = `nostore`; re-hidrata con `customer.retrieve()` |
+| recuperación de clave | evento **`auth.password_reset`** + token de un solo uso | entrega vía subscriber (`password-reset.ts`); email real diferido |
+| direcciones | **Customer Address** (`customer_address`) | CRUD nativo; Chile: `country_code:"cl"`, comuna→`city`, región→`province` |
+| pedidos del cliente | **Order** ligada a `customer_id` | historial vía `store.order.list`; la orden se liga al completar el carrito transferido |
+| carrito ↔ cliente | `store.cart.transferCart` (nativo) | asocia el carrito de invitado al cliente al iniciar sesión |
+
+- **Compra de invitado:** una orden creada sin sesión queda ligada al **email**, no
+  a un `customer`. Vincular órdenes de invitado a una cuenta creada después = flujo
+  nativo `order.requestTransfer` (requiere email) → **recomendación futura**, no MVP.
+- **Secrets:** `JWT_SECRET`/`COOKIE_SECRET` son de desarrollo; rotarlos para producción
+  (infra de lanzamiento, D25). El `STORE_CORS`/`AUTH_CORS` ya incluyen el storefront.
+
+---
+
+## 7. Envío — IMPLEMENTADO (Fase 5 · Etapa B, D28) · Medusa-native
+
+Regla ÚNICA de envío, **definida en el backend** y consumida por el front (nunca
+duplicada). Todo con entidades/mecanismos **nativos** de Medusa; cero lógica propia.
+
+| Concepto | Mecanismo nativo | Notas |
+|---|---|---|
+| costo base | **Shipping Option** "Despacho Estándar" (flat) | `3990` CLP (seed); Express `5990` |
+| envío gratis sobre umbral | **Promotion** automática (`is_automatic`) | `target_type: shipping_methods`, `value: 100`, regla `item_total ≥ 30000` → la **orden** queda con `shipping_total = 0` |
+| valores (umbral + base) | `apps/backend/src/lib/shipping.ts` (constantes) | fuente única; alimenta seed + promoción + ruta |
+| exposición al front | `GET /store/shipping-policy` | el front consume vía `getShippingPolicy()` (sin hardcodear) |
+
+- La promoción se crea con el **script idempotente** `apps/backend/src/scripts/setup-free-shipping.ts`
+  (`medusa exec`, sin reseed). Cambiar el umbral/costo = editar `lib/shipping.ts` (+ la
+  opción en el Admin/seed) — un solo lugar.
+- **Verificado:** orden bajo umbral → envío $3.990; orden sobre umbral → envío $0.

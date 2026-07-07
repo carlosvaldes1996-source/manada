@@ -57,12 +57,15 @@
 - [x] **Checkout punta a punta verificado** por Store API → **orden #1 registrada** ($28.980 CLP, dirección almacenada).
 - [x] **Medio de pago (decisión Carlos):** Webpay **NO** se integra aún; MVP usa el **pago manual** como método real. Webpay = fast-follow.
 
-### Frontend — ⬜ conectar `apps/web` al backend (por etapas; prompt #10)
-- [ ] **1. Fundación:** SDK Medusa (`@medusajs/js-sdk`) + `apps/web/.env.local` (URL backend + publishable key) + capa `lib/medusa/` (mapea producto Medusa → tipo `Product`).
-- [ ] **2. Catálogo:** home/PLP (`categoria/[slug]`) + PDP (`producto/[slug]`) con productos reales.
-- [ ] **3. Carrito:** `cart-provider` sobre carritos de Medusa (CLP).
-- [ ] **4. Checkout:** `/checkout` real (dirección → despacho → **pago manual** → orden).
-- [ ] **5. Cuenta/sesión:** `session-provider` sobre auth de cliente de Medusa.
+### Frontend — conectar `apps/web` al backend (por etapas; prompt #10)
+- [x] **1. Fundación** (Etapa 1): SDK Medusa (`@medusajs/js-sdk`) + `apps/web/.env.local` + capa `lib/medusa/` (mapea producto Medusa → tipo `Product`).
+- [x] **2. Catálogo** (Etapa 2, D23): home/PLP + PDP con productos reales; catálogo Medusa-native + metadata administrable + `subscription_price` calculado por el backend.
+- [x] **3. Carrito** (Etapa 3, D24): `cart-provider` sobre carritos reales de Medusa (CLP, `cart_id` persistido).
+- [x] **4. Checkout** (Etapa 3, D24): `/checkout` real (dirección → despacho → **pago manual** → **orden real**).
+- [x] **5. Auditoría de MVP + plan de cierre** (D25): flujo propio en 2 etapas (A cuentas · B tienda coherente); cuentas SÍ, moat diferido.
+- [x] **6. Etapa A — Cuentas y sesión reales** (D26): auth nativo de Medusa (registro/login/logout/recuperación + sesión persistente JWT), `transferCart` carrito→cliente, `/cuenta/pedidos` (historial real) + `/cuenta/direcciones` (CRUD nativo), subscriber de recuperación en el backend. Compra de invitado intacta. **`tsc`+`eslint`+`build` (28 rutas) + smoke punta a punta ✅.**
+- [x] **7. Etapa B — Tienda coherente y honesta** (D28): buscador real (`q` Store API + `/buscar`); cross-sell real (`listProducts`); **regla única de envío** (backend: opción $3.990 + promoción automática de envío gratis ≥ $30.000 vía script idempotente + ruta `/store/shipping-policy`); **auditoría de copy** (sin Webpay/SII/"pago protegido"/fechas de envío falsas); reseñas y ratings ocultos. **`tsc`+`eslint`+`build` (25 rutas) + smoke (orden bajo umbral $3.990 / sobre umbral $0) ✅. Flujo propio del MVP cerrado.**
+- [ ] **8. Solo terceros + infra (después):** **Mercado Pago** (Checkout Pro) → **email transaccional** (entrega del enlace de recuperación + confirmaciones/boleta) → SII/courier/WhatsApp (post-tracción); **infra**: deploy backend (Railway/Postgres/Redis) + env vars en Vercel (D27) + dominio + gatear `/dev`. *(Flag: la UI de suscripción existe pero agrega línea única — decidir cablear o atenuar copy antes de lanzar.)*
 > Restricción: Next 16 con cambios de ruptura — leer `apps/web/AGENTS.md` + `apps/web/node_modules/next/dist/docs` antes de tocar el front. Mapear a los tipos/componentes existentes, no reescribir.
 > Para continuar en un chat nuevo: **prompt #10 de `PROMPTS.md`**.
 

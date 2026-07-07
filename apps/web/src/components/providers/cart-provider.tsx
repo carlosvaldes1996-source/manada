@@ -11,6 +11,7 @@ import {
   removeLineItem,
   retrieveCart,
   setLineItemQuantity,
+  transferCartToCustomer,
 } from "@/lib/medusa/cart";
 
 /**
@@ -46,6 +47,10 @@ interface CartContextValue {
   refresh: () => Promise<void>;
   /** Vacía: arranca un carrito nuevo (tras completar la orden). */
   clear: () => Promise<void>;
+  /** Asocia el carrito de invitado al cliente recién autenticado (transferCart). */
+  transferToCustomer: () => Promise<void>;
+  /** Olvida el carrito local (al cerrar sesión); el próximo ítem crea uno nuevo. */
+  reset: () => void;
   /** @deprecated Con carritos reales no se siembran ítems demo. No-op. */
   seedItems: (items: CartItem[]) => void;
 }
@@ -141,6 +146,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCart(await createCart());
   }, [setCart]);
 
+  const transferToCustomer = useCallback(async () => {
+    const id = cartRef.current?.id;
+    if (!id) return;
+    try {
+      setCart(await transferCartToCustomer(id));
+    } catch {
+      // Si el carrito ya no es transferible (expirado/completado), lo olvidamos.
+      setCart(null);
+    }
+  }, [setCart]);
+
+  const reset = useCallback(() => {
+    setCart(null);
+  }, [setCart]);
+
   const seedItems = useCallback(() => {
     // Con carritos reales de Medusa no se siembran ítems demo. Compat no-op.
   }, []);
@@ -149,8 +169,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const items = mapCartItems(cart);
     const count = items.reduce((sum, i) => sum + i.quantity, 0);
     const subtotal = cart?.item_subtotal ?? items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
-    return { cart, items, count, subtotal, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, seedItems };
-  }, [cart, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, seedItems]);
+    return { cart, items, count, subtotal, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, transferToCustomer, reset, seedItems };
+  }, [cart, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, transferToCustomer, reset, seedItems]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

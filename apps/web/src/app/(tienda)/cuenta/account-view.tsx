@@ -9,13 +9,14 @@ import { Grid } from "@/components/ui/grid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NavIcon } from "@/lib/icons";
 import { ACCOUNT_NAV } from "@/config/nav";
 import { useSession, useAuthActions } from "@/hooks";
 import { cn } from "@/lib/utils";
 
 /** Secciones ya implementadas — el resto se muestra sin enlace para no romper (U065). */
-const LIVE_ROUTES = new Set(["/cuenta/mascotas"]);
+const LIVE_ROUTES = new Set(["/cuenta/mascotas", "/cuenta/pedidos", "/cuenta/direcciones"]);
 
 /**
  * Mi cuenta — panel de secciones, según la sesión real:
@@ -26,8 +27,24 @@ const LIVE_ROUTES = new Set(["/cuenta/mascotas"]);
  */
 export function AccountView() {
   const router = useRouter();
-  const { user, status } = useSession();
-  const { leave } = useAuthActions();
+  const { user, status, isLoading } = useSession();
+  const { logout } = useAuthActions();
+
+  if (isLoading) {
+    return (
+      <Section spacing="md">
+        <Stack gap={6}>
+          <Skeleton className="h-10 w-64" />
+          <Grid cols={1} md={2} gap={4}>
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </Grid>
+        </Stack>
+      </Section>
+    );
+  }
 
   if (status !== "authenticated") {
     return (
@@ -51,8 +68,8 @@ export function AccountView() {
     );
   }
 
-  function signOut() {
-    leave();
+  async function signOut() {
+    await logout();
     router.push("/");
   }
 

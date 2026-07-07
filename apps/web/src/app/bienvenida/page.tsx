@@ -42,7 +42,7 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
  */
 export default function BienvenidaPage() {
   const router = useRouter();
-  const { user, status, guest, signUp } = useSession();
+  const { user, status, guest } = useSession();
   const { activePet } = usePet();
   const { toast } = useToast();
   const reduced = usePrefersReducedMotion();
@@ -78,9 +78,8 @@ export default function BienvenidaPage() {
                 ¡Gracias, {guest.firstName}! Tu pedido está en camino
               </h1>
               <p className="body-l text-text-secondary">
-                Te enviamos la confirmación y la boleta a{" "}
-                <strong className="text-text-primary">{guest.email}</strong>. Compraste como
-                invitado, sin cuenta ni compromisos.
+                Te escribiremos a <strong className="text-text-primary">{guest.email}</strong> con la
+                confirmación de tu pedido. Compraste como invitado, sin cuenta ni compromisos.
               </p>
             </Stack>
           </motion.div>
@@ -102,18 +101,12 @@ export default function BienvenidaPage() {
                 <GuestPerk icon={<ShieldCheck className="size-4" aria-hidden />} text="Tus datos son privados y puedes borrar la cuenta cuando quieras." />
               </Stack>
               <Row gap={3} wrap>
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    signUp(guest);
-                    toast({
-                      title: "Cuenta creada",
-                      description: `Guardamos tu compra en ${guest.email}.`,
-                      variant: "success",
-                    });
-                  }}
-                >
-                  Crear mi cuenta con {guest.email}
+                <Button size="lg" asChild>
+                  <Link
+                    href={`/crear-cuenta?email=${encodeURIComponent(guest.email)}&nombre=${encodeURIComponent(guest.firstName)}`}
+                  >
+                    Crear mi cuenta
+                  </Link>
                 </Button>
                 <Button size="lg" variant="ghost" asChild>
                   <Link href="/categoria/todo">Seguir explorando</Link>

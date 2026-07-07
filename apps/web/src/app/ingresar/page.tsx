@@ -3,35 +3,53 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import { FunnelShell } from "@/components/layout";
 import { Section } from "@/components/ui/section";
-import { Stack, Row } from "@/components/ui/stack";
+import { Stack } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Alert } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
 import { useAuthActions } from "@/hooks";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
- * Ingresar — login del usuario que ya tiene cuenta y entrada **demo**.
- *
- * Sin backend (D13): el formulario y el acceso demo entran como "Carlos" y
- * siembran a Toby + su carrito (useAuthActions.enterDemo), para revisar intacta
- * la app logueada ya aprobada (Etapas 1–2). El visitante sin cuenta es derivado
- * al embudo de activación. La auth real llega en Fase 4.
+ * Ingresar — login REAL del cliente (Fase 5 · Etapa A). Auth nativo de Medusa
+ * (emailpass): al iniciar sesión se transfiere el carrito de invitado a la cuenta
+ * y la sesión queda persistida (JWT del SDK). El visitante sin cuenta es derivado
+ * al embudo de activación. La compra como invitado sigue disponible sin ingresar.
  */
 export default function IngresarPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { enterDemo } = useAuthActions();
+  const { login } = useAuthActions();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function enter(message: string) {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (loading) return;
+    setFormError(null);
+    const next: typeof errors = {};
+    if (!EMAIL_RE.test(email)) next.email = "Revisa tu correo";
+    if (!password) next.password = "Ingresa tu contraseña";
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
     setLoading(true);
-    enterDemo();
-    toast({ title: message, description: "Bienvenido de vuelta a tu manada.", variant: "success" });
-    router.push("/");
+    const { ok, error } = await login(email, password);
+    if (ok) {
+      toast({ title: "¡Hola de nuevo!", description: "Bienvenido de vuelta a tu manada.", variant: "success" });
+      router.push("/");
+    } else {
+      setFormError(error ?? "No pudimos iniciar tu sesión.");
+      setLoading(false);
+    }
   }
 
   return (
@@ -43,33 +61,35 @@ export default function IngresarPage() {
             <p className="body-m text-text-secondary">Entra para ver lo que preparamos para tu mascota.</p>
           </Stack>
 
-          {/* Acceso demo destacado (sin backend) */}
-          <Button
-            size="lg"
-            block
-            loading={loading}
-            leadingIcon={<Sparkles className="size-4" aria-hidden />}
-            onClick={() => enter("Sesión demo iniciada")}
-          >
-            Entrar como Carlos (demo)
-          </Button>
+          {formError && <Alert variant="error">{formError}</Alert>}
 
-          <Row gap={3} className="text-[13px] text-text-muted">
-            <Separator className="flex-1" />
-            <span>o con tu correo</span>
-            <Separator className="flex-1" />
-          </Row>
-
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              enter("¡Hola de nuevo!");
-            }}
-          >
-            <Input type="email" label="Correo" placeholder="tucorreo@ejemplo.cl" autoComplete="email" required />
-            <Input type="password" label="Contraseña" placeholder="••••••••" autoComplete="current-password" required />
-            <Button type="submit" variant="secondary" block loading={loading}>
+          <form className="flex flex-col gap-4" onSubmit={submit} noValidate>
+            <Input
+              type="email"
+              label="Correo"
+              placeholder="tucorreo@ejemplo.cl"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={errors.email}
+              required
+            />
+            <Input
+              type="password"
+              label="Contraseña"
+              placeholder="••••••••"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={errors.password}
+              required
+            />
+            <div className="-mt-1 text-right">
+              <Link href="/recuperar" className="text-[13px] font-semibold text-text-brand underline-offset-2 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+            <Button type="submit" size="lg" block loading={loading}>
               Ingresar
             </Button>
           </form>

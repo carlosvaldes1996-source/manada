@@ -8,14 +8,16 @@
 export { medusa, MEDUSA_BACKEND_URL } from "./client";
 export { getRegionId } from "./region";
 export { mapProduct, PRODUCT_FIELDS } from "./map-product";
-export { listProducts, getProductByHandle } from "./products";
+export { listProducts, getProductByHandle, searchProducts } from "./products";
 export type { ListProductsParams } from "./products";
+export { getShippingPolicy, type ShippingPolicy } from "./shipping";
 export {
   createCart,
   retrieveCart,
   addLineItem,
   setLineItemQuantity,
   removeLineItem,
+  transferCartToCustomer,
   mapCartItems,
   findLineIdByProduct,
   CART_FIELDS,
@@ -32,3 +34,24 @@ export {
   type ShippingOptionView,
   type CompletedOrder,
 } from "./checkout";
+export {
+  mapCustomer,
+  getCurrentCustomer,
+  registerCustomer,
+  loginCustomer,
+  logoutCustomer,
+  requestPasswordReset,
+  resetPassword,
+  type RegisterInput,
+} from "./auth";
+export {
+  listOrders,
+  listAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  type OrderView,
+  type OrderLineView,
+  type AddressView,
+  type AddressInput,
+} from "./account";

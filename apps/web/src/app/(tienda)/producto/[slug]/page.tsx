@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProductByHandle, listProducts } from "@/lib/medusa";
+import { getProductByHandle, listProducts, getShippingPolicy } from "@/lib/medusa";
 import { ProductView } from "./product-view";
 
 // La ficha se hidrata desde el backend en cada request (no en el build).
@@ -22,10 +22,11 @@ export default async function ProductoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [product, products] = await Promise.all([
+  const [product, products, policy] = await Promise.all([
     getProductByHandle(slug),
     listProducts(),
+    getShippingPolicy(),
   ]);
   if (!product) notFound();
-  return <ProductView product={product} products={products} />;
+  return <ProductView product={product} products={products} policy={policy} />;
 }

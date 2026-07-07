@@ -12,13 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { SubscriptionBox } from "@/components/commerce/subscription-box";
-import { HonestShippingBlock } from "@/components/commerce/honest-shipping-block";
 import { ProductRail } from "@/components/commerce/product-rail";
 import { usePet, useCart, useSession } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { recommendFood, recommendComplements, foodPlan } from "@/lib/recommend";
 import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
-import { DEMO_SHIPPING } from "@/lib/demo-data";
 
 const STAGE_LABEL: Record<string, string> = { cachorro: "cachorro", adulto: "adulto", senior: "senior" };
 const FALLBACK_PRODUCT = { price: { current: 0 }, subscriptionDiscount: undefined };
@@ -52,7 +50,6 @@ export function RecommendationView() {
   }, [activePet, router]);
   if (!activePet) return null;
 
-  const shipping = { ...DEMO_SHIPPING, comuna: "tu comuna" };
 
   function addToOrder() {
     if (!food) return;
@@ -182,8 +179,6 @@ export function RecommendationView() {
                     ? "Agregar a mi pedido"
                     : "Agregar a mi primer pedido"}
               </Button>
-
-              <HonestShippingBlock date={shipping.date} cost={shipping.cost} comuna={shipping.comuna} size="md" />
             </Stack>
           </div>
 
@@ -193,7 +188,6 @@ export function RecommendationView() {
               overline="Para completar su cuidado"
               title={`También podría servirle a ${activePet.name}`}
               products={complements}
-              shipping={shipping}
             />
           )}
         </Stack>

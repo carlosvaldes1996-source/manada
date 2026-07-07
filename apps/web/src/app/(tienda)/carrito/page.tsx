@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ShoppingBag, Truck, ShieldCheck } from "lucide-react";
+import { RefreshCw, ShoppingBag, Truck } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,9 @@ import {
   ProductRail,
 } from "@/components/commerce";
 import { useCart, usePet } from "@/components/providers";
-import { SITE } from "@/config/site";
-import { effectiveSubscriptionPrice } from "@/lib/format";
-import { PRODUCTS, DEMO_SHIPPING } from "@/lib/demo-data";
+import { effectiveSubscriptionPrice, formatCLP } from "@/lib/format";
+import { getShippingPolicy, listProducts, type ShippingPolicy } from "@/lib/medusa";
+import type { Product } from "@/types";
 
 /**
  * Carrito.
@@ -28,13 +29,32 @@ import { PRODUCTS, DEMO_SHIPPING } from "@/lib/demo-data";
  * - U051: las líneas se agrupan en "Se repite" vs "Compra única".
  * - U052: un ÚNICO bloque de cross-sell, al final y discreto, RELEVANTE a la
  *   mascota activa (no ofrecer comida de gato a un dueño de perro).
+ *
+ * Etapa B: envío desde la política REAL del backend (una sola regla, sin duplicar)
+ * y cross-sell con productos REALES del catálogo (Store API).
  */
 export default function CarritoPage() {
   const { items, updateQuantity, removeItem } = useCart();
   const { activePet } = usePet();
   const router = useRouter();
 
-  const threshold = SITE.commerce.freeShippingThreshold;
+  const [policy, setPolicy] = useState<ShippingPolicy | null>(null);
+  const [catalog, setCatalog] = useState<Product[]>([]);
+
+  // Política de envío (fuente única = backend) + catálogo real para el cross-sell.
+  useEffect(() => {
+    let active = true;
+    Promise.all([getShippingPolicy(), listProducts({ limit: 24 })])
+      .then(([p, products]) => {
+        if (!active) return;
+        setPolicy(p);
+        setCatalog(products);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Precio efectivo (con descuento de suscripción del backend) y ahorro por línea.
   const effective = (i: (typeof items)[number]) =>
@@ -43,16 +63,20 @@ export default function CarritoPage() {
   const regularSubtotal = items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
   const savings = items.reduce((s, i) => s + (i.product.price.current - effective(i)) * i.quantity, 0);
   const paySubtotal = regularSubtotal - savings;
-  const shippingCost = paySubtotal >= threshold ? 0 : DEMO_SHIPPING.cost;
+  // Estimación coherente con el backend: gratis sobre el umbral, si no el costo base.
+  // El cobro definitivo lo confirma el checkout con las opciones reales de Medusa.
+  const shippingCost = policy ? (paySubtotal >= policy.freeShippingThreshold ? 0 : policy.baseShippingAmount) : undefined;
 
   const subscriptionLines = items.filter((i) => i.subscriptionWeeks);
   const oneTimeLines = items.filter((i) => !i.subscriptionWeeks);
 
-  const related = PRODUCTS.filter(
-    (p) =>
-      !items.some((i) => i.product.id === p.id) &&
-      (!activePet || p.species.includes(activePet.species)),
-  ).slice(0, 6);
+  const related = catalog
+    .filter(
+      (p) =>
+        !items.some((i) => i.product.id === p.id) &&
+        (!activePet || p.species.includes(activePet.species)),
+    )
+    .slice(0, 6);
 
   if (items.length === 0) {
     return (
@@ -125,12 +149,12 @@ export default function CarritoPage() {
 
           {/* Resumen + envío gratis */}
           <Stack gap={4}>
-            <FreeShippingBar subtotal={paySubtotal} threshold={threshold} />
+            {policy && <FreeShippingBar subtotal={paySubtotal} threshold={policy.freeShippingThreshold} />}
             <OrderSummary
               subtotal={regularSubtotal}
               savings={savings}
               shipping={shippingCost}
-              note="Los precios incluyen IVA. Emitimos boleta SII."
+              note="Los precios incluyen IVA. El costo final de despacho lo confirmas al pagar."
             >
               <Button block size="lg" onClick={() => router.push("/checkout")}>
                 Ir a pagar
@@ -144,15 +168,11 @@ export default function CarritoPage() {
             <Stack gap={2} className="rounded-[var(--radius-md)] border border-border-default bg-surface p-4 text-[13px] text-text-secondary">
               <Row gap={2} align="start">
                 <Truck className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
-                Despacho honesto: ves la fecha y el costo reales antes de pagar.
+                Despacho honesto: ves el costo real antes de pagar y es gratis sobre {policy ? formatCLP(policy.freeShippingThreshold) : "cierto monto"}.
               </Row>
               <Row gap={2} align="start">
                 <RefreshCw className="mt-0.5 size-4 shrink-0 text-miel-700" aria-hidden />
                 Las suscripciones no tienen permanencia: pausa o cancela cuando quieras.
-              </Row>
-              <Row gap={2} align="start">
-                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--success)]" aria-hidden />
-                Pago seguro y boleta SII en cada pedido.
               </Row>
             </Stack>
           </Stack>
@@ -164,7 +184,6 @@ export default function CarritoPage() {
             overline="Quizás falta algo"
             title="Completa tu pedido"
             products={related}
-            shipping={DEMO_SHIPPING}
           />
         )}
       </Stack>

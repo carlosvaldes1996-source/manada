@@ -18,7 +18,7 @@ import {
   type ShippingOption,
   type PaymentOption,
 } from "@/components/commerce";
-import { useCart } from "@/components/providers";
+import { useCart, useSession } from "@/components/providers";
 import {
   listShippingOptions,
   setCheckoutInfo,
@@ -49,10 +49,11 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
  */
 export default function CheckoutPage() {
   const { cart, items, subtotal, isLoading, clear } = useCart();
+  const { user } = useSession();
   const router = useRouter();
   const cartId = cart?.id;
 
-  // Datos del comprador (compra como invitado).
+  // Datos del comprador (compra como invitado o cliente autenticado).
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,6 +68,17 @@ export default function CheckoutPage() {
   const [paymentId, setPaymentId] = useState("manual");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Prellena una sola vez los datos del cliente autenticado, sin pisar lo que ya
+  // escribió (ajuste de estado en render guardado — patrón recomendado de React,
+  // ya que el cliente llega asíncrono desde la sesión persistida).
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  if (user && prefilledFor !== user.id) {
+    setPrefilledFor(user.id);
+    if (!firstName) setFirstName(user.firstName ?? "");
+    if (!lastName) setLastName(user.lastName ?? "");
+    if (!email) setEmail(user.email ?? "");
+  }
 
   // Opciones de despacho reales del carrito.
   useEffect(() => {
@@ -177,18 +189,20 @@ export default function CheckoutPage() {
             <Stack gap={6}>
               {/* Identificación (compra como invitado, siempre posible) */}
               <Block title="Tus datos">
-                <p className="text-sm text-text-secondary">
-                  Compras como invitado.{" "}
-                  <Link href="/ingresar" className="font-semibold text-text-brand underline-offset-2 hover:underline">
-                    Ingresa
-                  </Link>{" "}
-                  si ya tienes cuenta.
-                </p>
+                {!user && (
+                  <p className="text-sm text-text-secondary">
+                    Compras como invitado.{" "}
+                    <Link href="/ingresar" className="font-semibold text-text-brand underline-offset-2 hover:underline">
+                      Ingresa
+                    </Link>{" "}
+                    si ya tienes cuenta.
+                  </p>
+                )}
                 <Row gap={3} className="max-w-md" wrap>
                   <Input label="Nombre" placeholder="Carlos" autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} error={errors.firstName} className="flex-1" required />
                   <Input label="Apellido" placeholder="Valdés" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} className="flex-1" required />
                 </Row>
-                <Input type="email" label="Correo para la boleta y el seguimiento" placeholder="tucorreo@ejemplo.cl" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} className="max-w-md" required />
+                <Input type="email" label="Correo para la confirmación y el seguimiento" placeholder="tucorreo@ejemplo.cl" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} className="max-w-md" required />
               </Block>
 
               {/* Dirección de entrega */}

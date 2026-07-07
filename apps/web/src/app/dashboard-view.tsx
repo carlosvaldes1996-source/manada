@@ -17,7 +17,6 @@ import { usePet, useSession } from "@/components/providers";
 import { formatDeliveryDate } from "@/lib/format";
 import {
   DEMO_NUDGE,
-  DEMO_SHIPPING,
   TOBY_ANTICIPATION,
   PRODUCT_BY_ID,
 } from "@/lib/demo-data";
@@ -149,7 +148,6 @@ export function DashboardView({ products }: { products: Product[] }) {
             activePet ? "Lo que sueles darle" : "Productos que las familias recompran"
           }
           products={railProducts}
-          shipping={DEMO_SHIPPING}
           href="/categoria/todo"
           linkLabel="Ver todo"
         />

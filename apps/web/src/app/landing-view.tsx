@@ -20,10 +20,9 @@ import { Progress } from "@/components/ui/progress";
 import { FeatureCard } from "@/components/ui/feature-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CategoryCard } from "@/components/commerce/category-card";
-import { ReviewCard } from "@/components/commerce/review-card";
 import { ProductRail } from "@/components/commerce/product-rail";
 import { CATEGORIES } from "@/lib/catalog";
-import { REVIEWS, DEMO_SHIPPING, TOBY_ANTICIPATION } from "@/lib/demo-data";
+import { TOBY_ANTICIPATION } from "@/lib/demo-data";
 import type { Product } from "@/types";
 
 /**
@@ -118,7 +117,6 @@ export function LandingView({ products }: { products: Product[] }) {
           overline="La vitrina"
           title="Lo que más recompran las familias"
           products={products.filter((p) => p.stock > 0).slice(0, 6)}
-          shipping={DEMO_SHIPPING}
           href="/categoria/todo"
           linkLabel="Ver toda la tienda"
         />
@@ -198,27 +196,12 @@ export function LandingView({ products }: { products: Product[] }) {
             </Row>
           </Stack>
           <Grid cols={1} sm={2} gap={3}>
-            <TrustItem icon={<Truck className="size-5" aria-hidden />} title="Despacho honesto" body="Ves la fecha y el costo reales antes de comprar, no en la sorpresa final." />
+            <TrustItem icon={<Truck className="size-5" aria-hidden />} title="Despacho honesto" body="Ves el costo real de despacho antes de pagar, sin sorpresas al final." />
             <TrustItem icon={<RefreshCw className="size-5" aria-hidden />} title="Sin permanencia" body="Pausas, adelantas o cancelas tu suscripción cuando quieras, sin costo." />
-            <TrustItem icon={<ShieldCheck className="size-5" aria-hidden />} title="Compra segura" body="Pago protegido y boleta SII en cada pedido. Como debe ser en Chile." />
+            <TrustItem icon={<ShieldCheck className="size-5" aria-hidden />} title="Compra sin sorpresas" body="Pagas por transferencia con los datos que te enviamos y coordinamos el despacho contigo." />
             <TrustItem icon={<Heart className="size-5" aria-hidden />} title="Hecho con cariño" body="Recomendaciones pensadas para tu mascota, no para vaciar la bodega." />
           </Grid>
         </div>
-      </Section>
-
-      {/* ── Prueba social ── */}
-      <Section spacing="md" tone="canvas">
-        <Stack gap={6}>
-          <SectionHeading
-            overline="Familias de la manada"
-            title="Lo que más valoran: que les avisamos a tiempo"
-          />
-          <Grid cols={1} md={3} gap={6}>
-            {REVIEWS.map((r) => (
-              <ReviewCard key={r.id} review={r} variant="panel" />
-            ))}
-          </Grid>
-        </Stack>
       </Section>
 
       {/* ── Categorías (navegación por necesidad) ── */}

@@ -16,9 +16,11 @@ export const SITE = {
   },
   // Reglas de comercio (palancas de AOV y descubrimiento)
   commerce: {
-    /** Umbral de envío gratis en CLP — alimenta la FreeShippingBar (AUDIT U042). */
-    freeShippingThreshold: 30000,
-    /** Productos por página en la PLP (descubrimiento por paginación, U067). */
+    /**
+     * Productos por página en la PLP (descubrimiento por paginación, U067).
+     * NOTA: el umbral de envío gratis NO vive aquí — es del backend (fuente única),
+     * expuesto en `GET /store/shipping-policy` y consumido vía `getShippingPolicy()`.
+     */
     productsPerPage: 12,
   },
 } as const;

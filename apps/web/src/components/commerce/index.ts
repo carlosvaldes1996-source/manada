@@ -3,6 +3,7 @@
 // Badges
 export * from "./badges";
 export * from "./honest-shipping-block";
+export * from "./shipping-policy-note";
 
 // Catálogo
 export * from "./product-card";

@@ -1,4 +1,4 @@
-import type { Product, ShippingEstimate } from "@/types";
+import type { Product } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Grid } from "@/components/ui/grid";
@@ -6,7 +6,6 @@ import { ProductCard } from "./product-card";
 
 export interface ProductGridProps {
   products: Product[];
-  shipping?: ShippingEstimate;
   /** Estado de carga: muestra skeletons en la misma grilla (2→3→4). */
   loading?: boolean;
   skeletonCount?: number;
@@ -20,7 +19,6 @@ export interface ProductGridProps {
  */
 export function ProductGrid({
   products,
-  shipping,
   loading = false,
   skeletonCount = 8,
   emptyState,
@@ -58,7 +56,7 @@ export function ProductGrid({
   return (
     <Grid cols={2} md={3} lg={4} gap={6} className={className}>
       {products.map((p) => (
-        <ProductCard key={p.id} product={p} shipping={shipping} />
+        <ProductCard key={p.id} product={p} />
       ))}
     </Grid>
   );

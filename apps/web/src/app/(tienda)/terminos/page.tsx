@@ -17,10 +17,10 @@ export default function TerminosPage() {
           aceptas estos términos.
         </p>
       </ProseBlock>
-      <ProseBlock heading="Precios y boleta">
+      <ProseBlock heading="Precios y comprobante">
         <p>
-          Los precios se muestran en pesos chilenos (CLP) e incluyen IVA. Emitimos <strong>boleta
-          electrónica SII</strong> por cada compra.
+          Los precios se muestran en pesos chilenos (CLP) e incluyen IVA. Emitimos la boleta
+          correspondiente por cada compra y te la hacemos llegar junto con tu pedido.
         </p>
       </ProseBlock>
       <ProseBlock heading="Suscripciones">
@@ -31,8 +31,8 @@ export default function TerminosPage() {
       </ProseBlock>
       <ProseBlock heading="Despacho">
         <p>
-          La fecha y el costo de despacho se muestran de forma honesta antes de pagar. Pueden variar
-          según tu comuna y disponibilidad.
+          El costo de despacho se muestra de forma honesta antes de pagar y coordinamos la entrega
+          contigo tras la compra. Puede variar según tu comuna y disponibilidad.
         </p>
       </ProseBlock>
       <ProseBlock heading="Contacto">

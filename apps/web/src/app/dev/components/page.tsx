@@ -482,7 +482,7 @@ function CommerceSection() {
   return (
     <GuideSection id="commerce" title="Commerce" blurb="Componentes de dominio e-commerce: catálogo, despacho honesto, suscripción y checkout.">
       <Demo name="ProductCard" when="Unidad central del catálogo. Conecta con el carrito y emite toast al agregar.">
-        <div className="w-64"><ProductCard product={product} shipping={DEMO_SHIPPING} /></div>
+        <div className="w-64"><ProductCard product={product} /></div>
       </Demo>
       <Demo name="Badges de e-commerce" when="Stock, descuento, suscripción y despacho honesto compacto.">
         <StockBadge stock={24} />
@@ -495,7 +495,7 @@ function CommerceSection() {
         <HonestShippingBlock date={DEMO_SHIPPING.date} cost={0} comuna="Ñuñoa" size="md" />
       </Demo>
       <Demo name="ProductGrid" when="Grilla 2→3→4 con estados loading y empty integrados." canvasClassName="block">
-        <ProductGrid products={PRODUCTS.slice(0, 4)} shipping={DEMO_SHIPPING} />
+        <ProductGrid products={PRODUCTS.slice(0, 4)} />
       </Demo>
       <Demo name="ProductRail" when="Carrusel horizontal (cross-sell, destacados de Home)." canvasClassName="block">
         <ProductRail title="Para la manada de Toby" overline="Cross-sell" products={PRODUCTS} href="/categoria/todo" />

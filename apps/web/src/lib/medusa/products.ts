@@ -16,6 +16,8 @@ export interface ListProductsParams {
   offset?: number;
   /** Filtra por id(s) de categoría de Medusa (para la PLP por categoría en Etapa 2). */
   category_id?: string | string[];
+  /** Búsqueda de texto libre (Store API `q`) — nombre, descripción, etc. */
+  q?: string;
 }
 
 export async function listProducts(params: ListProductsParams = {}): Promise<Product[]> {
@@ -26,8 +28,20 @@ export async function listProducts(params: ListProductsParams = {}): Promise<Pro
     limit: params.limit ?? 100,
     offset: params.offset,
     ...(params.category_id ? { category_id: params.category_id } : {}),
+    ...(params.q ? { q: params.q } : {}),
   });
   return products.map(mapProduct);
+}
+
+/**
+ * Búsqueda real de catálogo (Fase 5 · Etapa B) — usa el `q` nativo de la Store
+ * API de Medusa (busca en título, descripción, etc.). Devuelve `Product[]` ya
+ * mapeado. El filtrado fino (marca/especie) lo hace la UI sobre estos resultados.
+ */
+export async function searchProducts(query: string, limit = 24): Promise<Product[]> {
+  const q = query.trim();
+  if (!q) return [];
+  return listProducts({ q, limit });
 }
 
 export async function getProductByHandle(handle: string): Promise<Product | null> {
