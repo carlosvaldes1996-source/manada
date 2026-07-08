@@ -164,15 +164,11 @@ export default function CarritoPage() {
               </Button>
             </OrderSummary>
 
-            {/* Reaseguros de confianza (vale para todo carrito, clave en la 1ª compra) */}
+            {/* Reaseguro de confianza (vale para todo carrito, clave en la 1ª compra) */}
             <Stack gap={2} className="rounded-[var(--radius-md)] border border-border-default bg-surface p-4 text-[13px] text-text-secondary">
               <Row gap={2} align="start">
                 <Truck className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
                 Despacho honesto: ves el costo real antes de pagar y es gratis sobre {policy ? formatCLP(policy.freeShippingThreshold) : "cierto monto"}.
-              </Row>
-              <Row gap={2} align="start">
-                <RefreshCw className="mt-0.5 size-4 shrink-0 text-miel-700" aria-hidden />
-                Las suscripciones no tienen permanencia: pausa o cancela cuando quieras.
               </Row>
             </Stack>
           </Stack>

@@ -25,8 +25,10 @@ import {
   selectShippingMethod,
   initManualPayment,
   completeCart,
+  getShippingPolicy,
   type CheckoutAddress,
   type ShippingOptionView,
+  type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
 
@@ -65,6 +67,7 @@ export default function CheckoutPage() {
 
   const [shipOptions, setShipOptions] = useState<ShippingOptionView[]>([]);
   const [shippingId, setShippingId] = useState<string>("");
+  const [policy, setPolicy] = useState<ShippingPolicy | null>(null);
   const [paymentId, setPaymentId] = useState("manual");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -96,6 +99,17 @@ export default function CheckoutPage() {
     };
   }, [cartId]);
 
+  // Política de envío real (fuente única del backend) para reflejar el envío gratis.
+  useEffect(() => {
+    let active = true;
+    getShippingPolicy()
+      .then((p) => active && setPolicy(p))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const shippingOptionsView: ShippingOption[] = useMemo(
     () =>
       shipOptions.map((o) => ({
@@ -108,7 +122,13 @@ export default function CheckoutPage() {
     [shipOptions],
   );
 
-  const shippingCost = shipOptions.find((o) => o.id === shippingId)?.amount ?? 0;
+  // El envío mostrado refleja EXACTAMENTE la regla del backend (fuente única):
+  // gratis sobre el umbral; bajo ese monto, el costo de la opción elegida. Así el
+  // total coincide con lo que cobra la orden (la promoción automática de envío
+  // gratis deja el despacho en $0 sobre el umbral). No se hardcodea ningún valor.
+  const selectedShippingAmount = shipOptions.find((o) => o.id === shippingId)?.amount ?? 0;
+  const shippingCost =
+    policy && subtotal >= policy.freeShippingThreshold ? 0 : selectedShippingAmount;
   const total = subtotal + shippingCost;
 
   function validate(): boolean {

@@ -23,12 +23,6 @@ export default function TerminosPage() {
           correspondiente por cada compra y te la hacemos llegar junto con tu pedido.
         </p>
       </ProseBlock>
-      <ProseBlock heading="Suscripciones">
-        <p>
-          Las entregas recurrentes no tienen permanencia: puedes pausar, reagendar o cancelar cuando
-          quieras desde tu cuenta, sin costo. Te avisamos antes de cada cobro.
-        </p>
-      </ProseBlock>
       <ProseBlock heading="Despacho">
         <p>
           El costo de despacho se muestra de forma honesta antes de pagar y coordinamos la entrega

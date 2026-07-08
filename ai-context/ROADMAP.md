@@ -11,7 +11,7 @@
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *las fases y su orden*. El detalle táctico está en TODO.md y AUDIT_UI_UX.md. |
 
-> *Actualizado: 2026-07-06 (D22: **mandato MVP-first** — Fase 4 cerrada por lo esencial; **Fase 5 (MVP) activa**, alternativa manual por defecto)*
+> *Actualizado: 2026-07-08 (D29: **endurecimiento pre-lanzamiento ✅** — flujo propio cerrado + 7 correcciones de bajo riesgo; **Fase 5 (MVP) activa**, resta solo infra + terceros)*
 
 | Fase | Nombre | Entregable principal | Estado |
 |---|---|---|---|
@@ -75,5 +75,6 @@
 6. ✅ **Auditoría de MVP + plan de cierre** (D25): flujo propio en 2 etapas (A cuentas · B tienda coherente); cuentas SÍ, moat diferido.
 7. ✅ **Etapa A — Cuentas y sesión reales** (D26): auth nativo de Medusa (registro/login/logout/recuperación + sesión persistente JWT), `transferCart` carrito→cliente, historial de pedidos y direcciones reales; compra de invitado intacta. `tsc`+`eslint`+`build` (28 rutas) + smoke punta a punta ✅.
 8. ✅ **Etapa B — Tienda coherente y honesta** (D28): buscador real (`q` Store API), cross-sell real, **regla única de envío** (backend: opción $3.990 + promoción automática de envío gratis ≥ $30.000, ruta `/store/shipping-policy`), **auditoría de copy** (sin Webpay/SII/"pago protegido"/fechas falsas), reseñas y ratings ocultos. `tsc`+`eslint`+`build` (25 rutas) + smoke (envío free/pago en orden real) ✅. **Flujo propio del MVP cerrado.**
-9. ⬜ **Solo terceros + infra:** **Mercado Pago** (Checkout Pro) → email transaccional (recuperación + confirmaciones/boleta) → SII/courier/WhatsApp (post-tracción); **infra**: deploy backend (Railway/Postgres/Redis) + env vars en Vercel (D27) + dominio + gatear `/dev`.
+9. ✅ **Endurecimiento pre-lanzamiento** (D29, 2026-07-08): auditoría de CTO + 7 correcciones de código de bajo riesgo (solo `apps/web`, backend intacto, reversibles) → suscripción **atenuada** (`SUBSCRIPTIONS_ENABLED=false` = compra única), **total del checkout** que refleja la regla real de envío del backend, copy sin promesas de suscripción, **menú móvil sin 404**, **`/dev/*` gateado** en prod, cabeceras HTTP de seguridad, `error.tsx`/`not-found.tsx` de marca. `tsc`+`eslint`+`build` (25 rutas) + smoke en `next start` (prod) ✅.
+10. ⬜ **Solo terceros + infra:** **secretos de prod + eliminar el fallback `"supersecret"`** (backend) → **Mercado Pago** (Checkout Pro) → email transaccional (recuperación + confirmaciones/datos de transferencia) → SII/courier/WhatsApp (post-tracción); **infra**: deploy backend (Railway/Postgres+backups/Redis) + CORS + env vars en Vercel (D27) + dominio.
 > Next 16 con cambios de ruptura: leer `apps/web/AGENTS.md` + docs antes de tocar el front; mapear a los tipos/componentes existentes. Diferido a **Fases 6–7 (con tracción):** integración Webpay; automatización de courier, boleta SII, WhatsApp; **moat** (motor de anticipación + suscripción inteligente). Prompt de continuación: **#10 en `PROMPTS.md`**.

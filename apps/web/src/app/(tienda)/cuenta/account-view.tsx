@@ -11,12 +11,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NavIcon } from "@/lib/icons";
-import { ACCOUNT_NAV } from "@/config/nav";
+import { ACCOUNT_NAV, LIVE_ACCOUNT_HREFS } from "@/config/nav";
 import { useSession, useAuthActions } from "@/hooks";
 import { cn } from "@/lib/utils";
-
-/** Secciones ya implementadas — el resto se muestra sin enlace para no romper (U065). */
-const LIVE_ROUTES = new Set(["/cuenta/mascotas", "/cuenta/pedidos", "/cuenta/direcciones"]);
 
 /**
  * Mi cuenta — panel de secciones, según la sesión real:
@@ -84,7 +81,7 @@ export function AccountView() {
 
         <Grid cols={1} md={2} gap={4}>
           {ACCOUNT_NAV.map((item) => {
-            const live = LIVE_ROUTES.has(item.href);
+            const live = LIVE_ACCOUNT_HREFS.has(item.href);
             const inner = (
               <>
                 <span className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-brand-soft text-text-brand">

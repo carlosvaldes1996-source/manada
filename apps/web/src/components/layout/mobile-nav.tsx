@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import { ACCOUNT_NAV, MAIN_NAV } from "@/config/nav";
+import { ACCOUNT_NAV, LIVE_ACCOUNT_HREFS, MAIN_NAV } from "@/config/nav";
 import { NavIcon } from "@/lib/icons";
 import { useDisclosure } from "@/hooks/use-disclosure";
 import { IconButton } from "@/components/ui/icon-button";
@@ -41,7 +41,7 @@ export function MobileNav() {
         <Separator className="my-4" />
         <p className="mb-1 text-xs font-semibold tracking-[0.06em] text-text-muted uppercase">Mi cuenta</p>
         <nav aria-label="Mi cuenta" className="flex flex-col">
-          {ACCOUNT_NAV.map((item) => (
+          {ACCOUNT_NAV.filter((item) => LIVE_ACCOUNT_HREFS.has(item.href)).map((item) => (
             <DrawerClose asChild key={item.href}>
               <Link
                 href={item.href}

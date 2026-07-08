@@ -92,3 +92,13 @@ export const ACCOUNT_NAV: NavItem[] = [
   { label: "Medios de pago", href: "/cuenta/pagos", icon: "CreditCard" },
   { label: "Boletas", href: "/cuenta/boletas", icon: "Receipt" },
 ];
+
+/**
+ * Rutas de "Mi cuenta" YA implementadas (fuente única). El menú móvil solo enlaza
+ * estas para no generar 404; el panel de cuenta muestra el resto como "Pronto".
+ */
+export const LIVE_ACCOUNT_HREFS = new Set<string>([
+  "/cuenta/mascotas",
+  "/cuenta/pedidos",
+  "/cuenta/direcciones",
+]);

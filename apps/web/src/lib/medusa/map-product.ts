@@ -42,6 +42,15 @@ export const PRODUCT_FIELDS =
 type StoreProduct = HttpTypes.StoreProduct & { subscription_price?: number | null };
 type StoreVariant = HttpTypes.StoreProductVariant;
 
+/**
+ * MVP: el storefront NO ofrece suscripción todavía (el motor de entregas
+ * recurrentes es el moat, posterior al MVP). Hasta cablearlo de verdad, el
+ * catálogo se expone como **compra única**: así la UI nunca muestra un precio,
+ * badge ni CTA de suscripción que hoy no se cobra ni se cumple. Interruptor
+ * único y reversible: al implementar la suscripción real, poner en `true`.
+ */
+const SUBSCRIPTIONS_ENABLED = false;
+
 /** Emoji placeholder por categoría hasta tener packshots reales (U090). */
 const CATEGORY_EMOJI: Record<ProductCategory, string> = {
   alimento: "🐕",
@@ -179,13 +188,16 @@ export function mapProduct(product: StoreProduct): Product {
   const species = metaEnumList<Species>(meta, "species", VALID_SPECIES);
   const stage = metaEnumList<LifeStage>(meta, "stage", VALID_STAGES);
 
-  const subscribable = metaBool(meta, "subscribable");
+  const subscribable = SUBSCRIPTIONS_ENABLED && metaBool(meta, "subscribable");
   const subscriptionDiscount = subscribable
     ? metaNumber(meta, "subscription_discount_percentage")
     : undefined;
-  // Precio de suscripción: lo calcula el backend; el frontend NO recalcula.
+  // Precio de suscripción: lo calcula el backend; el frontend NO recalcula. Solo
+  // se expone si la suscripción está habilitada (hoy no, ver SUBSCRIPTIONS_ENABLED).
   const subscriptionPrice =
-    typeof product.subscription_price === "number" ? product.subscription_price : undefined;
+    subscribable && typeof product.subscription_price === "number"
+      ? product.subscription_price
+      : undefined;
 
   const ratingValue = metaNumber(meta, "rating");
   const reviewCount = metaNumber(meta, "review_count");
@@ -250,7 +262,7 @@ export function mapLineItemProduct(line: StoreCartLineLike): Product {
     price: { current: line.unit_price },
     format: line.variant_title || undefined,
     imageUrl: line.thumbnail ?? emojiFor(category, species),
-    subscribable: metaBool(meta, "subscribable"),
+    subscribable: SUBSCRIPTIONS_ENABLED && metaBool(meta, "subscribable"),
     stock: 999,
   };
 }
