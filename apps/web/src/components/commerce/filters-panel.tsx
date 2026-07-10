@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { SlidersHorizontal } from "lucide-react";
-import type { FilterGroup } from "@/lib/data/catalog";
+import type { FilterGroup } from "@/lib/catalog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

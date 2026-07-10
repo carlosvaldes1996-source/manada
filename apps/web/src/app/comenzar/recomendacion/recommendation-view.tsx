@@ -47,19 +47,24 @@ const STORE_HREF = "/categoria/todo";
  * para rearmar el plan, una **puerta de lealtad de marca** (no forzamos el cambio)
  * y la **anticipación como propuesta central** (el sistema sabe cuándo se acaba;
  * el usuario solo confirma o ajusta). Límite honesto de D29: recordatorio, no
- * cobro ni envío recurrente. Corre sobre catálogo demo (la reconexión al backend
- * real es una pasada de integración aparte).
+ * cobro ni envío recurrente. Corre sobre el catálogo REAL (Store API, O5): el
+ * producto sumado tiene `variantId` y llena el carrito real; al sumar registramos
+ * qué come la mascota (`assignFood`, seam de Pet Experience B6) → enciende su
+ * anticipación en dashboard/perfil.
  */
-export function RecommendationView() {
+export function RecommendationView({ products }: { products: Product[] }) {
   const router = useRouter();
-  const { activePet } = usePet();
+  const { activePet, assignFood } = usePet();
   const { addItem } = useCart();
   // Con sesión (alta de 2ª mascota): el pedido va directo al carrito, sin pasar
   // por el registro "valor primero" (que es solo para visitantes).
   const { status } = useSession();
   const isAuthed = status === "authenticated";
 
-  const foods = useMemo(() => (activePet ? recommendFoodRanked(activePet) : []), [activePet]);
+  const foods = useMemo(
+    () => (activePet ? recommendFoodRanked(activePet, products) : []),
+    [activePet, products],
+  );
   const recommended = foods[0];
   // El usuario puede rearmar el plan eligiendo una alternativa; por defecto = la
   // que elegiríamos. Si el id queda huérfano (cambió la mascota) cae a la recomendada.
@@ -79,12 +84,12 @@ export function RecommendationView() {
     [activePet, food],
   );
   const alternatives = useMemo(
-    () => (activePet && food ? recommendFoodAlternatives(activePet, food, 3) : []),
-    [activePet, food],
+    () => (activePet && food ? recommendFoodAlternatives(activePet, products, food, 3) : []),
+    [activePet, products, food],
   );
   const complements = useMemo(
-    () => (activePet ? recommendComplements(activePet).filter((p) => p.stock > 0) : []),
-    [activePet],
+    () => (activePet ? recommendComplements(activePet, products).filter((p) => p.stock > 0) : []),
+    [activePet, products],
   );
 
   // Sin mascota (entrada directa a la URL) → al alta.
@@ -99,12 +104,15 @@ export function RecommendationView() {
   const weightEstimated = Boolean(activePet.weightSource && activePet.weightSource !== "exacto");
 
   function addToOrder() {
-    if (!food) return;
+    if (!food || !activePet) return;
     addItem(food, { quantity: 1 });
+    // Manada aprende qué come la mascota (seam B6): llena "su alimento" en el
+    // perfil y enciende la anticipación real en dashboard/perfil.
+    assignFood(activePet.id, food.id);
     router.push(isAuthed ? "/carrito" : "/crear-cuenta");
   }
 
-  // Catálogo demo sin alimento para esta especie (p. ej. "otro"): igual celebramos.
+  // Catálogo sin alimento para esta especie (p. ej. "otro"): igual celebramos.
   if (!food) {
     return (
       <FunnelShell exitHref={exitHref}>

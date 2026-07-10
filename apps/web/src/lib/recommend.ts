@@ -1,16 +1,16 @@
 import type { LifeStage, Pet, Product } from "@/types";
-import { PRODUCTS } from "./data/catalog";
 import { formatCLP } from "./format";
 import { dailyRationGrams, estimateRunOut, type RunOutEstimate } from "./anticipation";
 
 /**
- * Motor de recomendaciones (stub determinista — el "se adelantó por mí").
+ * Motor de recomendaciones (el "se adelantó por mí").
  *
- * A partir del perfil de mascota recién creado elige el alimento que mejor le
- * calza, ofrece alternativas igual de válidas y explica POR QUÉ, para que la
- * pantalla de recomendación (Funnel F4) asesore en vez de vender una sola opción
- * (FUNNEL_TARGET §1.5). En la pasada de integración se reemplaza por catálogo real
- * del backend (mismas firmas: se mapea, no se reescribe).
+ * Lógica PURA sobre el catálogo que recibe: el caller (un server component)
+ * provee los productos reales de la Store API y este módulo elige el alimento
+ * que mejor calza al perfil, ofrece alternativas igual de válidas y explica POR
+ * QUÉ, para que la pantalla de recomendación (Funnel F4) asesore en vez de
+ * vender una sola opción (FUNNEL_TARGET §1.5). Sin fuente de datos propia:
+ * el backend es la única verdad del catálogo (O5).
  */
 
 export const STAGE_LABEL: Record<LifeStage, string> = {
@@ -51,18 +51,18 @@ function scoreFood(product: Product, pet: Pet): number {
  * Alimentos para la especie de la mascota, ordenados de mejor a peor calce
  * (etapa, stock, valoración). Base para la recomendada y sus alternativas.
  */
-export function recommendFoodRanked(pet: Pet): Product[] {
-  return PRODUCTS.filter(
-    (p) => p.category === "alimento" && p.species.includes(pet.species),
-  ).sort((a, b) => scoreFood(b, pet) - scoreFood(a, pet));
+export function recommendFoodRanked(pet: Pet, products: Product[]): Product[] {
+  return products
+    .filter((p) => p.category === "alimento" && p.species.includes(pet.species))
+    .sort((a, b) => scoreFood(b, pet) - scoreFood(a, pet));
 }
 
 /**
  * Mejor alimento para la mascota (la que elegiríamos): el primero del ranking.
  * Devuelve `undefined` si el catálogo no tiene nada para su especie.
  */
-export function recommendFood(pet: Pet): Product | undefined {
-  return recommendFoodRanked(pet)[0];
+export function recommendFood(pet: Pet, products: Product[]): Product | undefined {
+  return recommendFoodRanked(pet, products)[0];
 }
 
 /**
@@ -70,8 +70,13 @@ export function recommendFood(pet: Pet): Product | undefined {
  * especie, **etapa apropiada** (nunca comida de cachorro para un adulto), en stock,
  * excluyendo la elegida. No son de segunda: matan la sensación de una sola vía.
  */
-export function recommendFoodAlternatives(pet: Pet, chosen: Product, limit = 2): Product[] {
-  return recommendFoodRanked(pet)
+export function recommendFoodAlternatives(
+  pet: Pet,
+  products: Product[],
+  chosen: Product,
+  limit = 2,
+): Product[] {
+  return recommendFoodRanked(pet, products)
     .filter((p) => p.id !== chosen.id && p.stock > 0 && stageAppropriate(p, pet))
     .slice(0, limit);
 }
@@ -135,10 +140,9 @@ export function alternativeAngle(alt: Product, chosen: Product, pet: Pet): strin
  * Complementos de cuidado para el riel "también podría servirle": misma especie,
  * otra categoría (farmacia/accesorios), en stock primero.
  */
-export function recommendComplements(pet: Pet, limit = 4): Product[] {
-  return PRODUCTS.filter(
-    (p) => p.category !== "alimento" && p.species.includes(pet.species),
-  )
+export function recommendComplements(pet: Pet, products: Product[], limit = 4): Product[] {
+  return products
+    .filter((p) => p.category !== "alimento" && p.species.includes(pet.species))
     .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0))
     .slice(0, limit);
 }
