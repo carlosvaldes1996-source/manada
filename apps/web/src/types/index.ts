@@ -12,6 +12,15 @@ export type Species = "perro" | "gato" | "otro";
 /** Etapa de vida — alimenta sugerencias de transición de fórmula. */
 export type LifeStage = "cachorro" | "adulto" | "senior";
 
+/**
+ * Confianza del peso registrado (funnel F3 · onboarding estimable):
+ * - `exacto` — el dueño lo sabe o lo pesó.
+ * - `rango`  — eligió un bucket de tamaño (se usa el punto medio).
+ * - `estimado` — derivado de la raza reconocida.
+ * Cuando ≠ `exacto`, la ración/anticipación se muestran como estimadas.
+ */
+export type WeightSource = "exacto" | "rango" | "estimado";
+
 export interface Pet {
   id: string;
   name: string;
@@ -21,6 +30,8 @@ export interface Pet {
   stage: LifeStage;
   /** Peso en kg — habilita el cálculo de ración y días restantes. */
   weightKg?: number;
+  /** Cómo se obtuvo el peso (exacto / rango / estimado). Ver {@link WeightSource}. */
+  weightSource?: WeightSource;
   breed?: string;
   neutered?: boolean;
   /** Condiciones de salud (ej. "renal", "sobrepeso") para filtrar catálogo. */

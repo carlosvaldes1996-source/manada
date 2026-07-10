@@ -1,6 +1,7 @@
 /** Barrel de componentes de mascota (el núcleo/moat). Importa desde "@/components/pet". */
 export * from "./pet-avatar";
 export * from "./pet-tag";
+export * from "./breed-combobox";
 export * from "./pet-status";
 export * from "./pet-card";
 export * from "./pet-switcher";

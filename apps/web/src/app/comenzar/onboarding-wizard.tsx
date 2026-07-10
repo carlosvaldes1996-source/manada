@@ -4,17 +4,18 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, HelpCircle, Check, Scale, Utensils } from "lucide-react";
-import type { LifeStage, Pet, Species } from "@/types";
+import type { LifeStage, Pet, Species, WeightSource } from "@/types";
 import { FunnelShell } from "@/components/layout";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Chip } from "@/components/ui/chip";
 import { RadioGroup, RadioCard } from "@/components/ui/radio";
 import { PetAvatar } from "@/components/pet/pet-avatar";
+import { BreedCombobox } from "@/components/pet/breed-combobox";
 import { usePet } from "@/components/providers";
 import { dailyRationGrams } from "@/lib/anticipation";
+import { findBreed, estimateWeightFromBreed, sizeBucketsForSpecies, midpoint } from "@/lib/breeds";
 import { profileCompleteness } from "@/lib/pet";
 import { fade, fadeInUp } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -26,12 +27,11 @@ interface Draft {
   name?: string;
   stage?: LifeStage;
   weightKg?: number;
-  neutered?: boolean;
+  weightSource?: WeightSource;
   breed?: string;
-  conditions?: string[];
 }
 
-const STEP_IDS = ["especie", "nombre", "etapa", "peso", "esterilizado", "raza", "salud"] as const;
+const STEP_IDS = ["especie", "nombre", "raza", "etapa", "peso"] as const;
 type StepId = (typeof STEP_IDS)[number];
 
 const SPECIES: { value: Species; label: string; emoji: string }[] = [
@@ -45,8 +45,6 @@ const STAGES: { value: LifeStage; label: string; hint: string }[] = [
   { value: "adulto", label: "Adulto", hint: "~1 a 7 años" },
   { value: "senior", label: "Senior", hint: "7 años en adelante" },
 ];
-
-const CONDITIONS = ["Sobrepeso", "Piel sensible", "Problemas renales", "Articulaciones", "Digestión sensible"];
 
 /**
  * Alta de la primera mascota — el momento más importante del producto (UX.md §5,
@@ -67,15 +65,36 @@ export function OnboardingWizard() {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  const optionalSteps: StepId[] = ["raza", "salud"];
+  /** Fija peso + su confianza juntos (mantiene coherente el flag "estimado"). */
+  const setWeight = (weightKg: number | undefined, weightSource: WeightSource | undefined) =>
+    setDraft((d) => ({ ...d, weightKg, weightSource }));
+
+  /**
+   * Al elegir raza, pre-estimamos el peso desde la raza reconocida (§1.1
+   * "pre-estimado desde raza"), salvo que el dueño ya lo haya fijado exacto.
+   * Al pasar a Mestizo/manual se descarta el estimado previo (se re-elige por
+   * tamaño en el paso de peso).
+   */
+  const onBreedChange = (breed: string) =>
+    setDraft((d) => {
+      const recognized = findBreed(d.species ?? "otro", breed);
+      if (recognized && d.weightSource !== "exacto") {
+        return { ...d, breed, weightKg: estimateWeightFromBreed(recognized), weightSource: "estimado" };
+      }
+      if (!recognized && d.weightSource === "estimado") {
+        return { ...d, breed, weightKg: undefined, weightSource: undefined };
+      }
+      return { ...d, breed };
+    });
+
   const canContinue = useMemo(() => {
     switch (stepId) {
       case "especie": return Boolean(draft.species);
       case "nombre": return Boolean(draft.name?.trim());
+      case "raza": return Boolean(draft.breed?.trim());
       case "etapa": return Boolean(draft.stage);
-      case "peso": return typeof draft.weightKg === "number" && draft.weightKg > 0;
-      case "esterilizado": return typeof draft.neutered === "boolean";
-      default: return true; // raza y salud son opcionales
+      case "peso": return true; // peso no bloqueante: siempre hay estimación o "no sé" (F3)
+      default: return true;
     }
   }, [stepId, draft]);
 
@@ -89,8 +108,6 @@ export function OnboardingWizard() {
       stage: draft.stage ?? "adulto",
       weightKg: draft.weightKg,
       breed: draft.breed?.trim() || undefined,
-      neutered: draft.neutered,
-      conditions: draft.conditions ?? [],
       completeness: 0,
     };
     pet.completeness = profileCompleteness(pet);
@@ -178,6 +195,20 @@ export function OnboardingWizard() {
                     </Question>
                   )}
 
+                  {/* Raza */}
+                  {stepId === "raza" && (
+                    <Question
+                      title={`¿Qué raza es ${petName}?`}
+                      why="Con su raza estimamos el peso y afinamos lo que le recomendamos. Si no la sabes, elige Mestizo."
+                    >
+                      <BreedCombobox
+                        species={draft.species ?? "otro"}
+                        value={draft.breed}
+                        onChange={onBreedChange}
+                      />
+                    </Question>
+                  )}
+
                   {/* Etapa */}
                   {stepId === "etapa" && (
                     <Question
@@ -200,136 +231,19 @@ export function OnboardingWizard() {
                   {stepId === "peso" && (
                     <Question
                       title={`¿Cuánto pesa ${petName}?`}
-                      why="Con su peso calculamos cuánto come al día y cuándo se le acaba la comida."
+                      why="Con su peso calculamos cuánto come al día y cuándo se le acaba. Si no lo sabes, lo estimamos."
                     >
-                      <div className="flex max-w-[280px] items-center gap-3">
-                        <button
-                          type="button"
-                          aria-label="Bajar 1 kg"
-                          onClick={() =>
-                            set("weightKg", Math.max(1, Math.round(((draft.weightKg ?? 1) - 1) * 10) / 10))
-                          }
-                          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
-                        >
-                          −
-                        </button>
-                        <div className="flex-1">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            min={0}
-                            step={0.1}
-                            aria-label="Peso en kilos"
-                            placeholder="8"
-                            autoFocus
-                            trailing="kg"
-                            withField={false}
-                            value={draft.weightKg ?? ""}
-                            onChange={(e) => {
-                              const n = parseFloat(e.target.value);
-                              set("weightKg", Number.isFinite(n) ? n : undefined);
-                            }}
-                            className="text-center"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          aria-label="Subir 1 kg"
-                          onClick={() =>
-                            set("weightKg", Math.min(150, Math.round(((draft.weightKg ?? 0) + 1) * 10) / 10))
-                          }
-                          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
-                        >
-                          +
-                        </button>
-                      </div>
-                      {liveRation && (
-                        <Row gap={2} className="rounded-[var(--radius-md)] bg-accent-soft px-3.5 py-2.5 text-sm text-text-primary">
-                          <Utensils className="size-4 shrink-0 text-miel-700" aria-hidden />
-                          Comería <strong>~{liveRation} g al día</strong>. Con eso nos anticipamos a su recompra.
-                        </Row>
-                      )}
-                    </Question>
-                  )}
-
-                  {/* Esterilización */}
-                  {stepId === "esterilizado" && (
-                    <Question
-                      title={`¿${petName} está esterilizado?`}
-                      why="Cambia sus necesidades calóricas, así afinamos la ración."
-                    >
-                      <RadioGroup
-                        value={draft.neutered == null ? undefined : draft.neutered ? "si" : "no"}
-                        onValueChange={(v) => set("neutered", v === "si")}
-                        aria-label="Esterilización"
-                        className="sm:grid-cols-2"
-                      >
-                        <RadioCard value="si" title="Sí" />
-                        <RadioCard value="no" title="No" />
-                      </RadioGroup>
-                    </Question>
-                  )}
-
-                  {/* Raza (opcional) */}
-                  {stepId === "raza" && (
-                    <Question
-                      title={`¿Qué raza es ${petName}?`}
-                      why="Afina las recomendaciones de salud. Si no sabes, no pasa nada."
-                      optional
-                    >
-                      <Input
-                        label="Raza"
-                        placeholder="Ej: Mestizo, Labrador, Siamés…"
-                        value={draft.breed ?? ""}
-                        onChange={(e) => set("breed", e.target.value)}
-                        className="max-w-sm"
+                      <WeightStep
+                        species={draft.species ?? "otro"}
+                        stage={draft.stage}
+                        breed={draft.breed}
+                        weightKg={draft.weightKg}
+                        weightSource={draft.weightSource}
+                        onSetWeight={setWeight}
                       />
-                      <button
-                        type="button"
-                        onClick={() => set("breed", "Mestizo")}
-                        className="self-start text-[13px] font-semibold text-text-brand underline-offset-2 hover:underline"
-                      >
-                        No estoy seguro · marcar como Mestizo
-                      </button>
                     </Question>
                   )}
 
-                  {/* Salud (opcional) */}
-                  {stepId === "salud" && (
-                    <Question
-                      title={`¿Algo de salud que debamos cuidar en ${petName}?`}
-                      why="Filtramos el catálogo a lo que es seguro para él. Privado y solo para cuidarlo mejor."
-                      optional
-                    >
-                      <div className="flex flex-wrap gap-2">
-                        {CONDITIONS.map((c) => {
-                          const active = draft.conditions?.includes(c) ?? false;
-                          return (
-                            <Chip
-                              key={c}
-                              active={active}
-                              onToggle={(on) =>
-                                set(
-                                  "conditions",
-                                  on
-                                    ? [...(draft.conditions ?? []), c]
-                                    : (draft.conditions ?? []).filter((x) => x !== c),
-                                )
-                              }
-                            >
-                              {c}
-                            </Chip>
-                          );
-                        })}
-                        <Chip
-                          active={(draft.conditions?.length ?? 0) === 0}
-                          onToggle={() => set("conditions", [])}
-                        >
-                          Ninguna por ahora
-                        </Chip>
-                      </div>
-                    </Question>
-                  )}
                 </Stack>
               </motion.div>
             </AnimatePresence>
@@ -340,11 +254,6 @@ export function OnboardingWizard() {
                 {stepIndex === 0 ? "Volver" : "Atrás"}
               </Button>
               <div className="flex-1" />
-              {optionalSteps.includes(stepId) && !isLast && (
-                <Button type="button" variant="ghost" onClick={() => setStepIndex((i) => i + 1)}>
-                  Omitir
-                </Button>
-              )}
               <Button
                 type="submit"
                 disabled={!canContinue}
@@ -367,9 +276,16 @@ export function OnboardingWizard() {
               </div>
               <Stack gap={2} className="mt-5 text-left">
                 <PreviewRow label="Especie" value={draft.species ? SPECIES.find((s) => s.value === draft.species)?.label : undefined} />
+                <PreviewRow label="Raza" value={draft.breed?.trim() || undefined} />
                 <PreviewRow label="Etapa" value={draft.stage ? STAGES.find((s) => s.value === draft.stage)?.label : undefined} />
-                <PreviewRow label="Peso" value={draft.weightKg ? `${draft.weightKg} kg` : undefined} />
-                <PreviewRow label="Esterilizado" value={draft.neutered == null ? undefined : draft.neutered ? "Sí" : "No"} />
+                <PreviewRow
+                  label="Peso"
+                  value={
+                    draft.weightKg != null
+                      ? `${draft.weightSource !== "exacto" ? "~" : ""}${draft.weightKg} kg`
+                      : undefined
+                  }
+                />
                 {liveRation && (
                   <PreviewRow label="Ración estimada" value={`~${liveRation} g/día`} highlight />
                 )}
@@ -390,21 +306,16 @@ export function OnboardingWizard() {
 function Question({
   title,
   why,
-  optional,
   children,
 }: {
   title: React.ReactNode;
   why: string;
-  optional?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Stack gap={5}>
       <Stack gap={2}>
-        <h1 className="heading-1 text-text-primary">
-          {title}
-          {optional && <span className="ml-2 align-middle text-base font-normal text-text-muted">(opcional)</span>}
-        </h1>
+        <h1 className="heading-1 text-text-primary">{title}</h1>
         <p className="body-m inline-flex items-start gap-1.5 text-text-secondary">
           <Scale className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
           {why}
@@ -424,5 +335,205 @@ function PreviewRow({ label, value, highlight }: { label: string; value?: string
         {value ?? "—"}
       </span>
     </div>
+  );
+}
+
+/** Input numérico de peso con stepper ±1 kg (peso exacto). */
+function ExactWeightInput({
+  value,
+  onChange,
+}: {
+  value?: number;
+  onChange: (kg: number | undefined) => void;
+}) {
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  return (
+    <div className="flex max-w-[280px] items-center gap-3">
+      <button
+        type="button"
+        aria-label="Bajar 1 kg"
+        onClick={() => onChange(Math.max(1, round1((value ?? 1) - 1)))}
+        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
+      >
+        −
+      </button>
+      <div className="flex-1">
+        <Input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={0.1}
+          aria-label="Peso en kilos"
+          placeholder="8"
+          autoFocus
+          trailing="kg"
+          withField={false}
+          value={value ?? ""}
+          onChange={(e) => {
+            const n = parseFloat(e.target.value);
+            onChange(Number.isFinite(n) ? n : undefined);
+          }}
+          className="text-center"
+        />
+      </div>
+      <button
+        type="button"
+        aria-label="Subir 1 kg"
+        onClick={() => onChange(Math.min(150, round1((value ?? 0) + 1)))}
+        className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Paso de peso estimable (funnel F3). Ofrece 3 caminos sin bloquear:
+ *  1. estimar desde la raza reconocida (pre-cargado al elegir la raza),
+ *  2. elegir por tamaño (bucket → punto medio),
+ *  3. ingresar el peso exacto.
+ * Marca la ración como "estimado" cuando el peso no es exacto. Un "no sé" con
+ * buena estimación es más completable y de mejor calidad que un número inventado.
+ */
+function WeightStep({
+  species,
+  stage,
+  breed,
+  weightKg,
+  weightSource,
+  onSetWeight,
+}: {
+  species: Species;
+  stage?: LifeStage;
+  breed?: string;
+  weightKg?: number;
+  weightSource?: WeightSource;
+  onSetWeight: (kg: number | undefined, source: WeightSource | undefined) => void;
+}) {
+  const recognized = findBreed(species, breed);
+  const buckets = sizeBucketsForSpecies(species);
+  const hasSpeciesData = species === "perro" || species === "gato";
+  const [mode, setMode] = useState<"suggest" | "size" | "exact">(
+    weightSource === "exacto" ? "exact" : weightSource === "rango" ? "size" : "suggest",
+  );
+
+  const ration =
+    weightKg != null && stage ? (
+      <Row gap={2} className="rounded-[var(--radius-md)] bg-accent-soft px-3.5 py-2.5 text-sm text-text-primary">
+        <Utensils className="mt-0.5 size-4 shrink-0 text-miel-700" aria-hidden />
+        <span>
+          Comería <strong>~{dailyRationGrams(weightKg, stage)} g al día</strong>
+          {weightSource !== "exacto" && " (estimado)"}. Con eso nos anticipamos a su recompra.
+        </span>
+      </Row>
+    ) : null;
+
+  // Especie sin lista curada ("otro"): sólo peso exacto, no bloqueante.
+  if (!hasSpeciesData) {
+    return (
+      <Stack gap={4}>
+        <ExactWeightInput value={weightKg} onChange={(kg) => onSetWeight(kg, kg != null ? "exacto" : undefined)} />
+        <p className="text-[13px] text-text-muted">Si no lo sabes, puedes continuar y ajustarlo luego.</p>
+        {ration}
+      </Stack>
+    );
+  }
+
+  // Peso exacto.
+  if (mode === "exact") {
+    return (
+      <Stack gap={4}>
+        <ExactWeightInput value={weightKg} onChange={(kg) => onSetWeight(kg, kg != null ? "exacto" : undefined)} />
+        <button
+          type="button"
+          onClick={() => {
+            if (recognized) {
+              onSetWeight(estimateWeightFromBreed(recognized), "estimado");
+              setMode("suggest");
+            } else {
+              setMode("size");
+            }
+          }}
+          className="inline-flex items-center gap-1 self-start text-[13px] font-semibold text-text-brand underline-offset-2 hover:underline"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden />
+          {recognized ? "Volver a la estimación" : "Estimar por tamaño"}
+        </button>
+        {ration}
+      </Stack>
+    );
+  }
+
+  // Elegir por tamaño (bucket) — también el estado por defecto sin raza reconocida.
+  if (mode === "size" || !recognized) {
+    const currentBucketId =
+      weightSource === "rango" ? buckets.find((b) => midpoint(b.range) === weightKg)?.id : undefined;
+    return (
+      <Stack gap={4}>
+        <p className="body-m text-text-secondary">Elige su tamaño y estimamos el peso:</p>
+        <RadioGroup
+          value={currentBucketId}
+          onValueChange={(id) => {
+            const b = buckets.find((x) => x.id === id);
+            if (b) onSetWeight(midpoint(b.range), "rango");
+          }}
+          aria-label="Tamaño"
+        >
+          {buckets.map((b) => (
+            <RadioCard
+              key={b.id}
+              value={b.id}
+              title={b.label}
+              description={`${b.range[0]}–${b.range[1]} kg · ${b.example}`}
+            />
+          ))}
+        </RadioGroup>
+        <button
+          type="button"
+          onClick={() => setMode("exact")}
+          className="inline-flex items-center gap-1 self-start text-[13px] font-semibold text-text-brand underline-offset-2 hover:underline"
+        >
+          <Scale className="size-3.5" aria-hidden />
+          Sé su peso exacto
+        </button>
+        {ration}
+      </Stack>
+    );
+  }
+
+  // Estimación por raza reconocida.
+  const [min, max] = recognized.pesoRangoAdulto;
+  const estimate = estimateWeightFromBreed(recognized);
+  const usingEstimate = weightSource === "estimado" && weightKg != null;
+  return (
+    <Stack gap={4}>
+      <div className="rounded-[var(--radius-lg)] border border-terracota-200 bg-brand-soft p-4">
+        <p className="text-sm text-text-primary">
+          Los <strong>{recognized.nombre}</strong> suelen pesar entre <strong>{min}</strong> y{" "}
+          <strong>{max} kg</strong>.
+        </p>
+        {usingEstimate ? (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-semibold text-text-brand">
+            <Check className="size-4" aria-hidden />
+            Usaremos ~{weightKg} kg como estimación.
+          </p>
+        ) : (
+          <Button size="sm" className="mt-2.5" onClick={() => onSetWeight(estimate, "estimado")}>
+            Usar ~{estimate} kg
+          </Button>
+        )}
+      </div>
+      <Row gap={2} className="flex-wrap text-[13px] font-semibold text-text-brand">
+        <button type="button" onClick={() => setMode("exact")} className="underline-offset-2 hover:underline">
+          Sé su peso exacto
+        </button>
+        <span className="text-text-muted" aria-hidden>·</span>
+        <button type="button" onClick={() => setMode("size")} className="underline-offset-2 hover:underline">
+          Elegir por tamaño
+        </button>
+      </Row>
+      {ration}
+    </Stack>
   );
 }
