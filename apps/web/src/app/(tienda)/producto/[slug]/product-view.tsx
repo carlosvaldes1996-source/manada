@@ -19,11 +19,13 @@ import {
   ProductRail,
   StockBadge,
 } from "@/components/commerce";
+import { PetAvatar } from "@/components/pet";
 import { usePet, useCart } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
 import { categoryLabel } from "@/lib/catalog";
+import { cn } from "@/lib/utils";
 import type { ShippingPolicy } from "@/lib/medusa";
 import type { Product } from "@/types";
 
@@ -49,19 +51,23 @@ export function ProductView({
   products: Product[];
   policy: ShippingPolicy;
 }) {
-  const { activePet } = usePet();
+  const { activePet, pets, assignFood } = usePet();
   const { addItem } = useCart();
   const { toast } = useToast();
   const router = useRouter();
   const sub = useSubscription(product);
   const [qty, setQty] = useState(1);
+  // "¿Para quién?" (§1.3): con ≥2 mascotas el dueño elige antes de agregar.
+  const [targetPetId, setTargetPetId] = useState<string | null>(null);
 
   const soldOut = product.stock <= 0;
 
   // Specs de valor (U044): ración diaria, duración del saco y precio por kilo.
   const bagKg = product.format && /kg/i.test(product.format) ? parseFloat(product.format) : undefined;
   const isFood = product.category === "alimento";
-  const ration = isFood && activePet?.weightKg ? dailyRationGrams(activePet.weightKg, activePet.stage) : undefined;
+  // La mascota destino: la elegida (≥2) o la activa. Las specs recalculan por ella.
+  const targetPet = pets.find((p) => p.id === targetPetId) ?? activePet;
+  const ration = isFood && targetPet?.weightKg ? dailyRationGrams(targetPet.weightKg, targetPet.stage) : undefined;
   const duration = isFood && bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
   const pricePerKg = bagKg ? Math.round(product.price.current / bagKg) : undefined;
 
@@ -83,17 +89,29 @@ export function ProductView({
       quantity: qty,
       subscriptionWeeks: sub.isSubscribed ? sub.frequency : undefined,
     });
-    toast({
-      title: sub.isSubscribed ? "Suscripción iniciada" : "Agregado al carrito",
-      description: `${product.brand.name} · ${product.name}`,
-      variant: "success",
-      action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
-    });
+    // Alimento + mascota → aprendemos qué come y encendemos la anticipación (§1.3).
+    // El toast es donde el dueño entiende que Manada acaba de aprender algo suyo.
+    if (isFood && targetPet) assignFood(targetPet.id, product.id);
+    toast(
+      isFood && targetPet
+        ? {
+            title: `Guardamos que ${targetPet.name} come esto`,
+            description: "Te avisaremos antes de que se le acabe.",
+            variant: "success",
+            action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
+          }
+        : {
+            title: sub.isSubscribed ? "Suscripción iniciada" : "Agregado al carrito",
+            description: `${product.brand.name} · ${product.name}`,
+            variant: "success",
+            action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
+          },
+    );
   }
 
   const specs: { label: string; value: string }[] = [];
   if (ration) specs.push({ label: "Ración diaria", value: `~${ration} g` });
-  if (duration) specs.push({ label: `Le dura a ${activePet?.name ?? "tu mascota"}`, value: `~${pluralize(duration, "día")}` });
+  if (duration) specs.push({ label: `Le dura a ${targetPet?.name ?? "tu mascota"}`, value: `~${pluralize(duration, "día")}` });
   if (pricePerKg) specs.push({ label: "Precio por kilo", value: formatCLP(pricePerKg) });
   if (specs.length === 0 && product.format) specs.push({ label: "Formato", value: product.format });
 
@@ -174,6 +192,36 @@ export function ProductView({
               </Stack>
             )}
 
+            {/* "¿Para quién?" (§1.3): con ≥2 mascotas se elige antes del CTA; las
+                specs de arriba ya recalculan por la mascota seleccionada. */}
+            {isFood && pets.length >= 2 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-[13px] font-semibold text-text-secondary">¿Para quién es?</span>
+                <div className="flex flex-wrap gap-2">
+                  {pets.map((p) => {
+                    const selected = p.id === targetPet?.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setTargetPetId(p.id)}
+                        aria-pressed={selected}
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-2.5 py-1.5 text-sm font-semibold transition-colors",
+                          selected
+                            ? "border-terracota-300 bg-brand-soft text-text-brand"
+                            : "border-border-default bg-surface text-text-secondary hover:border-terracota-200",
+                        )}
+                      >
+                        <PetAvatar pet={p} size="xs" />
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <Separator />
 
             {/* CTA único (U045): cantidad + acción primaria */}
@@ -192,7 +240,9 @@ export function ProductView({
                   ? "Sin stock por ahora"
                   : sub.isSubscribed
                     ? "Suscribir y agregar"
-                    : "Agregar al carrito"}
+                    : isFood && targetPet
+                      ? `Agregar para ${targetPet.name}`
+                      : "Agregar al carrito"}
               </Button>
             </Row>
 

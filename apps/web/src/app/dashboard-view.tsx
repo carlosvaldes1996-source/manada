@@ -14,11 +14,7 @@ import { CategoryTiles } from "@/components/commerce/category-tiles";
 import { AppShell } from "@/components/layout";
 import { usePet, useSession } from "@/components/providers";
 import { formatDeliveryDate } from "@/lib/format";
-import {
-  DEMO_NUDGE,
-  TOBY_ANTICIPATION,
-  PRODUCT_BY_ID,
-} from "@/lib/demo-data";
+import { petFoodAnticipation } from "@/lib/anticipation";
 import type { Product } from "@/types";
 
 /**
@@ -31,20 +27,24 @@ import type { Product } from "@/types";
  * cross-sell (U052); el nombre se alterna con "tu compañero" (U053).
  */
 export function DashboardView({ products }: { products: Product[] }) {
-  const { activePet } = usePet();
+  const { activePet, foodAssignedAt } = usePet();
   const { user } = useSession();
   const router = useRouter();
   const { toast } = useToast();
 
   const firstName = user?.firstName ?? "";
 
+  // Su alimento asignado (catálogo real) + anticipación derivada de él (Bloque 6):
+  // solo anticipamos cuando conocemos su alimento y su peso; si no, invitamos a
+  // completarlo — sin números inventados.
   const currentFood = activePet?.currentFoodId
-    ? PRODUCT_BY_ID.get(activePet.currentFoodId)
+    ? products.find((p) => p.id === activePet.currentFoodId)
     : undefined;
-
-  // Solo anticipamos cuando conocemos su alimento (mascota recién creada aún no
-  // lo tiene → no mostramos los días de Toby, evita incoherencia).
-  const hasAnticipation = Boolean(currentFood);
+  const anticipation =
+    activePet && currentFood
+      ? petFoodAnticipation(activePet, currentFood, foodAssignedAt[activePet.id])
+      : null;
+  const hasAnticipation = Boolean(anticipation);
 
   // Sustantivo de especie para alternar con el nombre y bajar densidad de "Toby" (U053).
   const speciesNoun =
@@ -84,10 +84,10 @@ export function DashboardView({ products }: { products: Product[] }) {
             <AnticipationCapsule
               petName={activePet!.name}
               pet={activePet!}
-              daysLeft={TOBY_ANTICIPATION.daysLeft}
-              percentLeft={TOBY_ANTICIPATION.percentLeft}
-              runOutDate={TOBY_ANTICIPATION.runOutDate}
-              reason={DEMO_NUDGE.reason}
+              daysLeft={anticipation!.daysLeft}
+              percentLeft={anticipation!.percentLeft}
+              runOutDate={anticipation!.runOutDate}
+              reason={`Lo calculamos con el peso de ${activePet!.name} (${activePet!.weightKg} kg) y el tamaño del saco (${currentFood!.format}). Es una estimación; ajústala cuando quieras.`}
               onReschedule={(date) =>
                 toast({
                   title: "Entrega reagendada",

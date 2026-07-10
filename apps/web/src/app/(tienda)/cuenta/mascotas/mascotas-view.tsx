@@ -15,9 +15,8 @@ import {
 } from "@/components/pet";
 import { ProductRail } from "@/components/commerce/product-rail";
 import { usePet } from "@/components/providers";
-import { dailyRationGrams } from "@/lib/anticipation";
+import { bagKgFromFormat, dailyRationGrams, petFoodAnticipation } from "@/lib/anticipation";
 import { formatDeliveryDate, pluralize } from "@/lib/format";
-import { DEMO_NUDGE, TOBY_ANTICIPATION, PRODUCT_BY_ID } from "@/lib/demo-data";
 import type { Product } from "@/types";
 
 /**
@@ -32,7 +31,7 @@ import type { Product } from "@/types";
  * se derivan/omiten sin romper el layout; el backend real los enciende después.
  */
 export function MascotasView({ products }: { products: Product[] }) {
-  const { activePet } = usePet();
+  const { activePet, foodAssignedAt } = usePet();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -51,12 +50,18 @@ export function MascotasView({ products }: { products: Product[] }) {
     );
   }
 
-  const currentFood = activePet.currentFoodId ? PRODUCT_BY_ID.get(activePet.currentFoodId) : undefined;
+  // Su alimento asignado (catálogo real, Bloque 6) + anticipación derivada de él.
+  const currentFood = activePet.currentFoodId
+    ? products.find((p) => p.id === activePet.currentFoodId)
+    : undefined;
+  const anticipation = currentFood
+    ? petFoodAnticipation(activePet, currentFood, foodAssignedAt[activePet.id])
+    : null;
 
   // "Su día a día": stat-cards derivadas (mismo patrón que las specs de la PDP).
   // Degradan con gracia: la ración necesita peso; la duración, peso + saco.
   const ration = activePet.weightKg ? dailyRationGrams(activePet.weightKg, activePet.stage) : undefined;
-  const bagKg = currentFood?.format && /kg/i.test(currentFood.format) ? parseFloat(currentFood.format) : undefined;
+  const bagKg = bagKgFromFormat(currentFood?.format);
   const bagDuration = bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
 
   const specs: { label: string; value: string }[] = [];
@@ -93,22 +98,24 @@ export function MascotasView({ products }: { products: Product[] }) {
           <h2 className="heading-3 text-text-primary">Su día a día</h2>
           {currentFood ? (
             <Stack gap={4}>
-              <AnticipationCapsule
-                pet={activePet}
-                petName={activePet.name}
-                daysLeft={TOBY_ANTICIPATION.daysLeft}
-                percentLeft={TOBY_ANTICIPATION.percentLeft}
-                runOutDate={TOBY_ANTICIPATION.runOutDate}
-                reason={DEMO_NUDGE.reason}
-                onReschedule={(date) =>
-                  toast({
-                    title: "Entrega reagendada",
-                    description: `Llegará ${formatDeliveryDate(date)}. Te avisaremos un día antes.`,
-                    variant: "success",
-                  })
-                }
-                onSubscribe={() => router.push(`/producto/${currentFood.slug}`)}
-              />
+              {anticipation && (
+                <AnticipationCapsule
+                  pet={activePet}
+                  petName={activePet.name}
+                  daysLeft={anticipation.daysLeft}
+                  percentLeft={anticipation.percentLeft}
+                  runOutDate={anticipation.runOutDate}
+                  reason={`Lo calculamos con el peso de ${activePet.name} (${activePet.weightKg} kg) y el tamaño del saco (${currentFood.format}). Es una estimación; ajústala cuando quieras.`}
+                  onReschedule={(date) =>
+                    toast({
+                      title: "Entrega reagendada",
+                      description: `Llegará ${formatDeliveryDate(date)}. Te avisaremos un día antes.`,
+                      variant: "success",
+                    })
+                  }
+                  onSubscribe={() => router.push(`/producto/${currentFood.slug}`)}
+                />
+              )}
               {specs.length > 0 && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {specs.map((s) => (
@@ -121,6 +128,13 @@ export function MascotasView({ products }: { products: Product[] }) {
                     </div>
                   ))}
                 </div>
+              )}
+              {/* Alimento conocido pero sin peso: no inventamos días; invitamos a completar. */}
+              {!anticipation && specs.length === 0 && (
+                <p className="body-m text-text-secondary">
+                  Ya sabemos que {activePet.name} come {currentFood.brand.name}. Cuéntanos su
+                  peso para calcular cuánto le dura el saco y avisarte antes de que se acabe.
+                </p>
               )}
             </Stack>
           ) : (

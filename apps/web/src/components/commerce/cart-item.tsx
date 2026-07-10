@@ -6,6 +6,8 @@ import { formatCLP, effectiveSubscriptionPrice } from "@/lib/format";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
 import { Badge } from "@/components/ui/badge";
 import { IconButton } from "@/components/ui/icon-button";
+import { PetAvatar } from "@/components/pet";
+import { usePet } from "@/components/providers";
 import { cn } from "@/lib/utils";
 
 export interface CartItemProps {
@@ -32,6 +34,10 @@ function unitPrice(line: CartLine): number {
 export function CartItem({ line, onQuantityChange, onRemove, compact = false, className }: CartItemProps) {
   const { product } = line;
   const unit = unitPrice(line);
+  // "· para {nombre}": la línea de alimento muestra a quién cuida, derivado de la
+  // asignación que vive en la mascota (currentFoodId) — fuente única (§1.3).
+  const { pets } = usePet();
+  const forPet = pets.find((p) => p.currentFoodId === product.id);
 
   return (
     <div className={cn("flex gap-3 border-b border-border-default py-4 last:border-0", className)}>
@@ -45,6 +51,12 @@ export function CartItem({ line, onQuantityChange, onRemove, compact = false, cl
             <p className="overline text-text-secondary">{product.brand.name}</p>
             <p className="truncate text-[15px] font-semibold text-text-primary">{product.name}</p>
             {product.format && <p className="text-[13px] text-text-muted">{product.format}</p>}
+            {forPet && (
+              <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-[var(--radius-pill)] bg-brand-soft py-0.5 pr-2 pl-0.5 text-[12px] font-semibold text-text-brand">
+                <PetAvatar pet={forPet} size="xs" />
+                para {forPet.name}
+              </span>
+            )}
           </div>
           <IconButton label={`Quitar ${product.name}`} size="sm" onClick={() => onRemove(product.id)}>
             <Trash2 className="size-4" aria-hidden />

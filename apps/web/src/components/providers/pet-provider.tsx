@@ -22,6 +22,16 @@ interface PetContextValue {
   seedPets: (pets: Pet[], activeId?: string) => void;
   /** Vacía las mascotas (cerrar sesión). */
   clearPets: () => void;
+  /**
+   * Asigna un alimento a una mascota (`currentFoodId`) y registra CUÁNDO, para
+   * que la anticipación se calcule desde esa fecha. Es la costura del loop
+   * alimento↔mascota (PET_EXPERIENCE Bloque 6): la llama la PDP al "Agregar para
+   * {nombre}" y, más adelante, la recomendación del funnel — una sola API, sin
+   * duplicar. El backend real la reemplaza persistiendo `current_food` en el módulo.
+   */
+  assignFood: (petId: string, foodId: string) => void;
+  /** Fecha ISO en que se asignó el alimento actual de cada mascota (por id). */
+  foodAssignedAt: Record<string, string>;
 }
 
 const PetContext = createContext<PetContextValue | null>(null);
@@ -29,6 +39,7 @@ const PetContext = createContext<PetContextValue | null>(null);
 export function PetProvider({ children }: { children: React.ReactNode }) {
   const [pets, setPets] = useState<Pet[]>([]);
   const [activePetId, setActivePetId] = useState<string | null>(null);
+  const [foodAssignedAt, setFoodAssignedAt] = useState<Record<string, string>>({});
 
   const addPet = useCallback<PetContextValue["addPet"]>((pet, opts) => {
     setPets((prev) => [...prev, pet]);
@@ -43,6 +54,12 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
   const clearPets = useCallback(() => {
     setPets([]);
     setActivePetId(null);
+    setFoodAssignedAt({});
+  }, []);
+
+  const assignFood = useCallback<PetContextValue["assignFood"]>((petId, foodId) => {
+    setPets((prev) => prev.map((p) => (p.id === petId ? { ...p, currentFoodId: foodId } : p)));
+    setFoodAssignedAt((prev) => ({ ...prev, [petId]: new Date().toISOString() }));
   }, []);
 
   const value = useMemo<PetContextValue>(
@@ -53,8 +70,10 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       addPet,
       seedPets,
       clearPets,
+      assignFood,
+      foodAssignedAt,
     }),
-    [pets, activePetId, addPet, seedPets, clearPets],
+    [pets, activePetId, addPet, seedPets, clearPets, assignFood, foodAssignedAt],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

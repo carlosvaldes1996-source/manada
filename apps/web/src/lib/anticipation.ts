@@ -39,6 +39,37 @@ export function estimateRunOut(
   return { daysLeft, percentLeft, runOutDate };
 }
 
+/** kg del saco a partir del formato del producto ("3 kg" → 3; "500 g"/undefined → undefined). */
+export function bagKgFromFormat(format?: string): number | undefined {
+  if (!format || !/kg/i.test(format)) return undefined;
+  const n = parseFloat(format);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Anticipación REAL de una mascota para el alimento que tiene asignado
+ * (`pet.currentFoodId`). Deriva la ración del peso + etapa y estima cuándo se
+ * agota el saco contando desde la fecha de asignación (el reloj arranca cuando
+ * el dueño nos dice qué come). Devuelve `null` si faltan datos —sin peso o sin
+ * tamaño de saco— para que la UI degrade sin romperse.
+ *
+ * Reemplaza al demo `TOBY_ANTICIPATION`: ahora los días restantes salen del
+ * alimento y la mascota reales (PET_EXPERIENCE Bloque 6).
+ */
+export function petFoodAnticipation(
+  pet: { weightKg?: number; stage: LifeStage },
+  food: { format?: string },
+  assignedAtISO?: string,
+): RunOutEstimate | null {
+  if (!pet.weightKg) return null;
+  const bagKg = bagKgFromFormat(food.format);
+  if (!bagKg) return null;
+  const ration = dailyRationGrams(pet.weightKg, pet.stage);
+  const assignedAt = assignedAtISO ? new Date(assignedAtISO).getTime() : Date.now();
+  const daysSince = Math.max(0, Math.floor((Date.now() - assignedAt) / 86_400_000));
+  return estimateRunOut(bagKg, ration, daysSince);
+}
+
 /** Sugerencia de transición de fórmula por etapa de vida (cross-sell suave). */
 export function suggestStageTransition(pet: Pet): string | null {
   if (pet.stage === "cachorro") {
