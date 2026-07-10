@@ -10,6 +10,7 @@ export * from "./product-card";
 export * from "./product-grid";
 export * from "./product-rail";
 export * from "./category-card";
+export * from "./category-tiles";
 export * from "./brand-card";
 export * from "./review-card";
 export * from "./personalization-banner";

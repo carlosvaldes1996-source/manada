@@ -5,8 +5,14 @@ import { cn } from "@/lib/utils";
 export interface CategoryCardProps {
   label: string;
   href: string;
-  /** Ícono/emoji de la categoría (set custom a futuro, §5). */
+  /** Ícono/emoji de la categoría (fallback cuando no hay foto, §5). */
   icon?: React.ReactNode;
+  /**
+   * Ícono-foto de la categoría (diseño actual): se renderiza como tile con
+   * `bg-cover`. Si la imagen falta, degrada al color cálido de marca sin romper.
+   * Tiene prioridad sobre `icon`.
+   */
+  imageUrl?: string;
   description?: string;
   /** Variante compacta (tile de Home) vs. destacada. */
   size?: "sm" | "md";
@@ -17,7 +23,7 @@ export interface CategoryCardProps {
  * Acceso a una categoría (navegación por necesidad). Tile clicable con ícono,
  * etiqueta y descripción opcional. Hover eleva la sombra.
  */
-export function CategoryCard({ label, href, icon, description, size = "md", className }: CategoryCardProps) {
+export function CategoryCard({ label, href, icon, imageUrl, description, size = "md", className }: CategoryCardProps) {
   return (
     <Link
       href={href}
@@ -27,11 +33,20 @@ export function CategoryCard({ label, href, icon, description, size = "md", clas
         className,
       )}
     >
-      {icon && (
+      {imageUrl ? (
+        <span
+          className={cn(
+            "block overflow-hidden rounded-[var(--radius-md)] bg-brand-soft bg-cover bg-center",
+            size === "sm" ? "size-12" : "size-14",
+          )}
+          style={{ backgroundImage: `url('${imageUrl}')` }}
+          aria-hidden
+        />
+      ) : icon ? (
         <span className={size === "sm" ? "text-2xl" : "text-3xl"} aria-hidden>
           {icon}
         </span>
-      )}
+      ) : null}
       <span className="heading-4 text-text-primary">{label}</span>
       {description && <span className="flex-1 text-[13px] text-text-secondary">{description}</span>}
       <span className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-text-brand">

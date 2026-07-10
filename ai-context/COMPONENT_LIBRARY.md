@@ -30,6 +30,7 @@
 6. **Estados completos.** Donde aplica: `loading`, `error`, `disabled`, `empty`, `hover`, `focus`, `active`.
 7. **Motion con propósito** (Framer Motion + tokens), neutralizado por `prefers-reduced-motion`.
 8. **Sin duplicación.** Variantes vía `cva`; composición sobre copia.
+9. **Paridad logueado / no-logueado (D31).** Una misma superficie visual se implementa **una sola vez** y se comparte entre el estado anónimo y el de sesión (con props/variantes si el contexto cambia). La experiencia logueada **nunca** debe usar una versión más antigua de un componente que la anónima. Si una vista con sesión necesita algo que ya existe pulido en marketing, se reutiliza el componente, no se re-inlinea.
 
 **Decisión clave (D15):** primitivas interactivas sobre **Radix UI** (lo previsto en ARCHITECTURE.md §1: "shadcn/Radix → accesibilidad gratis"). Componentes presentacionales hand-rolled sobre tokens. Toast y carrusel propios (sin dependencias extra).
 
@@ -132,7 +133,8 @@
 | **ProductCard** | Unidad central del catálogo. Packshot · badges · marca/nombre · rating · precio · despacho honesto · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. |
 | **ProductGrid** | Grilla 2→3→4 con estados `loading` (skeletons) y `empty` integrados. |
 | **ProductRail** | Carrusel horizontal scroll-snap (cross-sell, destacados). |
-| **CategoryCard / BrandCard** | Accesos por necesidad y por marca. |
+| **CategoryCard / BrandCard** | Accesos por necesidad y por marca. `CategoryCard` acepta `imageUrl` (ícono-foto por slug, con fallback cálido si la foto falta) o `icon` (emoji, respaldo/styleguide); **la variante-foto es la canónica**. |
+| **CategoryTiles** | Grid de accesos a categorías de la Home (`CATEGORIES.slice(0,4)` con íconos-foto). **Fuente única compartida** por la landing anónima (`LandingView`) y el dashboard con sesión (`DashboardView`) → ambos estados muestran las mismas tarjetas (D31; antes el logueado usaba emojis viejos). |
 | **ReviewCard** | Reseña de PDP: autor, estrellas, compra verificada, mención a la mascota. |
 | **StockBadge / DiscountBadge / ShippingBadge / SubscriptionBadge** | Átomos de e-commerce sobre Badge, con semántica correcta. |
 | **HonestShippingBlock** | Despacho honesto (fecha + costo reales, **siempre visible**). Compacto (card) o completo (PDP). |

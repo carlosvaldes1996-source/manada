@@ -4,14 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
-import { Grid } from "@/components/ui/grid";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { useToast } from "@/components/ui/toast";
 import { AnticipationCapsule } from "@/components/pet/anticipation-capsule";
 import { RecommendationCard } from "@/components/pet/recommendation-card";
 import { ProductRail } from "@/components/commerce/product-rail";
-import { CategoryCard } from "@/components/commerce/category-card";
+import { CategoryTiles } from "@/components/commerce/category-tiles";
 import { AppShell } from "@/components/layout";
 import { usePet, useSession } from "@/components/providers";
 import { formatDeliveryDate } from "@/lib/format";
@@ -20,7 +19,6 @@ import {
   TOBY_ANTICIPATION,
   PRODUCT_BY_ID,
 } from "@/lib/demo-data";
-import { CATEGORIES } from "@/lib/catalog";
 import type { Product } from "@/types";
 
 /**
@@ -126,17 +124,7 @@ export function DashboardView({ products }: { products: Product[] }) {
             overline="Comprar por necesidad"
             title="¿Qué necesita hoy?"
           />
-          <Grid cols={2} md={4} gap={4}>
-            {CATEGORIES.slice(0, 4).map((c) => (
-              <CategoryCard
-                key={c.id}
-                label={c.label}
-                href={`/categoria/${c.slug}`}
-                description={c.description}
-                icon={<span className="text-3xl">{c.emoji}</span>}
-              />
-            ))}
-          </Grid>
+          <CategoryTiles />
         </Stack>
       </Section>
 
