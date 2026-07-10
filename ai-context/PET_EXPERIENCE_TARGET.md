@@ -248,3 +248,9 @@ B2 (pet-tag) ─┴─► B3 (perfil restyle) ─► B4 (foto + updatePet) ─�
 - **Dónde encaja.** `cuenta/mascotas/page.tsx` (Bloque 3) y `cuenta/account-view.tsx` (Bloque 7). No re-abrir Bloque 1.
 
 > **Cierre de la Parte 3.** Ninguna de estas observaciones se implementa hasta acordar el diseño con Carlos. O5 es el único **bug funcional** (flujo incompleto); O1–O4 y O6 son decisiones de experiencia a definir antes de escribir código. Cuando se prioricen, se convierten en bloques propios (o se integran a los existentes) siguiendo la disciplina "un bloque → validado → un commit".
+
+> **Ruteo acordado (Carlos, 2026-07-10):**
+> - **O5 → EN PAUSA** hasta tener el **catálogo y productos reales conectados al backend**. No rediseñar el flujo recomendación→carrito mientras dependa de datos demo (podría estar condicionado por el demo). Reevaluar el síntoma una vez que la recomendación corra sobre productos reales con `variantId`.
+> - **O1, O2, O3, O4 → primero UX/producto**, en un **chat separado**, antes de escribir código. Definir la experiencia; recién con el diseño acordado se abre bloque de implementación.
+> - **O6** se resuelve dentro del plan (Bloque 3 / Bloque 7); no se re-abre Bloque 1.
+> - Los siguientes bloques se continúan en **conversaciones independientes**; este hilo queda como referencia histórica.
