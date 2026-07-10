@@ -20,9 +20,16 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioCard } from "@/components/ui/radio";
 import { Stack } from "@/components/ui/stack";
+import { PetTag } from "./pet-tag";
+import type { Pet } from "@/types";
 
 export interface AnticipationCapsuleProps {
   petName: string;
+  /**
+   * Mascota — habilita la firma de personalización con rostro en el overline
+   * (§1.1). Si no se pasa, cae al overline con emoji de siempre (no rompe nada).
+   */
+  pet?: Pet;
   /** Días restantes estimados de alimento. */
   daysLeft: number;
   /** % restante del saco (0–100) para la barra. */
@@ -67,6 +74,7 @@ interface RescheduleOption {
  */
 export function AnticipationCapsule({
   petName,
+  pet,
   daysLeft,
   percentLeft = Math.min(100, Math.max(6, Math.round((daysLeft / 30) * 100))),
   runOutDate,
@@ -118,10 +126,14 @@ export function AnticipationCapsule({
         className,
       )}
     >
-      <span className="overline inline-flex items-center gap-1.5 text-text-brand">
-        <Sparkles className="size-3.5" aria-hidden />
-        Para {petName} 🐾
-      </span>
+      {pet ? (
+        <PetTag pet={pet} tone="brand" />
+      ) : (
+        <span className="overline inline-flex items-center gap-1.5 text-text-brand">
+          <Sparkles className="size-3.5" aria-hidden />
+          Para {petName} 🐾
+        </span>
+      )}
       <h2 id="anticipation-title" className="heading-2 mt-1 text-text-primary">
         A <span className="pet-name">{petName}</span> le quedan ~{pluralize(daysLeft, "día")} de comida
       </h2>

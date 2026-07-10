@@ -2,6 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 const sizes = {
+  xs: "size-5 text-xs",
   sm: "size-7 text-base",
   md: "size-10 text-xl",
   lg: "size-16 text-3xl",
@@ -24,7 +25,7 @@ export interface AvatarProps {
  * Prioriza foto real; si no, muestra emoji o iniciales sobre Miel→Terracota.
  */
 export function Avatar({ src, alt = "", emoji, initials, size = "md", className }: AvatarProps) {
-  const dimension = { sm: 28, md: 40, lg: 64, xl: 96 }[size];
+  const dimension = { xs: 20, sm: 28, md: 40, lg: 64, xl: 96 }[size];
   return (
     <span
       className={cn(

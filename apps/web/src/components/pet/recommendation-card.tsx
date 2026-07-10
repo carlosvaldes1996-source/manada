@@ -1,10 +1,17 @@
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PetTag } from "./pet-tag";
+import type { Pet } from "@/types";
 
 export interface RecommendationCardProps {
   /** Eyebrow personalizado ("Recomendado para Toby"). */
   eyebrow?: string;
+  /**
+   * Mascota — da rostro al eyebrow (firma de personalización, §1.1). Si no se
+   * pasa, cae al eyebrow con ícono Sparkles de siempre (no rompe nada).
+   */
+  pet?: Pet;
   title: React.ReactNode;
   description?: React.ReactNode;
   /** "¿Por qué te lo recomendamos?" — transparencia del moat. */
@@ -23,6 +30,7 @@ export interface RecommendationCardProps {
  */
 export function RecommendationCard({
   eyebrow,
+  pet,
   title,
   description,
   reason,
@@ -43,10 +51,14 @@ export function RecommendationCard({
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="overline inline-flex items-center gap-1 text-subscribe-strong">
-          <Sparkles className="size-3.5" aria-hidden />
-          {eyebrow ?? "Recomendado para ti"}
-        </span>
+        {pet ? (
+          <PetTag pet={pet} tone="miel" label={eyebrow ?? `Para ${pet.name}`} />
+        ) : (
+          <span className="overline inline-flex items-center gap-1 text-subscribe-strong">
+            <Sparkles className="size-3.5" aria-hidden />
+            {eyebrow ?? "Recomendado para ti"}
+          </span>
+        )}
         <h3 className="heading-4 text-text-primary">{title}</h3>
         {description && <p className="text-sm text-text-secondary">{description}</p>}
         <div className="mt-1.5 flex flex-wrap items-center gap-3">

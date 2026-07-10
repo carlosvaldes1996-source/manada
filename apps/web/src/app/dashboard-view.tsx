@@ -83,6 +83,7 @@ export function DashboardView({ products }: { products: Product[] }) {
           {hasAnticipation ? (
             <AnticipationCapsule
               petName={activePet!.name}
+              pet={activePet!}
               daysLeft={TOBY_ANTICIPATION.daysLeft}
               percentLeft={TOBY_ANTICIPATION.percentLeft}
               runOutDate={TOBY_ANTICIPATION.runOutDate}
@@ -146,6 +147,7 @@ export function DashboardView({ products }: { products: Product[] }) {
         <Section spacing="md" tone="canvas" className="pt-0">
           <RecommendationCard
             eyebrow={`Pensado para ${speciesNoun}`}
+            pet={activePet}
             title="¿Ya le toca la desparasitación?"
             description="Según su peso y la época del año, conviene revisar el calendario antiparasitario. Te ayudamos a elegir el correcto."
             reason="Lo sugerimos por su peso (8 kg) y porque pasaron varios meses desde tu última compra de farmacia. Es un recordatorio, no un diagnóstico."

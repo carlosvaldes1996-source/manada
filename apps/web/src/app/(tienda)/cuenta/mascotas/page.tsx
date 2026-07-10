@@ -100,6 +100,7 @@ export default function MascotasPage() {
         {currentFood ? (
           <AnticipationCapsule
             petName={activePet.name}
+            pet={activePet}
             daysLeft={TOBY_ANTICIPATION.daysLeft}
             percentLeft={TOBY_ANTICIPATION.percentLeft}
             runOutDate={TOBY_ANTICIPATION.runOutDate}
@@ -116,6 +117,7 @@ export default function MascotasPage() {
         ) : (
           <RecommendationCard
             eyebrow={`Para anticiparnos por ${activePet.name}`}
+            pet={activePet}
             title={`Cuéntanos qué come ${activePet.name}`}
             description="Con su alimento calculamos cuánto le dura el saco y te avisamos antes de que se acabe. Es lo único que nos falta."
             media={<span className="text-4xl">🍽️</span>}

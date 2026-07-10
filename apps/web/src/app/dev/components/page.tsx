@@ -80,6 +80,7 @@ import {
   PetEditCard,
   PetProfileHeader,
   PetStatus,
+  PetTag,
   RecommendationCard,
 } from "@/components/pet";
 import { Header } from "@/components/layout";
@@ -572,8 +573,12 @@ function CommerceSection() {
 function PetSection() {
   return (
     <GuideSection id="pet" title="Mascotas" blurb="El núcleo del producto (el moat). El perfil de la mascota es protagonista y alimenta la anticipación.">
-      <Demo name="AnticipationCapsule" when="El momento 'se adelantó por mí'. Entra con slide+fade y un pulso Miel." canvasClassName="block">
-        <AnticipationCapsule petName={pet.name} daysLeft={5} percentLeft={18} runOutDate={DEMO_SHIPPING.date} reason={DEMO_NUDGE.reason} onReschedule={() => {}} onSubscribe={() => {}} />
+      <Demo name="PetTag" when="Firma de personalización: overline con el rostro de la mascota ([cara] PARA TOBY). Con foto muestra su cara; sin foto, el emoji de su especie. Tonos: marca y miel.">
+        <PetTag pet={pet} />
+        <PetTag pet={pet} tone="miel" label="Pensado para Toby" />
+      </Demo>
+      <Demo name="AnticipationCapsule" when="El momento 'se adelantó por mí'. Entra con slide+fade y un pulso Miel. Con `pet` muestra la firma de personalización con rostro." canvasClassName="block">
+        <AnticipationCapsule petName={pet.name} pet={pet} daysLeft={5} percentLeft={18} runOutDate={DEMO_SHIPPING.date} reason={DEMO_NUDGE.reason} onReschedule={() => {}} onSubscribe={() => {}} />
       </Demo>
       <Demo name="PetProfileHeader" when="Cabecera del perfil: avatar, nombre como héroe y completitud." canvasClassName="block">
         <PetProfileHeader pet={pet} action={<Button variant="secondary" size="sm">Editar</Button>} />
@@ -588,7 +593,7 @@ function PetSection() {
       </Demo>
       <Demo name="FeedingSchedule · RecommendationCard" when="Ración calculada y recomendación con motivo transparente." canvasClassName="items-start">
         <div className="w-72"><FeedingSchedule pet={pet} /></div>
-        <div className="w-80"><RecommendationCard eyebrow={`Para ${pet.name}`} title="NexGard antiparasitario" description="Toca su desparasitación trimestral." media="💊" reason="Según el peso de Toby (8 kg) y la fecha de la última dosis." action={<Button size="sm" variant="subscribe">Agregar</Button>} /></div>
+        <div className="w-80"><RecommendationCard eyebrow={`Para ${pet.name}`} pet={pet} title="NexGard antiparasitario" description="Toca su desparasitación trimestral." media="💊" reason="Según el peso de Toby (8 kg) y la fecha de la última dosis." action={<Button size="sm" variant="subscribe">Agregar</Button>} /></div>
       </Demo>
     </GuideSection>
   );
