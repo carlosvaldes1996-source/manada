@@ -1,5 +1,6 @@
 import type { Pet } from "@/types";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import { PetAvatar } from "./pet-avatar";
 import { PetStatus } from "./pet-status";
 
@@ -11,24 +12,31 @@ export interface PetProfileHeaderProps {
 }
 
 /**
- * Cabecera del perfil de mascota (la pantalla del moat). Avatar grande, nombre
- * como héroe (Fraunces), badges de estado y barra de completitud — "lo que
- * sabemos nos deja cuidarlo mejor" (UX.md §3).
+ * Hero del perfil de mascota — retrato editorial, calidad de la landing
+ * (PET_EXPERIENCE §1.2). La mascota es el héroe: retrato grande con anillo
+ * terracota, nombre en Fraunces (`pet-name`, text-brand) y su estado. La barra
+ * de completitud recuerda que "lo que sabemos nos deja cuidarlo mejor" (UX.md §3).
+ * Vive sobre `brand-soft` con `radius-xl` para anclar la página.
  */
 export function PetProfileHeader({ pet, action, className }: PetProfileHeaderProps) {
   const completeness = pet.completeness ?? 0;
   return (
-    <div className={className}>
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <PetAvatar pet={pet} size="xl" />
+    <div
+      className={cn(
+        "rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft p-6 sm:p-8",
+        className,
+      )}
+    >
+      <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+        <PetAvatar pet={pet} size="xl" className="ring-4 ring-terracota-100" />
         <div className="flex flex-1 flex-col items-center gap-2 sm:items-start">
-          <h1 className="heading-1 pet-name">{pet.name}</h1>
+          <h1 className="heading-1 pet-name text-text-brand">{pet.name}</h1>
           <PetStatus pet={pet} show={["species", "stage", "weight", "breed"]} />
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
 
-      <div className="mt-5 flex flex-col gap-1.5">
+      <div className="mt-6 flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-[13px]">
           <span className="font-semibold text-text-secondary">Perfil completo</span>
           <span className="price text-text-primary">{completeness}%</span>
