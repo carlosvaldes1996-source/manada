@@ -85,14 +85,13 @@ import {
 } from "@/components/pet";
 import { Header } from "@/components/layout";
 import { useCart } from "@/components/providers";
+import { CATEGORIES, buildFilterGroups } from "@/lib/catalog";
 import {
   BRANDS,
-  CATEGORIES,
   DEMO_CART,
   DEMO_NUDGE,
   DEMO_PETS,
   DEMO_SHIPPING,
-  buildFilterGroups,
   PRODUCTS,
   REVIEWS,
 } from "@/lib/demo-data";

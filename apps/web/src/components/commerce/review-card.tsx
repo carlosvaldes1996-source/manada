@@ -1,8 +1,25 @@
 import { BadgeCheck } from "lucide-react";
-import type { Review } from "@/lib/data/catalog";
 import { Rating } from "@/components/ui/rating";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+
+/**
+ * Reseña que renderiza esta tarjeta (tipo del componente, no del catálogo).
+ * No hay sistema de reseñas real todavía (ocultas en la tienda, D28); cuando
+ * exista en el backend, su DTO se mapeará a este shape.
+ */
+export interface Review {
+  id: string;
+  author: string;
+  rating: number;
+  date: Date;
+  title?: string;
+  body: string;
+  /** Compra verificada — señal de confianza. */
+  verified?: boolean;
+  /** Nombre de la mascota del reseñador (calidez de marca). */
+  petName?: string;
+}
 
 export interface ReviewCardProps {
   review: Review;
