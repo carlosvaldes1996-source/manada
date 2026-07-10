@@ -19,9 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FeatureCard } from "@/components/ui/feature-card";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { CategoryCard } from "@/components/commerce/category-card";
+import { CategoryTiles } from "@/components/commerce/category-tiles";
 import { ProductRail } from "@/components/commerce/product-rail";
-import { CATEGORIES } from "@/lib/catalog";
 import { TOBY_ANTICIPATION } from "@/lib/demo-data";
 import type { Product } from "@/types";
 
@@ -75,32 +74,37 @@ export function LandingView({ products }: { products: Product[] }) {
             </Row>
           </Stack>
 
-          {/* Prueba visual del momento mágico (estática; foto real = Polish U090) */}
+          {/* Prueba visual del momento mágico: foto lifestyle real + tarjeta de
+              anticipación flotando sobre la escena (U090). Fallback a color de
+              marca si la foto aún no está subida. */}
           <div className="relative">
-            <div className="rounded-[var(--radius-xl)] border border-terracota-100 bg-surface p-6 shadow-md">
+            <div
+              className="aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft bg-cover bg-center shadow-md"
+              style={{ backgroundImage: "url('/fotos/hero.jpg')" }}
+              role="img"
+              aria-label="Una mujer acaricia a su perro golden retriever en el living de su casa"
+            />
+            <div className="absolute inset-x-3 bottom-3 rounded-[var(--radius-lg)] border border-terracota-100 bg-surface/95 p-4 shadow-lg backdrop-blur-sm sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-4 sm:max-w-[19rem]">
               <span className="overline inline-flex items-center gap-1.5 text-text-brand">
                 <Sparkles className="size-3.5" aria-hidden /> Para Toby 🐾
               </span>
-              <h2 className="heading-3 mt-1 text-text-primary">
+              <h2 className="heading-4 mt-0.5 text-text-primary">
                 A <span className="pet-name">Toby</span> le quedan ~{TOBY_ANTICIPATION.daysLeft} días de comida
               </h2>
-              <p className="body-s mt-1 text-text-secondary">
-                Lo calculamos por su peso y su última compra. ¿La reagendamos para que no le falte?
-              </p>
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-3 flex items-center gap-3">
                 {/* Misma fuente única de anticipación que la app (U040/U056) */}
                 <Progress
                   value={TOBY_ANTICIPATION.percentLeft}
                   tone="miel"
                   label={`Queda ~${TOBY_ANTICIPATION.percentLeft}% del saco`}
                   animateIn
-                  className="h-2.5 max-w-[200px] bg-neutral-300"
+                  className="h-2 max-w-[170px] bg-neutral-300"
                 />
                 <span className="price text-[13px] font-semibold text-urgency">
                   ~{TOBY_ANTICIPATION.percentLeft}%
                 </span>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Badge variant="subscribe">
                   <CalendarClock className="size-3.5" aria-hidden /> Llega el martes
                 </Badge>
@@ -129,6 +133,14 @@ export function LandingView({ products }: { products: Product[] }) {
             overline="Cómo funciona"
             title="Tres pasos para no preocuparte nunca más"
             description="Mientras más sabemos de tu mascota, mejor cuidamos de ella."
+          />
+          {/* Banda editorial (Photo: hombre registrando a su gato al atardecer).
+              Fallback a color de marca si la foto aún no está subida. */}
+          <div
+            className="aspect-[16/10] w-full overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft bg-cover bg-center sm:aspect-[21/8]"
+            style={{ backgroundImage: "url('/fotos/como-funciona.jpg')" }}
+            role="img"
+            aria-label="Una persona registra a su gato con el teléfono mientras come, al atardecer"
           />
           <Grid cols={1} md={3} gap={4}>
             <FeatureCard
@@ -177,7 +189,14 @@ export function LandingView({ products }: { products: Product[] }) {
       <Section
         spacing="md"
         tone="inverse"
-        className="mx-3 my-4 rounded-[var(--radius-xl)] sm:mx-6 lg:mx-10"
+        className="mx-3 my-4 overflow-hidden rounded-[var(--radius-xl)] bg-cover bg-center sm:mx-6 lg:mx-10"
+        style={{
+          // Foto de fondo (Photo: perro durmiendo de noche + plato lleno) con
+          // overlay cálido oscuro para mantener legible el texto blanco. Si la
+          // foto falta, queda el color inverse de respaldo (degrada sin romper).
+          backgroundImage:
+            "linear-gradient(rgba(28,18,13,0.74), rgba(28,18,13,0.86)), url('/fotos/promesa-noche.jpg')",
+        }}
       >
         <div className="grid items-center gap-8 lg:grid-cols-[1fr_1fr]">
           <Stack gap={4}>
@@ -208,17 +227,7 @@ export function LandingView({ products }: { products: Product[] }) {
       <Section spacing="md" tone="subtle">
         <Stack gap={6}>
           <SectionHeading overline="Todo en un lugar" title="Comida, accesorios y farmacia" />
-          <Grid cols={2} md={4} gap={4}>
-            {CATEGORIES.slice(0, 4).map((c) => (
-              <CategoryCard
-                key={c.id}
-                label={c.label}
-                href={`/categoria/${c.slug}`}
-                description={c.description}
-                icon={<span className="text-3xl">{c.emoji}</span>}
-              />
-            ))}
-          </Grid>
+          <CategoryTiles />
         </Stack>
       </Section>
 

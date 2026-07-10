@@ -28,6 +28,27 @@ import { SITE } from "@/config/site";
 import { pluralize } from "@/lib/format";
 import type { Product } from "@/types";
 
+/** Foto de cabecera (banner) por categoría. Solo los slugs con foto disponible;
+ *  el resto no muestra banner (degrada sin romper). Archivos en public/fotos/. */
+const BANNER_BY_SLUG: Record<string, string> = {
+  alimento: "cat-alimento.jpg",
+  perro: "cat-perro.jpg",
+  gato: "cat-gato.jpg",
+  farmacia: "cat-farmacia.jpg",
+  accesorios: "cat-accesorios.jpg",
+  higiene: "cat-higiene.jpg",
+};
+
+/** Foco vertical del recorte por categoría. El banner es muy panorámico (21:6) y
+ *  bg-center corta arriba/abajo; subimos el foco donde el sujeto (cabeza) queda
+ *  alto en la foto. Default "center" para los que se ven bien centrados. */
+const BANNER_POS: Record<string, string> = {
+  alimento: "center 78%", // el perro come agachado: bajar el foco al plato+cabeza
+  perro: "center 34%", // salvar las puntas de las orejas
+  farmacia: "center 28%", // que se vea la cabeza de la veterinaria
+  higiene: "center 42%",
+};
+
 /** Aplica la selección de filtros de catálogo (especie/etapa/marca) a una lista. */
 function applyCatalogFilters(products: Product[], filters: FilterSelection): Product[] {
   return products.filter((p) =>
@@ -121,6 +142,20 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
           <Breadcrumb items={breadcrumb} />
           <h1 className="heading-1 text-text-primary">{label}</h1>
         </Stack>
+
+        {/* Banner editorial de la categoría (foto lifestyle). Solo en los slugs
+            con foto; fallback a color de marca mientras no esté subida. */}
+        {BANNER_BY_SLUG[slug] && (
+          <div
+            className="aspect-[16/9] w-full overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft bg-cover sm:aspect-[21/6]"
+            style={{
+              backgroundImage: `url('/fotos/${BANNER_BY_SLUG[slug]}')`,
+              backgroundPosition: BANNER_POS[slug] ?? "center",
+            }}
+            role="img"
+            aria-label={`Categoría ${label}`}
+          />
+        )}
 
         {/* Realce personal (opt-in), separado de los filtros de catálogo (U043/U063) */}
         {activePet &&
