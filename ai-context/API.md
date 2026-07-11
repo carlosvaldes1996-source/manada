@@ -234,6 +234,12 @@ fuera del mapper.
   `avatar_url?`) → `{ pet: StorePet }`. **Regla de anticipación:** cuando el body trae
   `current_food_id`, el **backend** estampa `food_assigned_at = now()` (reloj del servidor,
   fuente única del "desde cuándo come esto"); el cliente jamás envía esa fecha.
+- **Re-anclaje a la compra (D35):** el subscriber `order.placed`
+  (`apps/backend/src/subscribers/food-purchased.ts`) re-estampa `food_assigned_at` a la
+  fecha de la orden cuando una orden confirmada del cliente incluye el alimento que una
+  mascota suya tiene asignado (match `order.items.product_id` ↔ `pet.current_food_id` —
+  sin `pet_id` en las líneas del carrito: el vínculo vive SOLO en la mascota). Orden de
+  invitado → no-op.
 - Validación con **zod** vía `validateAndTransformBody` (schemas en
   `src/api/store/pets/validators.ts`); enums de especie/etapa/fuente-de-peso rechazados
   en el borde. Sin `DELETE` por ahora (no existe UI que lo consuma; se agrega con su bloque).
