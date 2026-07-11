@@ -1,6 +1,20 @@
 import type { Pet } from "@/types";
 
 /**
+ * Condiciones de salud curadas — FUENTE ÚNICA del vocabulario (D38).
+ * Se eligen de un tap (patrón Chip del onboarding pre-F1); el texto libre quedó
+ * descartado por inconsistente y propenso a errores. Las consumen el perfil
+ * (PetEditDialog) y, cuando exista, el paso opcional de salud del funnel.
+ */
+export const PET_CONDITIONS = [
+  "Sobrepeso",
+  "Piel sensible",
+  "Problemas renales",
+  "Articulaciones",
+  "Digestión sensible",
+] as const;
+
+/**
  * Completitud del perfil de mascota a partir de dimensiones concretas, para que
  * el porcentaje y la lista de "lo que falta" SIEMPRE coincidan (AUDIT_UI_UX U054).
  * El perfil es el núcleo del producto (UX.md §3): cada dato habilita mejor cuidado.

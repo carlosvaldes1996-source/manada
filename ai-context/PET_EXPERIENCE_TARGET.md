@@ -148,6 +148,11 @@ El mayor salto visual: de "se siente vacío" a "la casa de Toby".
 ### 🔹 Bloque 4 — Subir foto + cascada + revelación
 El corazón emocional. Introduce la costura de edición del perfil.
 
+> **📋 Directivas de Carlos para B4 (2026-07-11, feedback post-D37 — vinculantes al implementar):**
+> 1. **La foto faltante debe ser OBVIA** (hoy la completitud se estanca en ~88% sin explicación: la foto es la única dimensión sin superficie accionable — no tiene card en la ficha ni afordancia en el avatar). Requisitos: avatar con **estado vacío explícito**, indicador visual (+ o lápiz), **toda el área clickeable**, microcopy tipo *"Agregar foto"*. El usuario jamás debe adivinar por qué no llega al 100%.
+> 2. **Storage: SIN infraestructura temporal.** No introducir un almacenamiento solo para cerrar B4; cuando se implemente, usar la **estrategia definitiva de la app** (Supabase Storage, GCS u otra decisión app-wide). Mientras tanto es válido dejar el upload **preparado visualmente sin persistencia** (preview local + copy honesto).
+> 3. **Prioridad de etapa (aplica a todos los bloques siguientes):** el backend está consolidado; el foco pasa a **consistencia visual, UX y sensación de producto terminado** por sobre agregar capacidades. El perfil debe sentirse como una *extensión natural del onboarding*, no como un formulario técnico — todo dato estructurado se edita con el mismo patrón del funnel (selector/chips/buscador), nunca texto libre (D38).
+
 - **UX/UI (frontend):** avatar-como-dropzone; `Dialog` con recorte circular; la coreografía única de la primera vez (§1.1); cascada al header/perfil/tags. Foto en estado del provider (objectURL local) + persistencia `localStorage` (andamio).
 - **Componentes crear/modificar:** **crear** `components/pet/pet-photo-uploader.tsx` (Dialog + crop + estados idle/cropping/saving/done/error); **modificar** `pet-provider.tsx` (añadir `updatePet` + hidratación `localStorage`), el hero del perfil y el `PetSwitcher` (cross-fade). Los sitios que ya leen `pet.avatarUrl` vía `PetAvatar` se actualizan solos.
 - **Dependencias:** Bloques 1–3 (para que la cascada luzca); provider `updatePet`.

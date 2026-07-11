@@ -12,10 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, Radio } from "@/components/ui/radio";
 import { useToast } from "@/components/ui/toast";
 import { usePet, type PetProfileChanges } from "@/components/providers";
+import { PET_CONDITIONS } from "@/lib/pet";
 import { BreedCombobox } from "./breed-combobox";
 
 export interface PetEditDialogProps {
@@ -49,9 +51,14 @@ export function PetEditDialog({ pet, open, onOpenChange }: PetEditDialogProps) {
 
 /**
  * Semántica setter-only: solo se envía lo que cambió; un campo dejado vacío no
- * borra el dato (excepto salud: limpiar el texto limpia la lista). Editar el
+ * borra el dato (la salud sí se limpia al des-marcar todos los chips). Editar el
  * peso a mano lo marca `weightSource: "exacto"` (afina ración y anticipación,
  * cierra el hedge "estimado" de F3).
+ *
+ * Salud = chips de un tap sobre la lista curada (`PET_CONDITIONS`, mismo patrón
+ * del onboarding) — nada de texto libre. Si la mascota trae una condición fuera
+ * de la lista (datos antiguos), se muestra como chip activo desactivable: nada
+ * se pierde en silencio.
  */
 function PetEditForm({ pet, onClose }: { pet: Pet; onClose: () => void }) {
   const { updatePet } = usePet();
@@ -63,7 +70,16 @@ function PetEditForm({ pet, onClose }: { pet: Pet; onClose: () => void }) {
   const [neutered, setNeutered] = useState<"" | "si" | "no">(() =>
     typeof pet.neutered === "boolean" ? (pet.neutered ? "si" : "no") : "",
   );
-  const [conditionsText, setConditionsText] = useState(() => (pet.conditions ?? []).join(", "));
+  const [conditions, setConditions] = useState<string[]>(() => pet.conditions ?? []);
+
+  // Chips a mostrar: la lista curada + lo que la mascota ya tenga fuera de ella.
+  const legacyConditions = (pet.conditions ?? []).filter(
+    (c) => !(PET_CONDITIONS as readonly string[]).includes(c),
+  );
+  const allConditionChips = [...PET_CONDITIONS, ...legacyConditions];
+
+  const toggleCondition = (name: string, on: boolean) =>
+    setConditions((prev) => (on ? [...prev, name] : prev.filter((c) => c !== name)));
 
   function save() {
     const changes: PetProfileChanges = {};
@@ -89,11 +105,11 @@ function PetEditForm({ pet, onClose }: { pet: Pet; onClose: () => void }) {
       changes.neutered = neutered === "si";
     }
 
-    const conditions = conditionsText
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
-    if (conditions.join("|") !== (pet.conditions ?? []).join("|")) {
+    const prevConditions = pet.conditions ?? [];
+    if (
+      conditions.length !== prevConditions.length ||
+      conditions.some((c) => !prevConditions.includes(c))
+    ) {
       changes.conditions = conditions;
     }
 
@@ -160,13 +176,26 @@ function PetEditForm({ pet, onClose }: { pet: Pet; onClose: () => void }) {
           </RadioGroup>
         </div>
 
-        <Input
-          label="Info de salud"
-          placeholder="renal, sobrepeso…"
-          value={conditionsText}
-          onChange={(e) => setConditionsText(e.target.value)}
-          hint="Separa con comas. Nos ayuda a filtrar lo que no le hace bien."
-        />
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-text-primary">Info de salud</span>
+          <div className="flex flex-wrap gap-2">
+            {allConditionChips.map((c) => (
+              <Chip
+                key={c}
+                active={conditions.includes(c)}
+                onToggle={(on) => toggleCondition(c, on)}
+              >
+                {c}
+              </Chip>
+            ))}
+            <Chip active={conditions.length === 0} onToggle={() => setConditions([])}>
+              Ninguna por ahora
+            </Chip>
+          </div>
+          <span className="text-[13px] text-text-secondary">
+            Nos ayuda a filtrar lo que no le hace bien. Es privado.
+          </span>
+        </div>
       </div>
 
       <DialogFooter>
