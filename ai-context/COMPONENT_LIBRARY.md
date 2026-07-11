@@ -5,8 +5,8 @@
 > |---|---|
 > | **Purpose** | Catálogo de los ~70 componentes reutilizables y cuándo usar cada uno. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | ✅ Etapa 2 completa (D15). Espera aprobación antes de Etapa 3. |
-> | **Last Updated** | 2026-06-29 |
+> | **Status** | 🟢 Vivo — librería en producción (D15) y creciendo por bloques (últimos: ProductImage D36, PetEditDialog D37/D38, FoodSelectorDialog D39). |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | DESIGN_SYSTEM.md, FRONTEND_ARCHITECTURE.md |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ del *uso de componentes*. El código vive en `apps/web/src/components/**`; styleguide en `/dev/components`. |
@@ -15,8 +15,7 @@
 >
 > - **Código:** `apps/web/src/components/{ui,layout,commerce,pet}` + `apps/web/src/hooks` + `apps/web/src/lib`.
 > - **Styleguide vivo y navegable:** `/dev/components` (todas las variantes, interactivo). Tokens en `/dev/tokens`.
-> - **Estado:** ✅ Etapa 2 completa (2026-06-28 · D15). `tsc` + `eslint` + `next build` + smoke-test en verde. **Pendiente de aprobación del usuario** antes de Etapa 3 (pantallas).
-> - **Regla:** las pantallas (Etapa 3) se ensamblan **solo** con estos componentes. Si falta algo, se agrega aquí primero (token → componente → página), nunca markup suelto en una página.
+> - **Regla:** las pantallas se ensamblan **solo** con estos componentes. Si falta algo, se agrega aquí primero (token → componente → página), nunca markup suelto en una página.
 
 ---
 
@@ -42,7 +41,7 @@
 - **Server vs Client:** Server por defecto; `"use client"` solo donde hay estado/efectos (overlays, toggles, tabs, carrito, switch…).
 - **`cn()`** (`@/lib/utils`) para componer clases (clsx + tailwind-merge).
 - **`asChild`** (Radix Slot) en `Button`/`IconButton` para renderizar como `<Link>` conservando estilos.
-- **Estado global:** `usePet()` / `useCart()` (providers) · `useToast()` (feedback). Datos demo en `lib/demo-data.ts` (Carlos + Toby + catálogo).
+- **Estado global:** `useSession()` (sesión JWT real) · `usePet()` / `useCart()` (providers hidratados desde el backend) · `useToast()` (feedback). `lib/demo-data.ts` son **fixtures SOLO del hero de la landing (D28) y del styleguide `/dev/*`** (gateado en prod, D29); ningún flujo real lo consume (D33).
 
 ---
 
@@ -172,11 +171,11 @@
 
 ## 7. `hooks/` y `lib/`
 
-**hooks/** — `useDisclosure` (overlays) · `useMediaQuery` / `useBreakpoint` / `useIsDesktop` (responsive, vía `useSyncExternalStore`) · `usePrefersReducedMotion` · `useSubscription` (estado de suscripción + ahorro de un producto) · `useAuthActions` (`enterDemo`/`leave`: coordina sesión + mascota + carrito) · re-export de `useSession`/`usePet`/`useCart`/`useToast`.
+**hooks/** — `useDisclosure` (overlays) · `useMediaQuery` / `useBreakpoint` / `useIsDesktop` (responsive, vía `useSyncExternalStore`) · `usePrefersReducedMotion` · `useSubscription` (ahorro de un producto; UI apagada por `SUBSCRIPTIONS_ENABLED=false`, D29) · `useAuthActions` (coordina login/registro/logout reales + `transferCart`, D26) · re-export de `useSession`/`usePet`/`useCart`/`useToast`.
 
-**Providers (estado global)** — `SessionProvider`/`useSession` (cuenta: `signUp`/`signInDemo`/`signOut`, anónimo por defecto) · `PetProvider`/`usePet` (arranca vacío; `addPet`/`seedPets`/`clearPets`) · `CartProvider`/`useCart` (arranca vacío; `seedItems`/`clear`).
+**Providers (estado global, sobre el backend real)** — `SessionProvider`/`useSession` (sesión JWT persistente de Medusa, D26) · `PetProvider`/`usePet` (hidrata `/store/pets` al login, empuja mascotas de invitado, `addPet`/`updatePet`/`assignFood` optimistas con PATCH, D34-i4/D37) · `CartProvider`/`useCart` (carrito real de Medusa, `cart_id` en localStorage, D24).
 
-**lib/** — `utils.ts` (`cn`) · `format.ts` (`formatCLP`, `formatDeliveryDate`, `formatShippingCost`, `discountPercent`, `pluralize`) · `motion.ts` (duraciones/eases/variants de marca) · `anticipation.ts` (`dailyRationGrams`, `estimateRunOut`, `suggestStageTransition`) · `recommend.ts` (motor de recomendación: `recommendFood`, `recommendComplements`, `foodPlan`) · `pet.ts` (completitud del perfil) · `icons.tsx` (`NavIcon` por nombre) · `data/catalog.ts` (marcas, categorías, productos, reseñas, filtros) · `demo-data.ts` (Carlos + Toby + carrito/despacho/nudge demo).
+**lib/** — `utils.ts` (`cn`) · `format.ts` (`formatCLP`, `roundCLP`/`subscriptionPrice` U066, `pluralize`…) · `motion.ts` (duraciones/eases/variants de marca) · `anticipation.ts` (`dailyRationGrams`, `estimateRunOut`, `petFoodAnticipation`, `bagKgFromFormat`) · `recommend.ts` (motor de recomendación **puro**: recibe `products: Product[]` del caller, D33) · `catalog.ts` (taxonomía + filtros/facetas puros sobre productos reales, D23) · `pet.ts` (completitud + `PET_CONDITIONS` chips curados, D38) · `icons.tsx` (`NavIcon`) · **`medusa/`** (capa de datos real: cliente SDK, products/cart/checkout/auth/account/shipping/pets — ver `CURRENT_STATE.md §Claves del código`) · `demo-data.ts` (fixtures solo hero landing + styleguide; `lib/data/catalog.ts` **fue eliminado** en D33-i2).
 
 ---
 

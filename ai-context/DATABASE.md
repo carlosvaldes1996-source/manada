@@ -5,38 +5,14 @@
 > |---|---|
 > | **Purpose** | Modelo de datos: entidades, relaciones, y el diseño del moat (Perfil de Mascota). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟡 Implementado: catálogo (§5) + cuentas/sesión (§6), Medusa-native. Moat (§1) aún borrador. |
-> | **Last Updated** | 2026-07-06 |
+> | **Status** | 🟢 Implementado y vivo: catálogo (§5), cuentas/sesión (§6), envío (§7), perfil de mascota (§8) — Medusa-native + módulo custom `pet`. |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | ARCHITECTURE.md, UX.md (§3 personalización) |
 > | **Supersedes** | — |
-> | **Source of Truth** | ✅ del *modelo de datos* (cuando madure en Fase 4). |
+> | **Source of Truth** | ✅ del *modelo de datos*. |
 
-> *Estado: §1–4 = borrador conceptual del moat (post-MVP). §5 = catálogo MVP YA
-> implementado en el backend Medusa (Fase 5 · Etapa 2); es la fuente de verdad viva.*
-
-## 1. Entidad crítica: PERFIL DE MASCOTA (el moat)
-El activo que se compone con el tiempo. Debe diseñarse para enriquecerse con cada interacción.
-
-Campos preliminares:
-- `id`, `owner_id`, `nombre`, `especie`, `raza`, `fecha_nacimiento` (→ edad/etapa), `peso`, `condiciones` (alergias, enfermedades), `nivel_actividad`, `preferencias` (sabores, texturas), `comuna`.
-- Derivados: etapa de vida (cachorro/adulto/senior), frecuencia de consumo estimada, próximas necesidades anticipadas.
-
-## 2. Entidades core (borrador)
-- `usuario` (1—N) `mascota`
-- `producto` (variantes, marca, categoría, etapa de vida objetivo)
-- `suscripcion` (mascota, producto, frecuencia, próxima_fecha, descuento)
-- `orden` / `linea_orden`
-- `direccion`
-- `boleta` (folio SII)
-- `evento_mascota` (timeline: cambios de etapa, recordatorios de salud)
-
-## 3. Principio de diseño
-Modelar para **anticipación**: la DB no solo registra compras, sino que permite predecir cuándo se acaba el alimento y qué necesitará la mascota a futuro.
-
-## 4. Pendientes
-- Esquema completo + relaciones + índices.
-- Modelo del motor de frecuencia de recompra.
-- Política de datos/privacidad (Ley 19.628 CL).
+## 1–4. (Superseded) Borrador conceptual del moat
+> 🗄️ El borrador original fue **materializado**: la entidad crítica "Perfil de Mascota" es hoy la tabla real `pet` (§8, módulo custom D34) y el principio "modelar para anticipación" se implementó con `current_food_id` + `food_assigned_at` (reloj del servidor, re-anclado a la compra por D35). **Siguen pendientes (post-tracción):** `suscripcion` como entidad (recipe Medusa), `evento_mascota` (timeline), `boleta` (folio SII), y la **política de datos/privacidad (Ley 19.628 CL)** — esta última conviene resolverla antes del lanzamiento público.
 
 ---
 
@@ -88,9 +64,9 @@ No se siembran rebajas falsas (coherente con marca honesta). Una rebaja real se
 modela con el mecanismo nativo de Medusa (**price list / sale**, administrable); el
 frontend ya la refleja automáticamente (`original_amount` > `calculated_amount`).
 
-### 5.5 Fuera del MVP (post-tracción)
-Perfil de Mascota (§1), suscripción como entidad, motor de anticipación, boleta SII
-→ módulos custom de Medusa **después** del MVP (D21/D22). El catálogo actual es el piso.
+### 5.5 Fuera del MVP (post-tracción) *(actualizado: el perfil ya entró)*
+~~Perfil de Mascota~~ → ✅ implementado como módulo `pet` (§8, D34). Siguen post-tracción:
+suscripción como entidad, motor de anticipación completo, boleta SII (D21/D22).
 
 ---
 

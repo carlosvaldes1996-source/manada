@@ -5,34 +5,14 @@
 > |---|---|
 > | **Purpose** | Contratos de API entre frontend y backend, e integraciones externas CL. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟡 Contratos implementados: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7). §1–4 = borrador histórico. |
-> | **Last Updated** | 2026-07-06 |
+> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9). |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | ARCHITECTURE.md, DATABASE.md |
 > | **Supersedes** | — |
-> | **Source of Truth** | ✅ de *contratos de API* (cuando madure en Fase 4). |
+> | **Source of Truth** | ✅ de *contratos de API*. Regla `ARCHITECTURE.md §2`: todo contrato nuevo se escribe AQUÍ antes de implementarse. |
 
-> *Estado: §1–4 = borrador. §5 = contrato de catálogo YA implementado y consumido
-> por `apps/web` (Store API de Medusa + campo calculado); fuente de verdad viva.*
-
-## 1. Alcance (a definir)
-API entre frontend Next.js y backend e-commerce (Medusa u otro), más integraciones externas CL.
-
-## 2. Dominios de endpoints (borrador)
-- **Catálogo:** productos, categorías, búsqueda, filtros.
-- **Carrito / Checkout:** carrito, cálculo de despacho, creación de orden, pago.
-- **Mascotas:** CRUD de perfil de mascota, recomendaciones personalizadas.
-- **Suscripciones:** crear/pausar/cancelar, cálculo de frecuencia, próxima entrega.
-- **Cuenta:** auth, direcciones, pedidos, boletas.
-- **Webhooks:** pago (Webpay/MercadoPago), courier (tracking), WhatsApp.
-
-## 3. Integraciones externas
-- Transbank Webpay Plus · Mercado Pago · Khipu.
-- Couriers (Blue Express/Starken/Chilexpress) — cotización y tracking.
-- SII (LibreDTE/Bsale) — emisión de boleta.
-- WhatsApp Business API — recordatorios.
-
-## 4. Pendientes
-- Definir contratos (REST/GraphQL), auth, rate limiting, idempotencia en pagos.
+## 1–4. (Superseded) Borrador conceptual de Fase 4
+> 🗄️ El borrador original de dominios/integraciones fue **superado por los contratos reales §5–§9** (todo lo implementado) y por `ARCHITECTURE.md §4` (integraciones CL pendientes: Mercado Pago primero, luego Webpay/courier/SII/WhatsApp). Contratos futuros (suscripción recurrente, webhooks de pago) se escribirán aquí antes de implementarse.
 
 ---
 
@@ -77,9 +57,10 @@ Sin cambios en Etapa 2: `POST /store/carts` → line-items → dirección/email 
 shipping-options/methods → payment-collections/sessions (`pp_system_default`) →
 `complete`. Pago manual (transferencia); fulfillment y boleta a mano en el Admin.
 
-### 5.5 Aún demo en `apps/web`
-El dashboard personalizado (mascota/anticipación) sigue con datos demo
-(`lib/demo-data.ts`) hasta construir el moat. Carrito y checkout ya son reales (§6).
+### 5.5 Estado de lo demo en `apps/web` *(actualizado 2026-07-11)*
+Ya **no queda ningún flujo real sobre datos demo** (D33): dashboard/perfil/anticipación
+se derivan de `/store/pets` (§9) + catálogo real. `lib/demo-data.ts` solo alimenta el
+hero de la landing (decisión de marca, D28) y el styleguide `/dev/*` (gateado en prod, D29).
 
 ---
 

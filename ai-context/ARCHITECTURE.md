@@ -5,13 +5,12 @@
 > |---|---|
 > | **Purpose** | Stack técnico, estructura física del repositorio, reglas arquitectónicas, infraestructura e integraciones Chile (pagos, despacho, SII). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟡 Estructura física LOCKED (D20) · stack backend LOCKED: Medusa v2 (D21) · **MVP-first LOCKED (D22): alternativa manual por defecto; solo el medio de pago es integración obligatoria. Modelo de datos mínimo se define durante la construcción (Fase 5).** |
-> | **Last Updated** | 2026-07-06 |
+> | **Status** | 🟢 Estructura física LOCKED (D20) · stack backend LOCKED y CONSTRUIDO: Medusa v2 (D21/D22) · MVP-first LOCKED (D22): alternativa manual por defecto. |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | PROJECT_MASTER.md, DECISIONS.md (D2, D12, D13, D20, D21) |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ del *stack/estructura/infra/integraciones*. Detalle de frontend → FRONTEND_ARCHITECTURE.md. Modelo de datos → DATABASE.md. Contratos → API.md. |
 
-> *Estado: estructura física del repo ✅ (D20) · **stack backend decidido: Medusa.js v2 (D21)**; restan proveedores CL, `DATABASE.md` y `API.md` (Fase 4).*
 >
 > **Principio rector de producto (D21):** Manada es **e-commerce primero**. Perfil de mascota, suscripciones, recomendaciones y anticipación existen para mejorar la experiencia de compra, no para convertir el producto en una plataforma de gestión de mascotas. Toda recomendación de arquitectura prioriza, en orden: velocidad de MVP · simplicidad operativa para fundador único · bajo costo de mantenimiento · escalar sin sobreingeniería.
 >
@@ -29,15 +28,15 @@ manada/
 ├── pnpm-workspace.yaml  ← workspace: apps/* + packages/*
 ├── pnpm-lock.yaml       ← lockfile ÚNICO (en raíz)
 ├── apps/
-│   ├── web/             ← frontend Next.js (@manada/web) — Fase 3, funcional
-│   └── backend/         ← RESERVADO (solo src/ + docs/ + README.md, sin código);
-│                          el scaffold se genera en Fase 5, tras validar el stack
+│   ├── web/             ← frontend Next.js (@manada/web) — real, 100% sobre el backend
+│   └── backend/         ← backend Medusa v2 (@manada/backend) — real desde D22;
+│                          módulos custom en src/modules (primer módulo: pet, D34)
 └── packages/            ← aún NO existe: packages/shared nace únicamente cuando
                            exista el primer contrato compartido aprobado en API.md
 ```
 
 - **Responsabilidades:** `apps/web` = experiencia de compra (solo consume API) · `apps/backend` = e-commerce headless + suscripciones custom + motor de anticipación + integraciones CL · `packages/shared` (futuro) = contratos API tipados y dominio compartido (Perfil de Mascota, anticipación, formato CLP).
-- **Deploy por subdirectorio:** `apps/web` → Vercel (root directory `apps/web`) · `apps/backend` → Railway/Fly. No hay proyecto Vercel enlazado aún.
+- **Deploy por subdirectorio:** `apps/web` → Vercel (proyecto `manada-web`, D27) · `apps/backend` → Railway (WIP). Detalle: `DEPLOYMENT.md`.
 - **Regla de dependencias (unidireccional):** `apps/web → packages/shared ← apps/backend`. Las apps **jamás** se importan entre sí.
 - **Rationale** (resumen; completo en D20): un equipo de una persona no amortiza polyrepo y fragmentaría `ai-context/`; la estructura es agnóstica al resultado de la validación de stack (Medusa u otro viven igual en `apps/backend`); `apps/*` deja espacio a futuros worker (recordatorios, Fase 7) y admin **con aprobación previa** (regla 5). Sin Turborepo por ahora (dos apps no lo ameritan; se puede añadir sin reestructurar).
 
@@ -53,9 +52,10 @@ manada/
 
 ## 3. Stack (alto nivel — decidido)
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui (re-estilizado a la marca). **Ejecutado en `apps/web/`** (Fase 3 · Etapa 1, D13; movido de `web/` a `apps/web/` por D20): Next 16 + React 19 + **Tailwind v4 (CSS-first vía `@theme`, sin `tailwind.config.ts`)** + shadcn (*new-york*) + framer-motion + lucide-react. Tokens en `src/app/globals.css`.
-- **Backend e-commerce:** ✅ **Medusa.js v2 (DECIDIDO, D21)** en `apps/backend` (regla 2; scaffold en Fase 5, versión exacta se fija ahí). El core cubre catálogo/carrito/checkout/órdenes/clientes/promos/inventario **+ Admin operativo incluido**; el frontend consume su **API REST store** (encaja con los providers `usePet`/`useCart`/`SessionProvider`, diseñados para hidratarse — D19). **Todo lo propio de Manada se construye como extensiones, sin fork del core:**
-  - **Módulos custom** (tablas propias en la misma Postgres + module links a entidades core): `pet-profile` (el moat), `subscription` (recipe oficial de Medusa: workflow de compra + scheduled jobs de renovación/expiración), `anticipation` (motor de frecuencia de recompra).
-  - **Integraciones CL como providers/hooks:** payment provider custom **Webpay** (no hay oficial; SDK Node de Transbank) + plugin comunitario Mercado Pago como segundo medio · fulfillment providers para courier · subscriber post-orden → boleta SII · scheduled jobs → recordatorios WhatsApp.
+- **Backend e-commerce:** ✅ **Medusa.js v2 (D21), construido y verificado** en `apps/backend` (starter bare `@medusajs/medusa` **2.16.0**, D22; setup local en `apps/backend/DEV.md`). El core cubre catálogo/carrito/checkout/órdenes/clientes/promos/inventario **+ Admin operativo incluido**; el frontend consume su **API REST store** (contratos en `API.md §5–§9`). **Todo lo propio de Manada se construye como extensiones, sin fork del core:**
+  - **Módulos custom** (tablas propias en la misma Postgres): ✅ **`pet`** (el perfil de mascota, D34 — primer módulo real, con rutas `/store/pets`, validación zod y subscribers `password-reset`/`food-purchased`). Futuros (post-tracción): `subscription` (recipe oficial de Medusa) y `anticipation` (motor de frecuencia de recompra).
+  - **Extensiones ya en producción de código:** middleware `subscription_price` (`src/api/middlewares.ts`, D23) · regla única de envío + ruta `/store/shipping-policy` (`src/lib/shipping.ts` + promoción automática, D28) · scripts idempotentes (`seed.ts`, `setup-free-shipping.ts`).
+  - **Integraciones CL como providers/hooks (pendientes):** Mercado Pago Checkout Pro (primero, fast-follow post-infra) · payment provider custom **Webpay** (no hay oficial; SDK Node de Transbank; sujeto a afiliación) · fulfillment providers para courier · subscriber post-orden → boleta SII · scheduled jobs → recordatorios WhatsApp.
 - **DB:** PostgreSQL. **Cache/sesiones:** Redis.
 - **Buscador:** Meilisearch / Algolia (autocompletar tolerante a typos).
 - **Infra:** Vercel (frontend) + Railway/Fly (backend) + Cloudflare CDN.
@@ -65,13 +65,14 @@ manada/
 
 > **Regla D22:** para el MVP se asume la **alternativa manual** por defecto. Solo el **medio de pago** es integración obligatoria para lanzar; despacho, boleta y mensajería se operan **manualmente desde el Admin de Medusa** hasta que exista tracción.
 
-- **Pagos** *(único bloqueante del MVP)*: Webpay Plus (Transbank) objetivo; Mercado Pago / Khipu / **transferencia (pago manual)** como alternativas. Decidir el primario para lanzar — la transferencia/pago manual es el **piso** si acelera el lanzamiento.
+- **Pagos**: ✅ decidido (D22/D24) — el MVP lanza con **pago manual** (`pp_system_default`, transferencia confirmada a mano en el Admin) como método real; **Mercado Pago Checkout Pro = fast-follow** post-infra; Webpay diferido (afiliación Transbank).
 - **Despacho** *(manual en el MVP)*: los envíos se gestionan a mano (etiqueta/coordinación con el courier fuera del sistema). Integración por API con Blue Express / Starken / Chilexpress → **diferida a Fase 7** (con tracción).
 - **Boleta/factura SII** *(manual en el MVP)*: emisión manual. Integración LibreDTE / Bsale → **diferida a Fase 7**.
 - **Mensajería** *(diferida)*: WhatsApp Business API (recordatorios de recompra — diferenciador) → **Fase 7**.
 
 ## 5. Decisiones pendientes (recortadas por D22 al mínimo del MVP)
 - ~~Validar Medusa.js vs alternativas~~ → ✅ **Medusa.js v2 (D21)**.
-- **Medio de pago primario para lanzar** (Webpay Plus / transferencia manual / Mercado Pago) — única decisión de "proveedores CL" que bloquea el MVP.
-- **Modelo de datos mínimo del checkout** → `DATABASE.md` (catálogo/carrito/orden + **dirección de despacho** + lo mínimo de perfil/suscripción que ya usa el front).
-- *(Diferidas — no bloquean el MVP, D22):* courier/boleta/WhatsApp; motor de "frecuencia de recompra" (módulo `anticipation`); arquitectura completa del **Perfil de Mascota** (módulo `pet-profile`). Se retoman con tracción (Fases 6–7).
+- ~~Medio de pago primario para lanzar~~ → ✅ **pago manual (transferencia, `pp_system_default`) como método real del MVP** (decisión de Carlos, D22); **Mercado Pago Checkout Pro como fast-follow** post-infra (D24 · WIP infra en `CURRENT_STATE.md`); Webpay diferido (afiliación Transbank).
+- ~~Modelo de datos mínimo del checkout~~ → ✅ implementado y documentado en `DATABASE.md §5–§8` (incluye el perfil de mascota como módulo `pet`, D34).
+- **Buscador dedicado** (Meilisearch/Algolia) → diferido a escala; hoy `q` nativo de la Store API (D28).
+- *(Diferidas — no bloquean el MVP, D22):* courier/boleta/WhatsApp; motor de "frecuencia de recompra" (módulo `anticipation`); **suscripción recurrente** (módulo `subscription`). Se retoman con tracción (Fases 6–7).

@@ -6,7 +6,7 @@
 > | **Purpose** | Fuente de verdad de **cómo y dónde se despliega Manada**: hosting, settings, variables de entorno, estrategia de ramas y el checklist del "primer deploy de producción funcional". |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-06 |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | ARCHITECTURE.md (§2 reglas), DECISIONS.md (D20 monorepo · D22 MVP-first · D25 infra de lanzamiento · **D27 Vercel**) |
 > | **Source of Truth** | ✅ de *la configuración de despliegue*. |
 
@@ -17,7 +17,7 @@
 | Servicio | Estado | Dónde |
 |---|---|---|
 | **Frontend** (`apps/web`, Next.js) | 🟢 **Desplegado en Vercel** — build verde, **modo staging (sin backend)** | proyecto `manada-web` |
-| **Backend** (`apps/backend`, Medusa v2) | 🔴 **No desplegado** — corre solo en localhost del fundador | pendiente (Railway/Render, diferido) |
+| **Backend** (`apps/backend`, Medusa v2) | 🟠 **No desplegado**, pero el despliegue a **Railway está en curso** — config endurecida + `railway.json` verificados en local, sin commitear (D30 reservada; punto exacto en `CURRENT_STATE.md §WIP`) | Railway (decidido en la sesión WIP: servicio único `shared`, build nativo sin Docker) |
 | **Base de datos / Redis** | 🔴 No provisionados en la nube | pendiente (Postgres/Redis gestionados) |
 | **Dominio `tumanada.cl`** | 🔴 **No conectado** — nada "vivo" de cara al público | pendiente (lanzamiento) |
 
@@ -85,11 +85,11 @@
 
 ---
 
-## 4 · Backend (pendiente — diferido)
+## 4 · Backend (🚧 despliegue a Railway en curso)
 
-**No desplegar todavía** (mandato de Carlos: no invertir tiempo en infra de backend hasta cerrar el MVP — Etapas A + B del plan D25).
+El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerrar el MVP" quedó cumplido y el despliegue **arrancó** (2026-07-09). Medusa v2 no corre en Vercel (servidor de larga vida): va a **Railway** (decidido: un solo servicio `shared`, build nativo pnpm sin Docker) + **Postgres gestionado** + **Redis**. Pasos macro: desplegar backend → migrar + seed de prod → URL pública + publishable key de prod → CORS al dominio del frontend → setear las 2 env vars en Vercel (§2) → redeploy del frontend.
 
-Cuando toque (post-MVP): Medusa v2 no corre en Vercel (servidor de larga vida). Necesita **host de contenedor/servidor** (Railway/Render/Fly) + **Postgres gestionado** + **Redis**. Pasos macro: desplegar backend → migrar + seed de prod → obtener URL pública + publishable key de prod → CORS apuntando al dominio del frontend → setear las 2 env vars en Vercel (§2) → redeploy del frontend.
+> Estado fino, decisiones de la sesión y punto exacto de continuación: **`CURRENT_STATE.md §WIP`** (el detalle se consolida aquí + D30 al validar cada etapa).
 
 ---
 
@@ -97,8 +97,8 @@ Cuando toque (post-MVP): Medusa v2 no corre en Vercel (servidor de larga vida). 
 
 Se marca cuando la tienda funciona de punta a punta de cara al público:
 
-- [ ] MVP cerrado (Etapa A cuentas ✅ + Etapa B tienda coherente) — plan D25.
-- [ ] Backend Medusa desplegado (host + Postgres + Redis) con secrets de prod reales.
+- [x] MVP cerrado (Etapa A cuentas ✅ D26 + Etapa B tienda coherente ✅ D28 + endurecimiento ✅ D29) — plan D25.
+- [ ] Backend Medusa desplegado (Railway + Postgres + Redis) con secrets de prod reales — 🚧 en curso (ver §0 y `CURRENT_STATE.md §WIP`).
 - [ ] Seed/datos de prod + publishable key de prod.
 - [ ] CORS del backend incluye el dominio del frontend.
 - [ ] `NEXT_PUBLIC_MEDUSA_BACKEND_URL` + `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` seteadas en Vercel → **redeploy**.
