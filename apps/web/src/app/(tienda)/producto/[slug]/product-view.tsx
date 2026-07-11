@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/toast";
 import {
   SubscriptionBox,
   ShippingPolicyNote,
+  ProductImage,
   ProductRail,
   StockBadge,
 } from "@/components/commerce";
@@ -129,14 +130,15 @@ export function ProductView({
         />
 
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Galería (packshot placeholder cálido — dirección de arte real = Polish 3.4) */}
-          <div className="grid aspect-square place-items-center rounded-[var(--radius-xl)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
-            <span
-              className="text-[9rem] drop-shadow-[0_20px_28px_rgba(42,39,34,0.14)]"
-              aria-hidden
-            >
-              {product.imageUrl ?? "📦"}
-            </span>
+          {/* Galería: foto real del Admin si existe; si no, packshot placeholder
+              cálido (dirección de arte real = Polish 3.4 / U090) */}
+          <div className="grid aspect-square place-items-center overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+            <ProductImage
+              image={product.imageUrl}
+              alt={`${product.brand.name} ${product.name}`}
+              imgClassName="p-10"
+              emojiClassName="text-[9rem] drop-shadow-[0_20px_28px_rgba(42,39,34,0.14)]"
+            />
           </div>
 
           {/* Caja de compra */}

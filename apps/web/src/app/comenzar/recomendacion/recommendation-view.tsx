@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
+import { ProductImage } from "@/components/commerce/product-image";
 import { ProductRail } from "@/components/commerce/product-rail";
 import { usePet, useCart, useSession } from "@/components/providers";
 import type { Product } from "@/types";
@@ -157,11 +158,14 @@ export function RecommendationView({ products }: { products: Product[] }) {
 
           {/* Recomendación principal (elegible: cambiar a una alternativa rearma el plan) */}
           <div className="grid gap-8 lg:grid-cols-2">
-            {/* Packshot (placeholder cálido — foto real = Polish U090) */}
-            <div className="grid aspect-square place-items-center rounded-[var(--radius-xl)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
-              <span className="text-[9rem] drop-shadow-[0_20px_28px_rgba(42,39,34,0.14)]" aria-hidden>
-                {food.imageUrl ?? "📦"}
-              </span>
+            {/* Packshot: foto real del Admin si existe; si no, placeholder cálido (U090) */}
+            <div className="grid aspect-square place-items-center overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+              <ProductImage
+                image={food.imageUrl}
+                alt={`${food.brand.name} ${food.name}`}
+                imgClassName="p-8"
+                emojiClassName="text-[9rem] drop-shadow-[0_20px_28px_rgba(42,39,34,0.14)]"
+              />
             </div>
 
             <Stack gap={4}>
@@ -441,8 +445,8 @@ function AltCard({
   const perKg = pricePerKg(product);
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border-default bg-surface p-4 sm:flex-row sm:items-center">
-      <span className="grid size-14 shrink-0 place-items-center rounded-[var(--radius-md)] bg-subtle text-3xl" aria-hidden>
-        {product.imageUrl ?? "📦"}
+      <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-subtle text-3xl" aria-hidden>
+        <ProductImage image={product.imageUrl} alt={product.name} imgClassName="p-1" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

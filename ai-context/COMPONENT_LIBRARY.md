@@ -130,7 +130,8 @@
 
 | Componente | Cuándo usar |
 |---|---|
-| **ProductCard** | Unidad central del catálogo. Packshot · badges · marca/nombre · rating · precio · despacho honesto · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. |
+| **ProductImage** | Packshot de producto — el ÚNICO punto que conoce la dualidad de `Product.imageUrl` (D36): URL real del Admin → `<img>` (contain, lazy, alt); emoji placeholder (U090) → span decorativo idéntico a antes. Lo usan ProductCard, CartItem, PDP, recomendación y checkout; **ningún sitio debe renderizar `imageUrl` directo**. |
+| **ProductCard** | Unidad central del catálogo. Packshot (`ProductImage`) · badges · marca/nombre · rating · precio · despacho honesto · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. |
 | **ProductGrid** | Grilla 2→3→4 con estados `loading` (skeletons) y `empty` integrados. |
 | **ProductRail** | Carrusel horizontal scroll-snap (cross-sell, destacados). |
 | **CategoryCard / BrandCard** | Accesos por necesidad y por marca. `CategoryCard` acepta `imageUrl` (ícono-foto por slug, con fallback cálido si la foto falta) o `icon` (emoji, respaldo/styleguide); **la variante-foto es la canónica**. |

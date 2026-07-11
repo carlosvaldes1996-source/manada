@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers";
 import { useToast } from "@/components/ui/toast";
 import { DiscountBadge, SubscriptionBadge } from "./badges";
+import { ProductImage } from "./product-image";
 
 export interface ProductCardProps {
   product: Product;
@@ -58,11 +59,14 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
         className="relative grid aspect-square place-items-center bg-gradient-to-b from-canvas to-subtle"
         aria-hidden
       >
-        {/* Placeholder cálido (packshot real pendiente, U090): emoji grande con
-            sombra de contacto para que no se vea como una caja vacía. */}
-        <span className="text-[5.5rem] drop-shadow-[0_12px_16px_rgba(42,39,34,0.12)] transition-transform duration-[var(--duration-standard)] group-hover:scale-105">
-          {product.imageUrl ?? "📦"}
-        </span>
+        {/* Foto real del Admin si existe; si no, emoji placeholder cálido (U090)
+            con sombra de contacto para que no se vea como una caja vacía. */}
+        <ProductImage
+          image={product.imageUrl}
+          alt={`${product.brand.name} ${product.name}`}
+          imgClassName="p-4 transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
+          emojiClassName="text-[5.5rem] drop-shadow-[0_12px_16px_rgba(42,39,34,0.12)] transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
+        />
         <div className="absolute top-2.5 left-2.5 flex flex-col items-start gap-1.5">
           {product.subscribable && <SubscriptionBadge discount={product.subscriptionDiscount} />}
           {discount > 0 && <DiscountBadge percent={discount} />}
