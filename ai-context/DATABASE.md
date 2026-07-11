@@ -134,3 +134,37 @@ duplicada). Todo con entidades/mecanismos **nativos** de Medusa; cero lógica pr
   (`medusa exec`, sin reseed). Cambiar el umbral/costo = editar `lib/shipping.ts` (+ la
   opción en el Admin/seed) — un solo lugar.
 - **Verificado:** orden bajo umbral → envío $3.990; orden sobre umbral → envío $0.
+
+---
+
+## 8. Perfil de mascota — IMPLEMENTADO (D34) · módulo custom `pet`
+
+Materializa la entidad crítica de §1 con el alcance del MVP actual (los campos que el
+frontend ya usa). **Primer módulo custom** (`apps/backend/src/modules/pet`), según D21:
+extiende Medusa sin tocar el core. Tabla `pet`:
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | pk (`pet_…`) | DML `model.id({ prefix: "pet" })` |
+| `customer_id` | text, **index** | dueño (Customer nativo de Medusa) |
+| `name` | text | |
+| `species` | enum `perro\|gato\|otro` | |
+| `stage` | enum `cachorro\|adulto\|senior` | etapa, no fecha de nacimiento (FUNNEL §1.2) |
+| `weight_kg` | float, null | |
+| `weight_source` | enum `exacto\|rango\|estimado`, null | confianza del peso (F3) |
+| `breed` | text, null | |
+| `neutered` | boolean, null | |
+| `conditions` | json, null | `string[]` (ej. `["renal"]`) |
+| `avatar_url` | text, null | se llena con Pet Experience B4 (foto) |
+| `current_food_id` | text, null | id de producto Medusa ("su alimento", B6) |
+| `food_assigned_at` | timestamptz, null | **estampado por el backend** al cambiar `current_food_id`; ancla del cálculo de anticipación |
+
+- **Relación con Customer: campo `customer_id` plano e indexado, NO module link.**
+  Rationale (MVP-first): el único patrón de consulta es "mascotas de este cliente";
+  un module link de Medusa agrega tabla de enlace + `query.graph` sin beneficio hoy.
+  Graduar a `defineLink` después no rompe el contrato de API.
+- **`completeness` NO se almacena** (derivada; la calcula el front). La ración/anticipación
+  tampoco: se derivan de `weight_kg` + `stage` + formato del producto (`lib/anticipation.ts`).
+- Servicio: `MedusaService({ Pet })` (CRUD autogenerado). Contrato de API en `API.md §9`.
+- §5.5 queda **superado en lo relativo al perfil**: la mascota ya es real; suscripción
+  como entidad y boleta SII siguen post-tracción.

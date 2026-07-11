@@ -1,4 +1,12 @@
-import { defineMiddlewares, MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import {
+  authenticate,
+  defineMiddlewares,
+  MedusaNextFunction,
+  MedusaRequest,
+  MedusaResponse,
+  validateAndTransformBody,
+} from "@medusajs/framework/http";
+import { StoreCreatePet, StoreUpdatePet } from "./store/pets/validators";
 
 /**
  * Campo calculado `subscription_price` en la Store API (Fase 5 · Etapa 2).
@@ -91,6 +99,13 @@ function augmentProducts(
   next();
 }
 
+/**
+ * Autenticación de cliente para `/store/pets` (API.md §9): mismo JWT de la
+ * sesión (D26). Un cliente solo opera sus mascotas; la propiedad se impone en
+ * las rutas con el `customer_id` del `auth_context`.
+ */
+const petsAuth = authenticate("customer", ["bearer", "session"]);
+
 export default defineMiddlewares({
   routes: [
     {
@@ -102,6 +117,21 @@ export default defineMiddlewares({
       matcher: "/store/products/:id",
       method: ["GET"],
       middlewares: [augmentProducts],
+    },
+    {
+      matcher: "/store/pets",
+      method: ["GET"],
+      middlewares: [petsAuth],
+    },
+    {
+      matcher: "/store/pets",
+      method: ["POST"],
+      middlewares: [petsAuth, validateAndTransformBody(StoreCreatePet)],
+    },
+    {
+      matcher: "/store/pets/:id",
+      method: ["PATCH"],
+      middlewares: [petsAuth, validateAndTransformBody(StoreUpdatePet)],
     },
   ],
 });

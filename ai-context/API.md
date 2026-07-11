@@ -206,3 +206,42 @@ El contenido visible se alineó a la realidad del MVP: **no** se promete Webpay,
 electrónica SII automática ni "pago protegido"; el pago es **transferencia manual** y el
 despacho se **coordina** tras la compra (sin fecha/comuna inventadas por tarjeta).
 Reseñas y ratings **ocultos** hasta que exista un sistema real.
+
+---
+
+## 9. Contrato de mascotas (`/store/pets`) — módulo custom `pet` (D34)
+
+Primer módulo custom del proyecto (previsto en D21 como `pet-profile`). Persiste el
+perfil de mascota del cliente para que onboarding/perfil/dashboard/anticipación dejen
+el estado en memoria y consuman **una sola fuente de verdad**. Encapsulado en
+`apps/web/src/lib/medusa/pets.ts`; el frontend **no** conoce la forma del backend
+fuera del mapper.
+
+### 9.1 Autenticación y alcance
+- Todas las rutas exigen **cliente autenticado**: `authenticate("customer", ["bearer","session"])`
+  (mismo JWT de §7 vía `Authorization: Bearer`) **más** la publishable key de la Store API.
+- Un cliente solo ve/toca **sus** mascotas (`customer_id` del `auth_context`); acceder a
+  una ajena responde **404** (no revela existencia).
+- **Invitados NO persisten** server-side: el funnel sigue creando la mascota en memoria;
+  al registrarse/iniciar sesión, el frontend **empuja** las mascotas en memoria al backend
+  (espejo del patrón `transferCart`, §7.3).
+
+### 9.2 Endpoints
+- **`GET /store/pets`** → `{ pets: StorePet[] }` — las mascotas del cliente (orden `created_at` asc).
+- **`POST /store/pets`** — body `{ name, species, stage, weight_kg?, weight_source?, breed?,
+  neutered?, conditions? }` → `{ pet: StorePet }` (201).
+- **`PATCH /store/pets/:id`** — body parcial (los mismos campos + `current_food_id?`,
+  `avatar_url?`) → `{ pet: StorePet }`. **Regla de anticipación:** cuando el body trae
+  `current_food_id`, el **backend** estampa `food_assigned_at = now()` (reloj del servidor,
+  fuente única del "desde cuándo come esto"); el cliente jamás envía esa fecha.
+- Validación con **zod** vía `validateAndTransformBody` (schemas en
+  `src/api/store/pets/validators.ts`); enums de especie/etapa/fuente-de-peso rechazados
+  en el borde. Sin `DELETE` por ahora (no existe UI que lo consuma; se agrega con su bloque).
+
+### 9.3 `StorePet` (shape del backend)
+`{ id, name, species: "perro"|"gato"|"otro", stage: "cachorro"|"adulto"|"senior",
+weight_kg: number|null, weight_source: "exacto"|"rango"|"estimado"|null, breed: string|null,
+neutered: boolean|null, conditions: string[]|null, avatar_url: string|null,
+current_food_id: string|null, food_assigned_at: string(ISO)|null, created_at, updated_at }`.
+Mapper del front: `StorePet → Pet` (camelCase; `completeness` NO se almacena — es derivada
+y se calcula en el front). Modelo de datos en `DATABASE.md §8`.

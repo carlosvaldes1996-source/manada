@@ -12,5 +12,9 @@ module.exports = defineConfig({
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     }
-  }
+  },
+  modules: [
+    // Módulo custom `pet` (D34): perfil de mascota como fuente única.
+    { resolve: './src/modules/pet' },
+  ],
 })
