@@ -85,6 +85,8 @@ Composición objetivo (desktop; en móvil apila en 1 col, el retrato arriba cent
 
 ## 1.3 Asociar alimento a una mascota (el flujo ideal)
 
+> **⚠️ Evolucionado por D39 (2026-07-11, feedback de Carlos tras usar B6 real):** el diseño de abajo mezclaba comprar con definir qué come (selector "¿para quién?" + CTA "Agregar para {nombre}" + asignación silenciosa al agregar) y en la práctica confundía las intenciones. El diseño vigente (aprobado por Carlos): **comprar ≠ definir qué come.** (1) La tienda es e-commerce puro — CTA "Agregar al carrito", specs personalizadas calculadas para la **mascota activa del header** (informativas). (2) **El puente = toast de un tap:** al agregar un alimento que no es el suyo, el toast pregunta *"¿Es el alimento que come {nombre}?"* [Sí, es el suyo] → recién ahí asigna. (3) **El perfil define:** card "Su alimento actual" en la ficha + `FoodSelectorDialog` (buscador sobre el catálogo real de su especie, actual marcado con badge; elegir asigna sin tocar el carrito). (4) **El funnel es la excepción deliberada:** "Sumar al pedido de {mascota}" en la recomendación sigue asignando (todo ese contexto ES su plan). Los principios de calidez de abajo siguen vigentes; el mecanismo cambió.
+
 Principio: la asignación es **acto de cuidado, no formulario**. Se infiere y se confirma con calidez.
 
 - **1 mascota → silencioso.** La PDP ya muestra ración/duración "para {nombre}". Al agregar: toast *"Guardamos que {nombre} come esto — te avisaremos antes de que se le acabe."* Cero clics extra. Ese toast es donde el usuario entiende que Manada acaba de aprender algo de su mascota.

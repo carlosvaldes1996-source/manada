@@ -12,6 +12,7 @@ import {
   PetProfileHeader,
   PetEditCard,
   PetEditDialog,
+  FoodSelectorDialog,
   AnticipationCapsule,
   RecommendationCard,
 } from "@/components/pet";
@@ -38,6 +39,8 @@ export function MascotasView({ products }: { products: Product[] }) {
   const router = useRouter();
   // Un solo lugar de edición (B5): la ficha y el hero abren el mismo Dialog.
   const [editOpen, setEditOpen] = useState(false);
+  // Definir qué come = acto de perfil, separado de comprar (D39).
+  const [foodOpen, setFoodOpen] = useState(false);
 
   if (!activePet) {
     return (
@@ -84,7 +87,7 @@ export function MascotasView({ products }: { products: Product[] }) {
     { key: "weight", label: "Peso", value: activePet.weightKg ? `${activePet.weightKg} kg` : undefined, hint: "Cuéntanos su peso para calcular su ración", onEdit: openEdit },
     { key: "breed", label: "Raza", value: activePet.breed, hint: "¿Qué raza es? Afina sus recomendaciones", onEdit: openEdit },
     { key: "neutered", label: "Esterilización", value: typeof activePet.neutered === "boolean" ? (activePet.neutered ? "Sí" : "No") : undefined, hint: "Cambia sus necesidades calóricas", onEdit: openEdit },
-    { key: "food", label: "Alimento", value: currentFood ? `${currentFood.brand.name} · ${currentFood.name}` : undefined, hint: "¿Qué come? Te avisamos antes de que se le acabe", onEdit: () => router.push("/categoria/alimento") },
+    { key: "food", label: "Su alimento actual", value: currentFood ? `${currentFood.brand.name} · ${currentFood.name}` : undefined, hint: "¿Qué come? Te avisamos antes de que se le acabe", onEdit: () => setFoodOpen(true) },
     { key: "health", label: "Info de salud", value: activePet.conditions?.length ? activePet.conditions.join(", ") : undefined, hint: "Cuéntame si tiene alguna condición para cuidarlo mejor", onEdit: openEdit },
   ];
 
@@ -148,7 +151,7 @@ export function MascotasView({ products }: { products: Product[] }) {
               description="Con su alimento calculamos cuánto le dura el saco y te avisamos antes de que se acabe. Es lo único que nos falta."
               media={<span className="text-4xl">🍽️</span>}
               action={
-                <Button variant="secondary" onClick={() => router.push("/categoria/alimento")}>
+                <Button variant="secondary" onClick={() => setFoodOpen(true)}>
                   Elegir su alimento
                 </Button>
               }
@@ -203,6 +206,8 @@ export function MascotasView({ products }: { products: Product[] }) {
 
       {/* Edición real del perfil (B5): guarda vía updatePet → PATCH /store/pets/:id */}
       <PetEditDialog pet={activePet} open={editOpen} onOpenChange={setEditOpen} />
+      {/* Definir su alimento (D39): asigna sin tocar el carrito */}
+      <FoodSelectorDialog pet={activePet} products={products} open={foodOpen} onOpenChange={setFoodOpen} />
     </Section>
   );
 }

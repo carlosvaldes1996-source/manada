@@ -8,6 +8,7 @@ export * from "./pet-switcher";
 export * from "./pet-profile-header";
 export * from "./pet-edit-card";
 export * from "./pet-edit-dialog";
+export * from "./food-selector-dialog";
 export * from "./feeding-schedule";
 export * from "./recommendation-card";
 export * from "./anticipation-capsule";
