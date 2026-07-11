@@ -5,7 +5,7 @@
 > |---|---|
 > | **Purpose** | Informe de sanidad documental + bitácora de consolidaciones. Registra qué se auditó, qué se encontró y qué se cambió. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟢 Refactorización 2026-07-11 en curso (ver §6 changelog) |
+> | **Status** | ✅ Refactorización 2026-07-11 completada y validada (ver §6 changelog) |
 > | **Last Updated** | 2026-07-11 |
 > | **Depends On** | toda la carpeta `/ai-context` |
 > | **Supersedes** | `history/04-project-health-report-2026-06-29.md` (consolidación anterior) |
@@ -90,4 +90,6 @@ Segunda consolidación documental del proyecto (la primera fue 2026-06-29, archi
 ## 6. Changelog de consolidaciones
 
 - **2026-06-29** — Primera consolidación (12 problemas, metadata de gobernanza, archivo de PROTOTYPE_BRIEF). Detalle en `history/04-project-health-report-2026-06-29.md`.
-- **2026-07-11** — Auditoría completa (este informe, §2) + refactorización por ownership: estado con dueño único, CURRENT_STATE como foto, 4 archivos movidos a `history/`, docs técnicos realineados a la realidad D29–D39, reglas anti-deuda (§5). Registrada como **D40** en `DECISIONS.md`. *(Los commits de la ejecución quedan en el historial de git con prefijo "Docs · Refactor 2026-07-11".)*
+- **2026-07-11** — Auditoría completa (este informe, §2) + refactorización por ownership: estado con dueño único, CURRENT_STATE como foto, 4 archivos movidos a `history/`, docs técnicos realineados a la realidad D29–D39, reglas anti-deuda (§5). Registrada como **D40** en `DECISIONS.md`. Ejecutada en 6 commits con prefijo "Docs · Refactor 2026-07-11".
+  - **Validación final (2026-07-11):** ✅ toda referencia a `.md` en docs activos resuelve a un archivo existente · ✅ cero punteros a prompts cerrados (`prompt #10`) o módulos eliminados (`lib/data/catalog`, `seedPets`) fuera de citas históricas · ✅ cero "apps/backend reservado" en docs activos · ✅ metadata (`Status`/`Last Updated`) al día en todos los docs tocados · ✅ `DECISIONS.md` intacta como append-only (solo se extendió el índice de vigencia y se anexó D40) · ✅ el WIP de infra (código sin commitear, D30 reservada) quedó preservado en `CURRENT_STATE.md §WIP`.
+  - **Números:** docs activos 3.773 → **3.184 líneas** (−16%), con la baja concentrada en lo que se lee siempre: CLAUDE.md 53→37 · CURRENT_STATE 84→70 (antes crecía sin límite) · ROADMAP 81→34 · TODO 85→61 · PROMPTS 255→79 · FRONTEND_ARCHITECTURE 294→66. La ruta de onboarding pasó de "lee TODA la carpeta" (~4.300 líneas con history) a CLAUDE + CURRENT_STATE + PROJECT_MASTER (~280 líneas) + docs del dominio de la tarea.
