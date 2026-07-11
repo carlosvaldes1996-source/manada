@@ -9,8 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Pet } from "@/types";
-import { createMyPet, listMyPets, updateMyPet } from "@/lib/medusa";
+import type { Pet, WeightSource } from "@/types";
+import { createMyPet, listMyPets, updateMyPet, type UpdateMyPetInput } from "@/lib/medusa";
+import { profileCompleteness } from "@/lib/pet";
 import { useSession } from "./session-provider";
 
 /**
@@ -44,8 +45,23 @@ interface PetContextValue {
    * reconcilia `foodAssignedAt` con la fecha que estampa el backend (§9.2).
    */
   assignFood: (petId: string, foodId: string) => void;
+  /**
+   * Edita campos del perfil (B5, la usa `PetEditDialog`). Optimista en memoria
+   * (recalcula `completeness`); con sesión persiste vía PATCH — semántica
+   * setter-only (los campos omitidos no cambian). Mismo patrón que assignFood.
+   */
+  updatePet: (petId: string, changes: PetProfileChanges) => void;
   /** Fecha ISO en que se asignó el alimento actual de cada mascota (por id). */
   foodAssignedAt: Record<string, string>;
+}
+
+/** Campos del perfil editables desde la UI (subset de `Pet`, B5). */
+export interface PetProfileChanges {
+  weightKg?: number;
+  weightSource?: WeightSource;
+  breed?: string;
+  neutered?: boolean;
+  conditions?: string[];
 }
 
 const PetContext = createContext<PetContextValue | null>(null);
@@ -160,6 +176,31 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updatePet = useCallback<PetContextValue["updatePet"]>((petId, changes) => {
+    // Optimista: la ficha y la barra de completitud reflejan el cambio al tiro.
+    setPets((prev) =>
+      prev.map((p) => {
+        if (p.id !== petId) return p;
+        const next = { ...p, ...changes };
+        next.completeness = profileCompleteness(next);
+        return next;
+      }),
+    );
+
+    if (statusRef.current === "authenticated" && !isLocalId(petId)) {
+      const body: UpdateMyPetInput = {
+        weight_kg: changes.weightKg,
+        weight_source: changes.weightSource,
+        breed: changes.breed,
+        neutered: changes.neutered,
+        conditions: changes.conditions,
+      };
+      void updateMyPet(petId, body).catch((err) =>
+        console.warn("[pets] no se pudo persistir la edición del perfil", err),
+      );
+    }
+  }, []);
+
   const value = useMemo<PetContextValue>(
     () => ({
       pets,
@@ -168,9 +209,10 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       addPet,
       clearPets,
       assignFood,
+      updatePet,
       foodAssignedAt,
     }),
-    [pets, activePetId, addPet, clearPets, assignFood, foodAssignedAt],
+    [pets, activePetId, addPet, clearPets, assignFood, updatePet, foodAssignedAt],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

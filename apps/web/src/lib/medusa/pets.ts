@@ -80,8 +80,18 @@ export async function createMyPet(pet: Pet): Promise<Pet> {
   return mapPet(created);
 }
 
-/** Campos editables hoy; se amplía cuando el perfil editable (B5) lo consuma. */
+/**
+ * Campos editables del PATCH (espejo de `StoreUpdatePet` del backend).
+ * Semántica SETTER-ONLY (B5): un campo omitido no cambia; el validador no
+ * acepta `null` para estos campos (solo `current_food_id`/`avatar_url` son
+ * anulables). `conditions: []` sí limpia la lista.
+ */
 export interface UpdateMyPetInput {
+  weight_kg?: number;
+  weight_source?: WeightSource;
+  breed?: string;
+  neutered?: boolean;
+  conditions?: string[];
   /** Producto que come (`null` = des-asignar). El backend estampa la fecha. */
   current_food_id?: string | null;
 }

@@ -30,5 +30,5 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 }
 
 export { useSession } from "./session-provider";
-export { usePet } from "./pet-provider";
+export { usePet, type PetProfileChanges } from "./pet-provider";
 export { useCart } from "./cart-provider";

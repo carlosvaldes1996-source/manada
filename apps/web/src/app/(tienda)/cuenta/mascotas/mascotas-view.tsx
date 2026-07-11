@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Section } from "@/components/ui/section";
 import { Stack } from "@/components/ui/stack";
@@ -10,6 +11,7 @@ import { useToast } from "@/components/ui/toast";
 import {
   PetProfileHeader,
   PetEditCard,
+  PetEditDialog,
   AnticipationCapsule,
   RecommendationCard,
 } from "@/components/pet";
@@ -34,6 +36,8 @@ export function MascotasView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
   const { toast } = useToast();
   const router = useRouter();
+  // Un solo lugar de edición (B5): la ficha y el hero abren el mismo Dialog.
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!activePet) {
     return (
@@ -72,17 +76,16 @@ export function MascotasView({ products }: { products: Product[] }) {
   // deriva por especie (mismo criterio honesto que el dashboard).
   const railProducts = products.filter((p) => p.species.includes(activePet.species)).slice(0, 6);
 
-  const notify = (what: string) =>
-    toast({ title: `Editar ${what}`, description: "La edición se conecta en la siguiente fase.", variant: "info" });
-
   // Su ficha: TODOS los campos (§1.2). Vacío = invitación cálida con su beneficio;
-  // no se ocultan ni se duplican en un panel "te falta" aparte.
+  // no se ocultan ni se duplican en un panel "te falta" aparte. Editar abre el
+  // Dialog real (B5, guarda de verdad); "Alimento" se elige en la tienda (§1.3).
+  const openEdit = () => setEditOpen(true);
   const ficha: { key: string; label: string; value?: string; hint: string; onEdit: () => void }[] = [
-    { key: "weight", label: "Peso", value: activePet.weightKg ? `${activePet.weightKg} kg` : undefined, hint: "Cuéntanos su peso para calcular su ración", onEdit: () => notify("peso") },
-    { key: "breed", label: "Raza", value: activePet.breed, hint: "¿Qué raza es? Afina sus recomendaciones", onEdit: () => notify("raza") },
-    { key: "neutered", label: "Esterilización", value: typeof activePet.neutered === "boolean" ? (activePet.neutered ? "Sí" : "No") : undefined, hint: "Cambia sus necesidades calóricas", onEdit: () => notify("esterilización") },
+    { key: "weight", label: "Peso", value: activePet.weightKg ? `${activePet.weightKg} kg` : undefined, hint: "Cuéntanos su peso para calcular su ración", onEdit: openEdit },
+    { key: "breed", label: "Raza", value: activePet.breed, hint: "¿Qué raza es? Afina sus recomendaciones", onEdit: openEdit },
+    { key: "neutered", label: "Esterilización", value: typeof activePet.neutered === "boolean" ? (activePet.neutered ? "Sí" : "No") : undefined, hint: "Cambia sus necesidades calóricas", onEdit: openEdit },
     { key: "food", label: "Alimento", value: currentFood ? `${currentFood.brand.name} · ${currentFood.name}` : undefined, hint: "¿Qué come? Te avisamos antes de que se le acabe", onEdit: () => router.push("/categoria/alimento") },
-    { key: "health", label: "Info de salud", value: activePet.conditions?.length ? activePet.conditions.join(", ") : undefined, hint: "Cuéntame si tiene alguna condición para cuidarlo mejor", onEdit: () => notify("salud") },
+    { key: "health", label: "Info de salud", value: activePet.conditions?.length ? activePet.conditions.join(", ") : undefined, hint: "Cuéntame si tiene alguna condición para cuidarlo mejor", onEdit: openEdit },
   ];
 
   return (
@@ -90,7 +93,7 @@ export function MascotasView({ products }: { products: Product[] }) {
       <Stack gap={10}>
         <PetProfileHeader
           pet={activePet}
-          action={<Button variant="secondary" onClick={() => notify("perfil")}>Editar perfil</Button>}
+          action={<Button variant="secondary" onClick={openEdit}>Editar perfil</Button>}
         />
 
         {/* ── Su día a día (el acento Miel) ── */}
@@ -197,6 +200,9 @@ export function MascotasView({ products }: { products: Product[] }) {
           />
         </Stack>
       </Stack>
+
+      {/* Edición real del perfil (B5): guarda vía updatePet → PATCH /store/pets/:id */}
+      <PetEditDialog pet={activePet} open={editOpen} onOpenChange={setEditOpen} />
     </Section>
   );
 }

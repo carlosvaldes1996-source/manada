@@ -162,6 +162,7 @@
 | **PetSwitcher** | Selector global de mascota (header). Cambiarla re-personaliza la UI. |
 | **PetProfileHeader** | Cabecera del perfil: avatar grande, nombre héroe, completitud. |
 | **PetEditCard** | Dato editable; estado vacío = invitación cálida a completar. |
+| **PetEditDialog** | El ÚNICO lugar de edición del perfil (B5/D37): peso (→ `weightSource:"exacto"`), raza (reusa `BreedCombobox`), esterilización y salud. Guarda vía `updatePet` (optimista + PATCH real con sesión); setter-only (campo vacío no borra; salud vacía sí limpia). Lo abren la ficha y el hero. |
 | **FeedingSchedule** | Ración diaria/por comida calculada por peso+etapa (motor de anticipación). |
 | **RecommendationCard** | Recomendación personalizada (acento Miel) con motivo transparente (Popover). |
 | **AnticipationCapsule** | El momento "se adelantó por mí": días restantes, barra Miel, reagendar/suscribir, razón honesta. Entra con slide+fade + un pulso. |
