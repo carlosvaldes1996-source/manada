@@ -55,3 +55,9 @@ export {
   type AddressView,
   type AddressInput,
 } from "./account";
+export {
+  listMyPets,
+  createMyPet,
+  updateMyPet,
+  type UpdateMyPetInput,
+} from "./pets";

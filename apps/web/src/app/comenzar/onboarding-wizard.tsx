@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, HelpCircle, Check, Scale, Utensils } from "lucide-react";
@@ -100,24 +100,36 @@ export function OnboardingWizard() {
 
   const isLast = stepIndex === STEP_IDS.length - 1;
 
-  function finish() {
-    const pet: Pet = {
-      id: `pet_${Date.now()}`,
-      name: (draft.name ?? "").trim() || "Mi mascota",
-      species: draft.species ?? "otro",
-      stage: draft.stage ?? "adulto",
-      weightKg: draft.weightKg,
-      breed: draft.breed?.trim() || undefined,
-      completeness: 0,
-    };
-    pet.completeness = profileCompleteness(pet);
-    addPet(pet, { activate: true });
-    router.push("/comenzar/recomendacion");
+  /** Guard síncrono anti doble-click mientras la creación remota está en vuelo. */
+  const finishingRef = useRef(false);
+
+  async function finish() {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    try {
+      const pet: Pet = {
+        // id LOCAL de invitado (prefijo `local_`): si hay sesión, addPet lo
+        // persiste en el backend y devuelve el id real `pet_…` (D34).
+        id: `local_pet_${Date.now()}`,
+        name: (draft.name ?? "").trim() || "Mi mascota",
+        species: draft.species ?? "otro",
+        stage: draft.stage ?? "adulto",
+        weightKg: draft.weightKg,
+        weightSource: draft.weightSource,
+        breed: draft.breed?.trim() || undefined,
+        completeness: 0,
+      };
+      pet.completeness = profileCompleteness(pet);
+      await addPet(pet, { activate: true });
+      router.push("/comenzar/recomendacion");
+    } finally {
+      finishingRef.current = false;
+    }
   }
 
   function next() {
     if (!canContinue) return;
-    if (isLast) finish();
+    if (isLast) void finish();
     else setStepIndex((i) => i + 1);
   }
 

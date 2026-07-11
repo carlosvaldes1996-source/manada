@@ -1,33 +1,47 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Pet } from "@/types";
+import { createMyPet, listMyPets, updateMyPet } from "@/lib/medusa";
+import { useSession } from "./session-provider";
 
 /**
  * Estado global del Perfil de Mascota — el núcleo del producto (UX.md §3).
  * El selector de mascota del header cambia `activePet` y re-personaliza toda
  * la UI (home, catálogo, anticipación).
  *
- * Fase 3.3B: arranca **vacío** para soportar al visitante nuevo (sin mascota
- * sembrada). El alta conversacional usa `addPet`; el demo-login siembra a Toby
- * vía `seedPets` (ver `useAuthActions`). En Fase 4 se conecta al backend.
+ * FUENTE DE VERDAD (D34): con sesión, las mascotas viven en el backend
+ * (`/store/pets`, módulo `pet`) — al autenticarse se hidratan desde ahí y toda
+ * mutación se persiste. El INVITADO opera en memoria (ids `local_…`); al
+ * iniciar sesión sus mascotas se EMPUJAN al backend (espejo de `transferCart`,
+ * API.md §9.1) y la memoria se reemplaza por lo hidratado.
  */
 interface PetContextValue {
   pets: Pet[];
   activePet: Pet | null;
   setActivePetId: (id: string) => void;
-  /** Crea una mascota (alta de onboarding). Por defecto la deja activa. */
-  addPet: (pet: Pet, opts?: { activate?: boolean }) => void;
-  /** Reemplaza la lista (demo-login). Activa `activeId` o la primera. */
-  seedPets: (pets: Pet[], activeId?: string) => void;
+  /**
+   * Crea una mascota (alta de onboarding). Con sesión la persiste en el backend
+   * (id real `pet_…`); como invitado queda en memoria (id `local_…`). Si la
+   * creación remota falla, degrada a memoria para no romper el flujo (se
+   * empuja en la próxima sincronización). Por defecto la deja activa.
+   */
+  addPet: (pet: Pet, opts?: { activate?: boolean }) => Promise<Pet>;
   /** Vacía las mascotas (cerrar sesión). */
   clearPets: () => void;
   /**
-   * Asigna un alimento a una mascota (`currentFoodId`) y registra CUÁNDO, para
-   * que la anticipación se calcule desde esa fecha. Es la costura del loop
-   * alimento↔mascota (PET_EXPERIENCE Bloque 6): la llama la PDP al "Agregar para
-   * {nombre}" y, más adelante, la recomendación del funnel — una sola API, sin
-   * duplicar. El backend real la reemplaza persistiendo `current_food` en el módulo.
+   * Asigna un alimento a una mascota (`currentFoodId`) — la costura del loop
+   * alimento↔mascota (B6): la llaman la PDP y la recomendación del funnel.
+   * Optimista en memoria; con sesión persiste vía `PATCH /store/pets/:id` y
+   * reconcilia `foodAssignedAt` con la fecha que estampa el backend (§9.2).
    */
   assignFood: (petId: string, foodId: string) => void;
   /** Fecha ISO en que se asignó el alimento actual de cada mascota (por id). */
@@ -36,19 +50,91 @@ interface PetContextValue {
 
 const PetContext = createContext<PetContextValue | null>(null);
 
+/** id local de invitado (no persistido). El backend emite ids `pet_…`. */
+function isLocalId(id: string): boolean {
+  return id.startsWith("local_");
+}
+
 export function PetProvider({ children }: { children: React.ReactNode }) {
+  const { status } = useSession();
   const [pets, setPets] = useState<Pet[]>([]);
   const [activePetId, setActivePetId] = useState<string | null>(null);
   const [foodAssignedAt, setFoodAssignedAt] = useState<Record<string, string>>({});
 
-  const addPet = useCallback<PetContextValue["addPet"]>((pet, opts) => {
-    setPets((prev) => [...prev, pet]);
-    if (opts?.activate ?? true) setActivePetId(pet.id);
-  }, []);
+  // Refs para leer estado fresco dentro de callbacks/efectos sin stale closures.
+  const statusRef = useRef(status);
+  const petsRef = useRef(pets);
+  const activePetIdRef = useRef(activePetId);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+  useEffect(() => {
+    petsRef.current = pets;
+  }, [pets]);
+  useEffect(() => {
+    activePetIdRef.current = activePetId;
+  }, [activePetId]);
 
-  const seedPets = useCallback<PetContextValue["seedPets"]>((next, activeId) => {
-    setPets(next);
-    setActivePetId(activeId ?? next[0]?.id ?? null);
+  /** Guard de sincronización en curso (evita el doble efecto de StrictMode). */
+  const syncingRef = useRef(false);
+
+  // Al autenticarse: empujar las mascotas de invitado y luego hidratar TODO
+  // desde el backend (una sola fuente). Al recargar con sesión persistida, la
+  // memoria arranca vacía → es solo hidratación.
+  useEffect(() => {
+    if (status !== "authenticated" || syncingRef.current) return;
+    syncingRef.current = true;
+
+    void (async () => {
+      try {
+        // 1 · Push de mascotas locales (espejo de transferCart). Se conserva
+        //     también su alimento asignado (el backend re-estampa la fecha).
+        const locals = petsRef.current.filter((p) => isLocalId(p.id));
+        const activeLocalId = activePetIdRef.current;
+        let nextActiveId: string | null = null;
+
+        for (const guest of locals) {
+          try {
+            const created = await createMyPet(guest);
+            if (guest.currentFoodId) {
+              await updateMyPet(created.id, { current_food_id: guest.currentFoodId });
+            }
+            if (guest.id === activeLocalId) nextActiveId = created.id;
+          } catch (err) {
+            console.warn("[pets] no se pudo transferir una mascota de invitado", err);
+          }
+        }
+
+        // 2 · Hidratar desde la fuente única.
+        const { pets: remote, foodAssignedAt: assignedAt } = await listMyPets();
+        setPets(remote);
+        setFoodAssignedAt(assignedAt);
+        setActivePetId((prev) => {
+          const candidate = nextActiveId ?? prev;
+          if (candidate && remote.some((p) => p.id === candidate)) return candidate;
+          return remote[0]?.id ?? null;
+        });
+      } catch (err) {
+        // Sin backend no rompemos la sesión: la memoria queda como esté.
+        console.warn("[pets] hidratación de mascotas falló", err);
+      } finally {
+        syncingRef.current = false;
+      }
+    })();
+  }, [status]);
+
+  const addPet = useCallback<PetContextValue["addPet"]>(async (pet, opts) => {
+    let final = pet;
+    if (statusRef.current === "authenticated") {
+      try {
+        final = await createMyPet(pet);
+      } catch (err) {
+        console.warn("[pets] creación remota falló; la mascota queda local", err);
+      }
+    }
+    setPets((prev) => [...prev, final]);
+    if (opts?.activate ?? true) setActivePetId(final.id);
+    return final;
   }, []);
 
   const clearPets = useCallback(() => {
@@ -58,8 +144,20 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const assignFood = useCallback<PetContextValue["assignFood"]>((petId, foodId) => {
+    // Optimista: la UI (toast de la PDP, dashboard) refleja el vínculo al tiro.
     setPets((prev) => prev.map((p) => (p.id === petId ? { ...p, currentFoodId: foodId } : p)));
     setFoodAssignedAt((prev) => ({ ...prev, [petId]: new Date().toISOString() }));
+
+    // Con sesión y mascota persistida → el backend es la verdad (re-estampa fecha).
+    if (statusRef.current === "authenticated" && !isLocalId(petId)) {
+      void updateMyPet(petId, { current_food_id: foodId })
+        .then(({ foodAssignedAt: serverAt }) => {
+          if (serverAt) {
+            setFoodAssignedAt((prev) => ({ ...prev, [petId]: serverAt }));
+          }
+        })
+        .catch((err) => console.warn("[pets] no se pudo persistir el alimento", err));
+    }
   }, []);
 
   const value = useMemo<PetContextValue>(
@@ -68,12 +166,11 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       activePet: pets.find((p) => p.id === activePetId) ?? null,
       setActivePetId,
       addPet,
-      seedPets,
       clearPets,
       assignFood,
       foodAssignedAt,
     }),
-    [pets, activePetId, addPet, seedPets, clearPets, assignFood, foodAssignedAt],
+    [pets, activePetId, addPet, clearPets, assignFood, foodAssignedAt],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
