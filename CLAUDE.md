@@ -4,32 +4,34 @@
 
 ## ⚠️ Antes de responder cualquier cosa
 
-1. **Lee TODA la carpeta `/ai-context`.** Es la **fuente oficial y única de verdad** del proyecto. No dependas del historial del chat.
-2. Orden de lectura recomendado:
-   1. `ai-context/PROJECT_MASTER.md` — visión completa y decisiones.
-   2. `ai-context/CURRENT_STATE.md` — **dónde estamos AHORA y desde dónde seguir.**
-   3. `ai-context/DECISIONS.md` — qué se decidió y por qué (no re-litigar).
-   4. `ai-context/TODO.md` y `ai-context/ROADMAP.md` — qué falta y en qué orden.
-   5. Archivos temáticos según la fase (`BRANDING.md`, `UX.md`, `ARCHITECTURE.md`, `DESIGN_SYSTEM.md`, `DATABASE.md`, `API.md`).
-3. Comprende completamente el contexto y úsalo como base para todas tus decisiones.
+1. La carpeta **`/ai-context` es la fuente oficial y única de verdad** del proyecto. No dependas del historial del chat.
+2. Orden de lectura para orientarte (no leas más de lo que tu tarea necesita):
+   1. `ai-context/CURRENT_STATE.md` — **único dueño del estado: dónde estamos, frentes abiertos y desde dónde seguir.**
+   2. `ai-context/PROJECT_MASTER.md` — visión, estrategia y resumen de decisiones.
+   3. `ai-context/DECISIONS.md` — qué se decidió y por qué (append-only; **no re-litigar**). Consúltalo por entrada (D#), no completo.
+   4. `ai-context/ROADMAP.md` (fases) y `ai-context/TODO.md` (detalle táctico).
+   5. El/los archivos temáticos **dueños del dominio de tu tarea** — mapa de owners en `ai-context/PROJECT_HEALTH_REPORT.md §3` (marca → `BRANDING.md` · visual → `DESIGN_SYSTEM.md` · UX → `UX.md` · stack/repo → `ARCHITECTURE.md` · frontend → `FRONTEND_ARCHITECTURE.md` + `COMPONENT_LIBRARY.md` · datos → `DATABASE.md` · contratos → `API.md` · deploy → `DEPLOYMENT.md` · funnel → `FUNNEL_TARGET.md` · perfil logueado → `PET_EXPERIENCE_TARGET.md`).
+3. `ai-context/history/` es archivo histórico: **no se lee por defecto** y nunca se borra.
 
 ## 🧭 Cómo continuar el proyecto en un chat nuevo
 
 > Copia esto al abrir un chat nuevo:
 >
-> "Lee toda la carpeta `/ai-context` de este proyecto. Es la fuente oficial de verdad. Empieza por `PROJECT_MASTER.md` y `CURRENT_STATE.md`, entiende el contexto completo y dime un resumen del estado antes de proponer nada. Luego continuamos desde donde indica `CURRENT_STATE.md`."
+> "Lee `ai-context/CURRENT_STATE.md` y `ai-context/PROJECT_MASTER.md` de este proyecto (la carpeta `/ai-context` es la fuente oficial de verdad; `CLAUDE.md` explica el mapa). Dime un resumen del estado antes de proponer nada. Luego continuamos desde el frente que indica `CURRENT_STATE.md`."
 
-## 📌 Estado actual (resumen rápido)
+## 📌 Qué es Manada (lo que no cambia)
 
-- **Proyecto:** Manada — e-commerce de mascotas en Chile (alimento + accesorios + farmacia + suscripción inteligente).
+- **Proyecto:** e-commerce de mascotas en Chile (alimento + accesorios + farmacia) con suscripción inteligente como motor. Nombre **Manada** · dominio `tumanada.cl` (D8).
 - **Concepto rector:** *"Te conoce como nadie y se anticipa a lo que tu mascota necesita."*
-- **Nombre/dominio:** Manada · `tumanada.cl` (definitivo, D8).
-- **Fase activa:** ver `ai-context/CURRENT_STATE.md`. **Fases 0–2 ✅ completas** (marca + sistema visual + UX + prototipo HTML). **Fase 3 (Frontend) funcionalmente completa:** app Next.js en **`apps/web/`** — Etapa 1 (fundaciones) ✅ D13 · Etapa 2 (Component Library) ✅ D15 (~70 componentes, doc en `ai-context/COMPONENT_LIBRARY.md` + styleguide en `/dev/components`) · Etapa 3 (Pantallas + Activation Flow + modelo de compra de invitado) ✅ D16/D17 · Polish 3.4 **lote 1 ✅ D18** (tipografía opsz, escala, contrastes AA, redondeo CLP, motion calmado); **Polish restante ⏸ en pausa** hasta tener fotos (U090; fotos IA de ChatGPT por probar). **Fase activa: 4 — Arquitectura técnica (D19)** — **estructura física ✅ D20:** monorepo pnpm (`apps/web` frontend · `apps/backend` **reservado, sin código** · `packages/shared` solo con el primer contrato aprobado en `API.md`), con **reglas arquitectónicas permanentes en `ARCHITECTURE.md §2`** (el backend vive SOLO en `apps/backend`, jamás dentro del frontend; comunicación solo vía la API de `API.md`; contrato primero, código después) · **stack backend ✅ D21: Medusa.js v2** bajo el principio **"e-commerce primero"** (el moat — perfil/suscripción/anticipación — se construye como módulos custom de Medusa, sin fork del core). **Fase activa: 5 — MVP (D22, MVP-first).** Backend Medusa v2 arrancado y verificado (D22) + frontend conectado al backend real por etapas: catálogo (D23), carrito + checkout→orden con pago manual (D24), **cuentas y sesión reales** (Etapa A, D26: registro/login/logout/recuperación + JWT persistente, transferencia de carrito, historial de pedidos, direcciones), y **tienda coherente y honesta** (Etapa B, D28: buscador real, cross-sell real, regla única de envío del backend con promoción automática de envío gratis, auditoría de copy sin promesas de Webpay/SII/pago-protegido). **El flujo propio del MVP queda CERRADO** — el código propio de Manada es 100% real sobre Medusa. Frontend además desplegado en Vercel como staging (D27). **Lo único que resta para lanzar = terceros + infra:** Mercado Pago (pago automático), email transaccional, deploy del backend (Railway/Postgres/Redis) + env vars + dominio; SII/courier/WhatsApp y el moat (perfil/anticipación/suscripción recurrente) quedan post-tracción. Para continuar en un chat nuevo usa el **prompt #10** de `ai-context/PROMPTS.md`.
+- **Stack:** monorepo pnpm — `apps/web` (Next.js 16) + `apps/backend` (**Medusa.js v2**, principio "e-commerce primero", D21). Reglas arquitectónicas permanentes en `ARCHITECTURE.md §2` (backend SOLO en `apps/backend`; comunicación solo vía los contratos de `API.md`; contrato primero, código después).
+- **Estado, fase activa y siguiente paso:** ver **`ai-context/CURRENT_STATE.md`** (no se duplica aquí).
 
 ## 🔧 Reglas de trabajo del proyecto
 
-- Tratar el proyecto como **startup profesional**: cada fase genera documentación permanente en `/ai-context`.
+- Tratar el proyecto como **startup profesional**: cada hito actualiza la documentación permanente en `/ai-context`.
+- **Un hecho, un dueño** (reglas anti-deuda: `ai-context/PROJECT_HEALTH_REPORT.md §5`). El estado vive solo en `CURRENT_STATE.md`; las decisiones solo en `DECISIONS.md`; los demás docs apuntan.
 - **Nunca eliminar información previa**; anexar o archivar en `ai-context/history/`.
 - Toda decisión se registra en `DECISIONS.md` con rationale.
-- Al cerrar una fase: actualizar `PROJECT_MASTER.md`, `CURRENT_STATE.md`, `DECISIONS.md`, `ROADMAP.md`, `TODO.md` y el archivo temático correspondiente.
-- Estrategia antes que estética. No avanzar a diseño sin posicionamiento cerrado.
+- Al cerrar un hito: barrido de punteros — reescribir `CURRENT_STATE.md`, entrada + índice en `DECISIONS.md`, fila en `PROJECT_MASTER.md §16`, `ROADMAP.md`/`TODO.md` si cambia el plan, y el doc temático dueño.
+- Estrategia antes que estética. Modo de trabajo por bloques: un bloque → validado por Carlos → un commit; frontend primero, integración backend como pasada separada.
+- Antes de tocar `apps/web`: leer `apps/web/AGENTS.md` (Next 16 tiene cambios de ruptura).

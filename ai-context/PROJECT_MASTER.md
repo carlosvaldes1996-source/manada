@@ -6,15 +6,14 @@
 > | **Purpose** | Documento maestro: visión, estrategia y resumen de decisiones del proyecto. |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-06 |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | DECISIONS.md (fuente), CURRENT_STATE.md, ROADMAP.md |
 > | **Supersedes** | `history/PROJECT_MASTER_v0.md` |
 > | **Source of Truth** | ✅ de la *visión y estrategia*. El detalle vive en los archivos temáticos. |
 
-> **Documento maestro. Solo decisiones.** Fuente única de verdad del proyecto.
-> Crece con cada fase hasta cubrir todo el proyecto. Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
+> **Documento maestro: visión y estrategia (lo permanente).** Para detalle de trabajo en curso, ver los archivos temáticos de `/ai-context`.
 >
-> *Estado: Fases 0–2 ✅ COMPLETAS. **Fase 3 (Frontend) funcionalmente completa** — Etapas 1–3 ✅ (D13/D15/D16/D17) + Polish lote 1 ✅ (D18); el **Polish 3.4 restante ⏸ en pausa** hasta tener fotos (U090). **Fase 4 (Arquitectura) cerrada por lo esencial** — estructura física ✅ **D20** · stack backend ✅ **D21: Medusa.js v2** ("e-commerce primero"). **Fase activa: 5 — MVP (D22, MVP-first).** El **flujo propio del MVP está CERRADO**: backend Medusa arrancado (D22) + catálogo (D23) + carrito/checkout→orden con pago manual (D24) + **cuentas y sesión reales** (Etapa A, D26) + **tienda coherente y honesta** (Etapa B, D28), todo real sobre Medusa; frontend desplegado en Vercel como staging (D27). **Lo único que resta = terceros + infra:** Mercado Pago, email transaccional, deploy del backend + env vars + dominio; SII/courier/WhatsApp y el moat, post-tracción. Ver `CURRENT_STATE.md` y prompt #10 de `PROMPTS.md`.*
+> *📍 El estado actual, la fase activa y el siguiente paso viven **únicamente** en `CURRENT_STATE.md` (no se duplican aquí — regla D40).*
 
 ---
 
@@ -106,15 +105,15 @@ Benchmark mundial (norte de calidad): Chewy (cariño + autoship), Zooplus (reten
 
 ## 14. Stack
 
-- **Estructura del repo (D20):** monorepo pnpm workspaces — `apps/web` (frontend) · `apps/backend` (reservado; scaffold en Fase 5 tras validar stack) · `packages/shared` solo cuando exista el primer contrato aprobado en `API.md`. **Reglas arquitectónicas permanentes en `ARCHITECTURE.md §2`** (frontend sin lógica de negocio ni DB; backend solo en `apps/backend`; comunicación solo vía `API.md`).
+- **Estructura del repo (D20):** monorepo pnpm workspaces — `apps/web` (frontend) · `apps/backend` (backend) · `packages/shared` solo cuando exista el primer contrato compartido aprobado en `API.md`. **Reglas arquitectónicas permanentes en `ARCHITECTURE.md §2`** (frontend sin lógica de negocio ni DB; backend solo en `apps/backend`; comunicación solo vía `API.md`).
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui (re-estilizado).
-- **Backend:** ✅ **Medusa.js v2 (decidido, D21)** en `apps/backend` — core commerce + Admin incluido; módulos custom `pet-profile` · `subscription` (recipe oficial) · `anticipation`; Webpay como payment provider custom.
+- **Backend:** ✅ **Medusa.js v2 (D21)** en `apps/backend`, **construido y verificado** (D22–D28) — core commerce + Admin incluido; el moat se construye como módulos custom (primer módulo real: `pet`, D34); pago automático (Mercado Pago) y Webpay como providers, post-infra.
 - **Infra:** Vercel (front) + Railway/Fly (backend) + Cloudflare CDN.
 - **Analytics:** GA4 + eventos e-commerce + PostHog/Hotjar.
 
 ## 15. Base de datos
 
-⬜ Pendiente (Fase 4). Entidad crítica = **Perfil de Mascota** (el moat). Borrador en DATABASE.md.
+✅ MVP implementado y verificado, Medusa-native: catálogo (D23), cuentas (D26), envío (D28) y **Perfil de Mascota** — la entidad crítica del moat — como módulo custom `pet` (D34/D35). Detalle en DATABASE.md §5–§8. Post-tracción: suscripción como entidad y motor de anticipación completo.
 
 ## 16. Decisiones tomadas
 
@@ -150,20 +149,27 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D26 | Fase 5 · Etapa A — **Cuentas y sesión reales** (auth nativo Medusa: registro/login/logout/recuperación + JWT persistente, `transferCart`, pedidos, direcciones) |
 | D27 | Fase 5 · Infra — Frontend desplegado en **Vercel** (staging sin backend; monorepo verificado; `main`=prod provisional) → `DEPLOYMENT.md` |
 | D28 | Fase 5 · Etapa B — **Tienda coherente y honesta** (buscador real, cross-sell real, regla única de envío del backend + promoción automática de envío gratis, auditoría de copy) → **flujo propio del MVP cerrado** |
+| D29 | Fase 5 · Endurecimiento pre-lanzamiento (7 correcciones de bajo riesgo; suscripción atenuada `SUBSCRIPTIONS_ENABLED=false` → compra única) |
+| D30 | **RESERVADA** — cierre de la etapa de infraestructura de producción (WIP; ver `CURRENT_STATE.md`) |
+| D31 | Paridad logueado/no-logueado — `CategoryTiles` compartido + principio 9 de la Component Library |
+| D32 | Funnel F4 — recomendación consultiva "El plan de {mascota}" (sobre estado local) |
+| D33 | Integración O5 — funnel sobre catálogo real; muere `lib/data/catalog`; demo solo hero/styleguide |
+| D34 | Backend — módulo custom `pet`: perfil de mascota persistido (`/store/pets`) + hidratación del provider |
+| D35 | Backend — subscriber `order.placed`: anticipación anclada a la compra confirmada |
+| D36 | Frontend — `ProductImage`: URL real del Admin vs emoji placeholder |
+| D37 | Pet Experience B5 — edición real del perfil (`PetEditDialog` → PATCH persistido) |
+| D38 | Consistencia perfil↔onboarding — salud con chips curados; regla "todo dato estructurado se edita con el patrón del funnel" |
+| D39 | Comprar ≠ definir qué come — PDP e-commerce pura + toast-puente 1-tap + `FoodSelectorDialog` |
+| D40 | Meta — refactorización documental por ownership (estado con dueño único; reglas anti-deuda) |
 
 ## 17. Pendientes
 
-Ver `TODO.md`. Estado: Fases 0–2 cerradas; Fase 3 Etapas 1–3 ✅ + Polish lote 1 ✅ (D18); Polish restante ⏸ en pausa (D19). **Fase 5 — MVP:** el **flujo propio del MVP está CERRADO** — backend Medusa (D22) + catálogo (D23) + carrito/checkout→orden (D24) + cuentas/sesión reales (Etapa A, D26) + tienda coherente (Etapa B, D28), todo real sobre Medusa. **Inmediato = solo terceros + infra:** Mercado Pago (pago automático), email transaccional, deploy del backend (Railway/Postgres/Redis) + env vars en Vercel (D27) + dominio; SII/courier/WhatsApp y el moat, post-tracción. **Operativos (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo.
+Ver `CURRENT_STATE.md` (frentes abiertos) y `TODO.md` (detalle táctico). **Operativos de marca (no bloquean):** registrar `tumanada.cl` + handles, verificar marca en INAPI, vectorizar logo.
 
 ## 18. Roadmap
 
-Ver `ROADMAP.md`.
-```
-✅ Fase 0.1 Estrategia negocio  ✅ Fase 0.2 Benchmarking  ✅ Fase 0.3 Estrategia marca
-✅ Fase 1 Identidad de marca    ✅ Fase 2 UX    🟡 Fase 3 Frontend (Polish ⏸)
-🔄 Fase 4 Arquitectura técnica  ⬜ Fase 5 MVP
-```
+Ver `ROADMAP.md` (fases 0–8 y su estado).
 
 ## 19. Prompts importantes
 
-Ver `PROMPTS.md` (incluye prompt de onboarding y prompts reutilizables).
+Ver `PROMPTS.md` (prompts operativos vivos; los de fases cerradas están en `history/07`).
