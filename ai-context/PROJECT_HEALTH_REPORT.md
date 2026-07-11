@@ -1,179 +1,93 @@
-# PROJECT_HEALTH_REPORT — Auditoría y consolidación documental de Manada
+# PROJECT_HEALTH_REPORT — Auditoría y refactorización documental 2026-07-11
 
 > **📋 Metadata**
 > | Campo | Valor |
 > |---|---|
-> | **Purpose** | Informe de sanidad documental + bitácora de la consolidación de gobernanza. |
+> | **Purpose** | Informe de sanidad documental + bitácora de consolidaciones. Registra qué se auditó, qué se encontró y qué se cambió. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | ✅ Consolidación 2026-06-29 completada |
-> | **Last Updated** | 2026-06-29 |
+> | **Status** | 🟢 Refactorización 2026-07-11 en curso (ver §6 changelog) |
+> | **Last Updated** | 2026-07-11 |
 > | **Depends On** | toda la carpeta `/ai-context` |
-> | **Supersedes** | — |
-> | **Source of Truth** | ✅ del *estado de salud de la documentación*. |
+> | **Supersedes** | `history/04-project-health-report-2026-06-29.md` (consolidación anterior) |
+> | **Source of Truth** | ✅ del *estado de salud de la documentación y las reglas anti-deuda (§5)*. |
 
 ---
 
 ## 1. Resumen ejecutivo
 
-La documentación de Manada estaba **bien estructurada y con buena disciplina de bitácora**, pero arrastraba **deuda de coherencia típica de un proyecto que avanzó rápido**: el documento maestro y varios estados quedaron "congelados" en el cierre de la Etapa 1 mientras el trabajo ya iba en la Etapa 2, había un artefacto de corrupción en el backlog, faltaba metadata de gobernanza y un brief ya cumplido seguía en la carpeta activa.
+Segunda consolidación documental del proyecto (la primera fue 2026-06-29, archivada en `history/04`). Se auditaron los **20 documentos activos** de `/ai-context`, los **5 históricos**, `CLAUDE.md` y el código real (`apps/web`, `apps/backend`) como contraste.
 
-Se auditaron **17 documentos** de `/ai-context`, **4** de `history/`, los **3** docs de `web/` y **5** READMEs de componentes, contrastándolos contra el **código real** en `web/src`. Resultado: **12 problemas** detectados (1 crítico, 3 altos, 5 medios, 3 bajos), **todos corregidos**. Se añadió **metadata consistente** a los 14 documentos activos, se **archivó** 1 documento obsoleto y se **reescribió** el README del frontend.
+**Veredicto de la auditoría:** la **arquitectura documental es correcta y se conserva** — docs temáticos con owner único, `DECISIONS.md` append-only, `history/` aislado, metadata de gobernanza. No se reestructura por reestructurar. El problema no era de estructura sino de **drift y duplicación de estado**: el proyecto avanzó de D28 a D39 en 5 días (backend con módulo custom, funnel F1–F4, Pet Experience B1–B6, integración O5) y varias superficies quedaron congeladas en D28 o duplicando lo que ya vive en `DECISIONS.md`.
 
-**Veredicto:** la base documental queda **impecable, consistente y lista** para iniciar la **Fase 3.3 (Pantallas)** sin arrastrar contradicciones. No se detectó deuda estratégica (las decisiones D1–D15 son coherentes entre sí); la deuda era de *mantenimiento*, no de *criterio*.
+## 2. Problemas encontrados (auditoría 2026-07-11)
 
----
-
-## 2. Arquitectura documental (después de la consolidación)
-
-**14 documentos activos** en `/ai-context`, cada uno con dominio único y metadata:
-
-| Documento | Dominio | Source of Truth de |
-|---|---|---|
-| `README.md` | Índice y reglas | mapa documental |
-| `PROJECT_MASTER.md` | Visión + estrategia | visión y estrategia |
-| `CURRENT_STATE.md` | Estado actual | estado y siguiente paso |
-| `DECISIONS.md` | Bitácora D1–D15 | decisiones y rationale |
-| `ROADMAP.md` | Fases 0–8 | fases y orden |
-| `TODO.md` | Tareas tácticas | (derivado) |
-| `BRANDING.md` | Marca, voz, naming | marca |
-| `DESIGN_SYSTEM.md` | Sistema visual, tokens | tokens y reglas visuales |
-| `UX.md` | IA, journeys, wireframes | IA y flujos |
-| `ARCHITECTURE.md` | Stack, infra, integraciones | stack/infra |
-| `FRONTEND_ARCHITECTURE.md` | Estructura `web/` + ejecución | arquitectura frontend |
-| `COMPONENT_LIBRARY.md` | Catálogo de componentes | uso de componentes |
-| `AUDIT_UI_UX.md` | Backlog UI/UX (108 ítems) | mejoras de frontend |
-| `DATABASE.md` / `API.md` | Borradores Fase 4 | datos / contratos (futuro) |
-| `PROMPTS.md` | Prompts reutilizables | prompts operativos |
-| `PROJECT_HEALTH_REPORT.md` | Sanidad documental | salud de la doc |
-
-**`history/`** (nunca se borra): estrategia de negocio, benchmarking, estrategia de marca, `PROJECT_MASTER_v0`, y ahora **`03-fase-2-prototype-brief.md`** (archivado).
-
-**Código:** `prototype/` (referencia visual/copy de Fase 2) · `web/` (app real, con `web/AGENTS.md` como guía operativa).
-
----
-
-## 3. Mapa de dependencias
-
-```
-                         PRODUCT / ESTRATEGIA
-              (PROJECT_MASTER ← history/estrategia-negocio)
-                                  │
-                              BRANDING
-                                  │
-                            DESIGN_SYSTEM
-                                  │
-                                 UX
-                                  │
-        ┌─────────────── FRONTEND ───────────────┐
-        │  FRONTEND_ARCHITECTURE                   │
-        │  COMPONENT_LIBRARY                        │
-        │  AUDIT_UI_UX                              │
-        └──────────────────┬──────────────────────┘
-                            │
-                         BACKEND  (Fase 4)
-                  ARCHITECTURE → DATABASE → API
-
-  Transversal (gobernanza): DECISIONS · ROADMAP · TODO · CURRENT_STATE
-  Meta: README · PROMPTS · PROJECT_HEALTH_REPORT
-```
-
-Regla: un documento **nunca** debe contradecir a su upstream. Si una decisión cambia un upstream, se anexa entrada en `DECISIONS.md` y se propaga hacia abajo.
-
----
-
-## 4. Problemas encontrados (informe de sanidad)
-
-| Estado | Problema | Impacto | Recomendación | Archivo | Prioridad |
+| # | Problema | Impacto | Archivo(s) | Prioridad | Estado |
 |---|---|---|---|---|---|
-| ✅ Corregido | Tags basura `</content></invoke>` al final | Rompe markdown; señal de descuido | Eliminar artefacto | `AUDIT_UI_UX.md` | **CRÍTICO** |
-| ✅ Corregido | Cabecera "siguiente: Etapa 2" (ya hecha en D15) | Desorienta al próximo chat | Sincronizar con D15 | `PROJECT_MASTER.md` | **ALTO** |
-| ✅ Corregido | Tabla de decisiones solo hasta D11 | D12–D15 invisibles en el maestro | Añadir D12–D15 | `PROJECT_MASTER.md §16` | **ALTO** |
-| ✅ Corregido | "Inmediato: construir prototipo" (ya hecho) | Tarea cerrada como pendiente | Reapuntar a Etapa 3 | `PROJECT_MASTER.md §17` | **ALTO** |
-| ✅ Corregido | "🔄 Fase 2 (activa)" — Fase 2 completa | Estado contradictorio | Marcar Fase 2 ✅ | `PROJECT_MASTER §12`, `UX.md`, `TODO.md` | **MEDIO** |
-| ✅ Corregido | Cuerpo con plan viejo (`tailwind.config.ts`, rutas `plp/pdp`, ~52 comp.) | Contradice D13 | Marcar §§1–8 como plan; §9 manda | `FRONTEND_ARCHITECTURE.md` | **MEDIO** |
-| ✅ Corregido | D12 "ACTIVO" pese a estar ejecutado | Decisión sin marcar superada | Marcar ✅ EJECUTADA | `DECISIONS.md` | **MEDIO** |
-| ✅ Corregido | Referencia a "Supabase" nunca decidida | Tecnología fantasma | "Medusa u otro, a validar" | `FRONTEND_ARCHITECTURE.md` | **MEDIO** |
-| ✅ Corregido | README boilerplate (Geist, npm) | Falso (Fraunces/Hanken, pnpm) | Reescribir real | `web/README.md` | **MEDIO** |
-| ✅ Corregido | Ausencia de metadata de gobernanza | Sin trazabilidad de estado/owner | Añadir bloque a todos | todos | **MEDIO** |
-| ✅ Corregido | "pendiente incorporar a TODO/ROADMAP" (ya hecho) | Nota obsoleta | Actualizar changelog | `AUDIT_UI_UX.md` | **BAJO** |
-| ✅ Corregido | "~50 componentes" vs ~70 reales | Cifra desactualizada | Actualizar a ~70 | `ARCHITECTURE.md` | **BAJO** |
+| 1 | **El "estado actual" existe redactado 5 veces** (CLAUDE.md §📌, README, PROJECT_MASTER cabecera+§17, CURRENT_STATE, ROADMAP cabecera), con distintos grados de desactualización. Un chat nuevo lee versiones contradictorias del mismo hecho. | ALTO — consumo de contexto ×5 + contradicciones | CLAUDE.md, README, PROJECT_MASTER, ROADMAP, TODO | **CRÍTICO** | ✅ Corregido (un solo dueño: CURRENT_STATE; el resto = puntero) |
+| 2 | **CURRENT_STATE degeneró en bitácora histórica**: "Último avance" duplica entradas de DECISIONS casi 1:1 (~40% del archivo); "Siguiente paso" arrastra "registro histórico". Dejó de ser una foto. | ALTO — duplica al owner (DECISIONS) y crece sin límite | CURRENT_STATE.md | **CRÍTICO** | ✅ Corregido (foto real; bitácora → `history/05`) |
+| 3 | **Tabla de decisiones de PROJECT_MASTER §16 llega a D28**; existen D29–D39. Cabecera de estado congelada en "Fase activa: 4". §15 dice "Base de datos ⬜ pendiente" con DATABASE.md §5–8 implementados. | ALTO — el doc maestro contradice la realidad | PROJECT_MASTER.md | **ALTO** | ✅ Corregido |
+| 4 | **Índice de vigencia de DECISIONS llega a D28** (existen D29–D39 como entradas pero no en el índice); metadata `Last Updated 2026-07-06` con entradas del 07-11. | MEDIO | DECISIONS.md | **ALTO** | ✅ Corregido |
+| 5 | **"`apps/backend` RESERVADO sin código"** repetido en ARCHITECTURE §1, README, CLAUDE.md — falso desde D22 (scaffold) y doblemente falso desde D34 (módulo custom `pet` con migraciones). ARCHITECTURE §3/§5 con pendientes ya decididos (medio de pago, versión de Medusa). | ALTO — un agente puede "reservar" lo que ya existe | ARCHITECTURE.md, README.md, CLAUDE.md | **ALTO** | ✅ Corregido |
+| 6 | **ROADMAP duplica TODO** (el detalle de Fase 5 está casi verbatim en ambos) y ambos quedaron en el punto "resta infra + terceros" sin reflejar los frentes reales abiertos (infra WIP, funnel F5, Pet Experience B4/B7) ni que el perfil de mascota ya se persiste (D34, matiza el "moat diferido"). | MEDIO | ROADMAP.md, TODO.md | **ALTO** | ✅ Corregido (detalle táctico = TODO; ROADMAP = fases) |
+| 7 | **FRONTEND_ARCHITECTURE §§1–8 es el plan original de 2026-06-27** ya superado (dice `tailwind.config.ts`, rutas `plp/pdp`, ~52 componentes, "backend a validar"); §9 congelado en D16. La consolidación anterior ya recomendó limpiarlo al iniciar Fase 4. | MEDIO — 200 líneas de contexto muerto por lectura | FRONTEND_ARCHITECTURE.md | **MEDIO** | ✅ Corregido (plan → `history/06`; doc reescrito a la realidad) |
+| 8 | **COMPONENT_LIBRARY §2/§7 citan módulos eliminados**: `lib/data/catalog.ts` (eliminado en D33-i2), `seedPets` (eliminado en D34-i4), "datos demo Carlos+Toby" como estado global (la sesión es real desde D26). Status: "espera aprobación antes de Etapa 3" (cerrada hace 8 días). | MEDIO — referencias rotas a código inexistente | COMPONENT_LIBRARY.md | **MEDIO** | ✅ Corregido |
+| 9 | **API.md/DATABASE.md §§1–4 "borrador"** contradicen las secciones implementadas (§2 API dice "REST/GraphQL a definir"; DATABASE §1 describe como futuro lo que §8 ya materializó). Metadata desactualizada. | MEDIO | API.md, DATABASE.md | **MEDIO** | ✅ Corregido (borradores marcados como superseded, sin borrar) |
+| 10 | **PROMPTS.md: 6 de 10 prompts son históricos** (marcados ✅ hechos) y CLAUDE.md instruía "usa el prompt #10", que está cerrado. | MEDIO — instrucción de arranque apunta a un flujo terminado | PROMPTS.md, CLAUDE.md | **MEDIO** | ✅ Corregido (históricos → `history/07`) |
+| 11 | **PROJECT_HEALTH_REPORT de 2026-06-29** presentado como vigente ("listo para iniciar Fase 3.3"). | BAJO | PROJECT_HEALTH_REPORT.md | **BAJO** | ✅ Corregido (archivado en `history/04`; este lo reemplaza) |
+| 12 | **DEPLOYMENT.md** correcto pero sin puntero al WIP de infra (Railway, en disco sin commitear) que lo va a modificar; checklist con ítems ya cumplidos sin marcar. | BAJO | DEPLOYMENT.md | **BAJO** | ✅ Corregido |
 
-**Verificación contra código:** el catálogo de `COMPONENT_LIBRARY.md` coincide con `web/src/components/{ui,layout,commerce,pet}`; las rutas declaradas (`/categoria/[slug]`, `/producto/[slug]`, `/carrito`, `/checkout`, `/cuenta`, `/cuenta/mascotas`, `/dev/*`) existen; el stack documentado (Next 16.2.9, React 19.2, pnpm, sin `tailwind.config.ts`) coincide con `package.json` y el árbol real. **Sin referencias a archivos inexistentes.**
+**Sanos, sin cambios de fondo:** BRANDING.md, DESIGN_SYSTEM.md, UX.md (fuentes de verdad estables de marca/visual/IA-UX), AUDIT_UI_UX.md (backlog vivo con owner claro), FUNNEL_TARGET.md y PET_EXPERIENCE_TARGET.md (docs de bloque al día, actualizados hasta D39), DEPLOYMENT.md (fiel a D27).
 
----
+**Deuda que NO es documental (fuera de alcance, no se toca):** el WIP de infraestructura (Etapa 1 Railway) vive en el working tree sin commitear (`medusa-config.ts`, `railway.json`) con **D30 reservada** para su cierre; su nota de continuidad se preserva en `CURRENT_STATE.md`.
 
-## 5. Cambios aplicados (PASO 9)
+## 3. Arquitectura documental (confirmada, con owners)
 
-**Problemas corregidos:** los 12 de la tabla §4.
+**Regla de lectura para agentes:** para una tarea concreta NO se lee toda la carpeta; se lee `CURRENT_STATE.md` + el/los docs dueños del dominio de la tarea (tabla siguiente). `DECISIONS.md` se consulta por entrada puntual (D#), no completo.
 
-**Contradicciones resueltas:**
-1. Estado de fase (Etapa 2 hecha) sincronizado en PROJECT_MASTER, CURRENT_STATE, TODO, ROADMAP.
-2. "Fase 2 activa" → "Fase 2 completa" en PROJECT_MASTER, UX, TODO.
-3. D12 "ACTIVO" → "✅ EJECUTADA por D13/D15".
-4. Plan viejo vs realidad en FRONTEND_ARCHITECTURE: se priorizó §9 explícitamente.
-5. Stack: "shadcn/Supabase" → realidad (Radix; backend a validar).
+| Documento | Único dueño de | Tipo |
+|---|---|---|
+| `README.md` | mapa documental + reglas de mantenimiento | meta |
+| `CURRENT_STATE.md` | **estado actual + frentes abiertos + siguiente paso** | temporal |
+| `DECISIONS.md` | decisiones y su rationale (D1…, append-only) | permanente |
+| `ROADMAP.md` | fases 0–8 y su estado (vista alta) | temporal |
+| `TODO.md` | detalle táctico de pendientes | temporal |
+| `PROJECT_MASTER.md` | visión, estrategia, negocio, resumen de decisiones | permanente |
+| `BRANDING.md` | marca, naming, voz, logo (concepto) | permanente |
+| `DESIGN_SYSTEM.md` | tokens y reglas visuales | permanente |
+| `UX.md` | IA de navegación, journeys, wireframes (visión UX) | permanente |
+| `ARCHITECTURE.md` | stack, estructura del repo, reglas arquitectónicas, integraciones CL | permanente |
+| `FRONTEND_ARCHITECTURE.md` | arquitectura real de `apps/web` | permanente |
+| `COMPONENT_LIBRARY.md` | catálogo y uso de componentes | permanente |
+| `AUDIT_UI_UX.md` | backlog de mejoras de frontend (U001–U122) | temporal (backlog vivo) |
+| `DATABASE.md` | modelo de datos | permanente |
+| `API.md` | contratos de API | permanente |
+| `DEPLOYMENT.md` | configuración de despliegue e infra | permanente |
+| `FUNNEL_TARGET.md` | experiencia objetivo del funnel + su plan de bloques | mixto (diseño + estado de bloques) |
+| `PET_EXPERIENCE_TARGET.md` | experiencia objetivo del perfil logueado + su plan de bloques | mixto |
+| `PROMPTS.md` | prompts operativos vivos | meta |
+| `PROJECT_HEALTH_REPORT.md` | salud documental + reglas anti-deuda | meta |
+| `history/` | contexto histórico aislado (nunca se borra, nunca se lee por defecto) | archivo |
 
-**Documentos creados:** `PROJECT_HEALTH_REPORT.md` (este).
+## 4. Qué se archivó en esta consolidación (sin pérdida de información)
 
-**Documentos archivados (a `history/`):** `PROTOTYPE_BRIEF.md` → `history/03-fase-2-prototype-brief.md` (con cabecera de archivado). El prototipo ya se construyó; sus fuentes de verdad vivas son BRANDING/DESIGN_SYSTEM/UX/COMPONENT_LIBRARY.
+| Archivo nuevo en `history/` | Contenido | Origen |
+|---|---|---|
+| `04-project-health-report-2026-06-29.md` | informe de la consolidación anterior | `PROJECT_HEALTH_REPORT.md` |
+| `05-bitacora-avances-2026-07.md` | bitácora "Último avance" completa (D16→D32) + secciones históricas de CURRENT_STATE | `CURRENT_STATE.md` |
+| `06-frontend-architecture-plan-2026-06-27.md` | plan original del sistema de componentes (§§1–8) | `FRONTEND_ARCHITECTURE.md` |
+| `07-prompts-historicos.md` | prompts #5–#10 (fases ya ejecutadas) | `PROMPTS.md` |
 
-**Documentos fusionados:** ninguno. *Rationale:* DATABASE/API son stubs de dominios distintos que crecerán en Fase 4; fusionarlos ahora para re-dividirlos luego sería churn. FRONTEND_ARCHITECTURE y COMPONENT_LIBRARY se solapan parcialmente pero cumplen roles distintos (arquitectura vs catálogo de uso) — se mantienen separados.
+## 5. Reglas anti-deuda documental (vinculantes desde 2026-07-11)
 
-**Documentos eliminados:** ninguno (regla del proyecto: nunca borrar, solo archivar).
+1. **Un hecho, un dueño.** Antes de escribir un hecho en un doc, pregunta: ¿este doc es su dueño (tabla §3)? Si no, escribe un puntero (`ver X.md §n` / `ver D#`), nunca una segunda redacción.
+2. **El estado del proyecto vive SOLO en `CURRENT_STATE.md`.** CLAUDE.md, README, PROJECT_MASTER y ROADMAP no repiten el estado; apuntan.
+3. **`CURRENT_STATE.md` es una foto, no una bitácora.** Al cerrar un hito: la narración completa va a `DECISIONS.md` (una entrada), y CURRENT_STATE se **reescribe** (no se apila) reflejando el nuevo presente. Máximo orientativo: ~100 líneas.
+4. **Cierre de hito = barrido de punteros:** actualizar CURRENT_STATE (reescribir), DECISIONS (entrada + índice de vigencia), tabla §16 de PROJECT_MASTER (una fila), ROADMAP/TODO si cambia el plan, y el doc temático dueño. Nada más.
+5. **Lo superado se archiva en `history/` con cabecera de archivado**, jamás se borra ni se deja "marcado como viejo" dentro del doc activo.
+6. **Metadata al día:** todo doc tocado actualiza `Last Updated` y `Status` en el mismo cambio.
+7. **`history/` no se lee por defecto.** Ningún prompt de arranque debe requerir leer benchmarking, debates de marca o briefs cumplidos para trabajar en código.
 
-**Documentos reescritos:** `web/README.md` (de boilerplate de create-next-app a guía real del frontend).
+## 6. Changelog de consolidaciones
 
-**Metadata añadida** (Purpose/Owner/Status/Last Updated/Depends On/Supersedes/Source of Truth) a los 14 documentos activos + este informe.
-
-**Referencias actualizadas:** README (índice), PROMPTS (#5 marcado histórico), enlaces a PROTOTYPE_BRIEF reapuntados a su nueva ruta.
-
----
-
-## 6. Revisión de decisiones (D1–D15)
-
-| Decisión | Vigencia |
-|---|---|
-| D1 Modelo de negocio | ✅ vigente |
-| D2 Stack custom headless | ✅ vigente |
-| D3 Nombre de trabajo "Manada" | ✅ cerrada por D8 |
-| D4 Amor como alma sobre moat | ✅ vigente |
-| D5 Concepto rector C1 | ✅ vigente |
-| D6 Arquitectura de marca | ✅ vigente |
-| D7 Sistema /ai-context | ✅ vigente |
-| D8 Nombre definitivo · `tumanada.cl` | 🔒 LOCKED |
-| D9 Dirección visual | 🔒 LOCKED |
-| D10 Logo huella-manada | 🔒 LOCKED (vector pendiente) |
-| D11 Sistema visual completo | 🔒 LOCKED |
-| D12 Prototipo → componentes Next.js | ✅ **ejecutada** por D13/D15 (ya no "activa") |
-| D13 Etapa 1 Fundaciones | 🔒 LOCKED |
-| D14 Auditoría → backlog | 🟢 ACTIVO (backlog vivo) |
-| D15 Etapa 2 Component Library | 🔒 LOCKED (espera aprobación Etapa 3) |
-
-No hay decisiones contradictorias ni reemplazadas sin marcar. El único ajuste fue **D12** (de "ACTIVO/solo planificar" a "EJECUTADA"). Resumen de vigencia añadido al encabezado de `DECISIONS.md`.
-
----
-
-## 7. Estado general del proyecto
-
-- **Fases 0–2:** ✅ completas (estrategia, marca, sistema visual, UX, prototipo).
-- **Fase 3 (Frontend):** 🔄 en curso — Etapa 1 (D13) y Etapa 2 (D15) ✅; **Etapa 3 (Pantallas) = siguiente, espera aprobación**.
-- **Fases 4–8:** ⬜ pendientes (backend, MVP, diferenciador, inteligencia, escala).
-- **Documentación:** 🟢 **saludable** — consistente, con metadata, sin contradicciones ni artefactos.
-- **Deuda documental restante:** ninguna crítica. Pendientes menores: el cuerpo histórico de FRONTEND_ARCHITECTURE §§1–8 se conserva como plan (marcado); puede limpiarse cuando se cierre la Fase 3.
-
----
-
-## 8. Recomendaciones antes de continuar con Fase 3.3
-
-1. **Aprobar formalmente la Component Library (D15)** — la Etapa 3 está bloqueada esperando tu OK explícito (mandato del brief de Fase 3).
-2. **Usar el prompt #7 de `PROMPTS.md`** para abrir el chat de Etapa 3; ensamblar pantallas **solo** con componentes existentes (token → componente → página).
-3. **Priorizar los P0 de Fase 3.3** de `AUDIT_UI_UX.md`: U040 (coherencia de fechas), U041 (doble identidad de la home), U042 (free-shipping real), U043 (PLP no oculta catálogo).
-4. **Mantener la disciplina de metadata:** al cerrar cada etapa, actualizar `Last Updated` y `Status` del doc tocado (usar prompt #2).
-5. **Fotografía real (U090)** sigue siendo el bloqueador #1 del *polish* (Etapa 4): conviene iniciar su gestión en paralelo, no bloquea la Etapa 3.
-6. **Higiene futura:** cuando se inicie la Fase 4, considerar limpiar las §§1–8 de FRONTEND_ARCHITECTURE (dejar solo la realidad ejecutada) y desarrollar DATABASE/API desde sus stubs.
-
----
-
-## 9. Changelog de consolidación
-
-- **2026-06-29** — Auditoría documental completa (PASOS 1–8) + consolidación (PASO 9). 12 problemas corregidos, metadata añadida a 14 docs, `PROTOTYPE_BRIEF.md` archivado, `web/README.md` reescrito, este informe creado. Sin pérdida de información (todo lo retirado vive en `history/`).
+- **2026-06-29** — Primera consolidación (12 problemas, metadata de gobernanza, archivo de PROTOTYPE_BRIEF). Detalle en `history/04-project-health-report-2026-06-29.md`.
+- **2026-07-11** — Auditoría completa (este informe, §2) + refactorización por ownership: estado con dueño único, CURRENT_STATE como foto, 4 archivos movidos a `history/`, docs técnicos realineados a la realidad D29–D39, reglas anti-deuda (§5). Registrada como **D40** en `DECISIONS.md`. *(Los commits de la ejecución quedan en el historial de git con prefijo "Docs · Refactor 2026-07-11".)*
