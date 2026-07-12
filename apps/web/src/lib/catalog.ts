@@ -84,9 +84,10 @@ export function buildFilterGroups(products: Product[]): FilterGroup[] {
       id: "especie",
       label: "Mascota",
       options: [
+        // MVP: solo perro/gato (el catálogo no tiene "otros"; la faceta vacía
+        // solo agregaba ruido). El valor "otro" del dominio sigue vigente.
         { value: "perro", label: "Perro" },
         { value: "gato", label: "Gato" },
-        { value: "otro", label: "Otros" },
       ],
     },
     {

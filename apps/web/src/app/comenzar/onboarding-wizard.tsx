@@ -34,10 +34,15 @@ interface Draft {
 const STEP_IDS = ["especie", "nombre", "raza", "etapa", "peso"] as const;
 type StepId = (typeof STEP_IDS)[number];
 
+/**
+ * Especies del MVP: solo perro y gato. "Otro" existe en el dominio pero se
+ * ocultó del alta (simplificación 2026-07-12): el catálogo real no tiene
+ * productos para otras especies y el flujo completo (razas, recomendación,
+ * PLP) entregaba una experiencia vacía. Vuelve cuando haya catálogo.
+ */
 const SPECIES: { value: Species; label: string; emoji: string }[] = [
   { value: "perro", label: "Perro", emoji: "🐶" },
   { value: "gato", label: "Gato", emoji: "🐱" },
-  { value: "otro", label: "Otro", emoji: "🐾" },
 ];
 
 const STAGES: { value: LifeStage; label: string; hint: string }[] = [

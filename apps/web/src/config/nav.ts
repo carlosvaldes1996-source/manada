@@ -16,6 +16,13 @@ export interface NavItem {
  * SOLO catálogo (por necesidad). Los destinos personales (suscripciones,
  * pedidos, mascotas) viven en "Mi cuenta", no se mezclan aquí (AUDIT U061).
  */
+/*
+ * Alcance MVP (simplificación 2026-07-12): se ocultan de la navegación los
+ * destinos sin experiencia real detrás — "Otros" (catálogo solo perro/gato),
+ * "Marcas" (PLP sin agrupación por marca) y "Ofertas" (sin precios rebajados
+ * en el catálogo). Las rutas siguen funcionando por deep-link y degradan con
+ * gracia; vuelven al nav cuando exista contenido real.
+ */
 export const MAIN_NAV: NavItem[] = [
   {
     label: "Comprar",
@@ -23,14 +30,12 @@ export const MAIN_NAV: NavItem[] = [
     children: [
       { label: "Perro", href: "/categoria/perro", icon: "Dog" },
       { label: "Gato", href: "/categoria/gato", icon: "Cat" },
-      { label: "Otros", href: "/categoria/otros", icon: "Bird" },
     ],
   },
   { label: "Alimento", href: "/categoria/alimento" },
   { label: "Accesorios", href: "/categoria/accesorios" },
   { label: "Farmacia", href: "/categoria/farmacia", icon: "Pill" },
-  { label: "Marcas", href: "/categoria/marcas" },
-  { label: "Ofertas", href: "/categoria/ofertas" },
+  { label: "Higiene", href: "/categoria/higiene" },
 ];
 
 /**
@@ -61,7 +66,6 @@ export const MEGA_MENU: MegaColumn[] = [
     items: [
       { label: "Perro", href: "/categoria/perro" },
       { label: "Gato", href: "/categoria/gato" },
-      { label: "Otros", href: "/categoria/otros" },
     ],
   },
   {

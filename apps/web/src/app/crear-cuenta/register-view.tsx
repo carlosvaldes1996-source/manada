@@ -155,8 +155,8 @@ export function RegisterView({
             )}
             <Stack gap={3} className="mt-4">
               <Benefit icon={<BellRing className="size-4" aria-hidden />} title="Anticipación" body="Te avisamos antes de que se le acabe la comida." />
-              <Benefit icon={<ShoppingBag className="size-4" aria-hidden />} title="Todo a mano" body="Tu pedido, suscripción y recompra en un toque." />
-              <Benefit icon={<ShieldCheck className="size-4" aria-hidden />} title="Sin compromisos" body="Pausa o cancela cuando quieras, sin permanencia." />
+              <Benefit icon={<ShoppingBag className="size-4" aria-hidden />} title="Todo a mano" body="Tu pedido, su perfil y la recompra en un toque." />
+              <Benefit icon={<ShieldCheck className="size-4" aria-hidden />} title="Sin compromisos" body="Tu cuenta es gratis y puedes borrarla cuando quieras." />
             </Stack>
           </aside>
         </div>

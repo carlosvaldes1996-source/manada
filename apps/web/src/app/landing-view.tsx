@@ -69,7 +69,7 @@ export function LandingView({ products }: { products: Product[] }) {
                 <Check className="size-4 text-success-strong" aria-hidden /> Gratis y en 2 minutos
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Check className="size-4 text-success-strong" aria-hidden /> Sin permanencia
+                <Check className="size-4 text-success-strong" aria-hidden /> Compra con o sin cuenta
               </span>
             </Row>
           </Stack>
@@ -177,7 +177,7 @@ export function LandingView({ products }: { products: Product[] }) {
               }
               icon={<Heart className="size-5" aria-hidden />}
               title="Nunca le falta nada"
-              description="Recibe su comida en la puerta, a tiempo, con la opción de suscribirte y ahorrar. Pausas o cancelas cuando quieras."
+              description="Recibe su comida en la puerta, a tiempo. Te avisamos antes de que se acabe y tú decides cada pedido."
             />
           </Grid>
         </Stack>
@@ -216,7 +216,7 @@ export function LandingView({ products }: { products: Product[] }) {
           </Stack>
           <Grid cols={1} sm={2} gap={3}>
             <TrustItem icon={<Truck className="size-5" aria-hidden />} title="Despacho honesto" body="Ves el costo real de despacho antes de pagar, sin sorpresas al final." />
-            <TrustItem icon={<RefreshCw className="size-5" aria-hidden />} title="Sin permanencia" body="Pausas, adelantas o cancelas tu suscripción cuando quieras, sin costo." />
+            <TrustItem icon={<RefreshCw className="size-5" aria-hidden />} title="Tú decides" body="Te avisamos a tiempo y tú confirmas cada pedido. Nada se compra solo." />
             <TrustItem icon={<ShieldCheck className="size-5" aria-hidden />} title="Compra sin sorpresas" body="Pagas por transferencia con los datos que te enviamos y coordinamos el despacho contigo." />
             <TrustItem icon={<Heart className="size-5" aria-hidden />} title="Hecho con cariño" body="Recomendaciones pensadas para tu mascota, no para vaciar la bodega." />
           </Grid>
