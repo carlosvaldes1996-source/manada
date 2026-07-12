@@ -14,6 +14,8 @@ export interface OrderLineView {
   title: string;
   quantity: number;
   thumbnail?: string | null;
+  /** Producto de la línea — permite el match alimento↔mascota (D35). */
+  productId?: string;
 }
 
 export interface OrderView {
@@ -49,7 +51,7 @@ type AnyOrder = {
   status?: string;
   payment_status?: string;
   fulfillment_status?: string;
-  items?: { id: string; title?: string; product_title?: string; quantity?: number; thumbnail?: string | null }[];
+  items?: { id: string; title?: string; product_title?: string; quantity?: number; thumbnail?: string | null; product_id?: string | null }[];
 };
 
 /** Etiqueta honesta del estado (operación manual del MVP, D22). */
@@ -67,6 +69,7 @@ function mapOrder(order: AnyOrder): OrderView {
     title: i.title || i.product_title || "Producto",
     quantity: i.quantity ?? 1,
     thumbnail: i.thumbnail ?? null,
+    productId: i.product_id ?? undefined,
   }));
   return {
     id: order.id,

@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PetAvatar } from "@/components/pet";
+import { usePet } from "@/components/providers";
 import { listOrders, type OrderView } from "@/lib/medusa";
 import { formatCLP, formatDateLong, pluralize } from "@/lib/format";
 import { AccountGate } from "../account-gate";
@@ -80,8 +82,13 @@ function OrdersList() {
 }
 
 function OrderCard({ order }: { order: OrderView }) {
+  const { pets } = usePet();
   const date = order.createdAt ? formatDateLong(new Date(order.createdAt)) : "";
   const badgeVariant = order.statusLabel === "Cancelado" ? "neutral" : order.statusLabel === "Entregado" ? "success" : "brand";
+
+  /** Si la línea es SU alimento, el pedido lo dice con su cara (D35: match por product_id). */
+  const petForItem = (productId?: string) =>
+    productId ? pets.find((p) => p.currentFoodId === productId) : undefined;
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-border-default bg-surface p-5">
@@ -96,20 +103,34 @@ function OrderCard({ order }: { order: OrderView }) {
       <div className="my-4 h-px bg-border-default" />
 
       <Stack gap={2}>
-        {order.items.map((item) => (
-          <Row key={item.id} gap={3} className="min-w-0">
-            <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-subtle text-lg" aria-hidden>
-              {item.thumbnail ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.thumbnail} alt="" className="size-full object-cover" />
-              ) : (
-                "📦"
-              )}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{item.title}</span>
-            <span className="shrink-0 text-[13px] text-text-secondary">×{item.quantity}</span>
-          </Row>
-        ))}
+        {order.items.map((item) => {
+          const pet = petForItem(item.productId);
+          return (
+            <Row key={item.id} gap={3} className="min-w-0">
+              <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-subtle text-lg" aria-hidden>
+                {item.thumbnail ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.thumbnail} alt="" className="size-full object-cover" />
+                ) : (
+                  "📦"
+                )}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                {item.title}
+                {pet && (
+                  <span className="ml-2 inline-flex items-center gap-1 align-middle text-[13px] text-text-secondary">
+                    · para{" "}
+                    <span aria-hidden>
+                      <PetAvatar pet={pet} size="xs" />
+                    </span>{" "}
+                    {pet.name}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-[13px] text-text-secondary">×{item.quantity}</span>
+            </Row>
+          );
+        })}
       </Stack>
 
       <Row justify="between" className="mt-4">

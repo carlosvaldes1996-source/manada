@@ -8,7 +8,6 @@ import {
   PartyPopper,
   Sparkles,
   PawPrint,
-  RefreshCw,
   Pill,
   ArrowRight,
   BellRing,
@@ -219,12 +218,12 @@ export function BienvenidaView({ products }: { products: Product[] }) {
               />
             )}
             <NextStep
-              icon={<RefreshCw className="size-5" aria-hidden />}
+              icon={<ShoppingBag className="size-5" aria-hidden />}
               tone="accent"
-              title="Revisa tu suscripción"
-              body="Ajusta la frecuencia, adelanta o pausa cuando quieras. Sin permanencia."
-              href="/cuenta/mascotas"
-              cta="Ver suscripción"
+              title="Sigue tu pedido"
+              body="Revisa su estado cuando quieras. Te avisaremos en cada paso hasta tu puerta."
+              href="/cuenta/pedidos"
+              cta="Ver mis pedidos"
             />
             <NextStep
               icon={<Pill className="size-5" aria-hidden />}
