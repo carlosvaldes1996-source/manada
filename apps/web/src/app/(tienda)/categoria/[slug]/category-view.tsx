@@ -31,6 +31,7 @@ import type { Product } from "@/types";
 /** Foto de cabecera (banner) por categoría. Solo los slugs con foto disponible;
  *  el resto no muestra banner (degrada sin romper). Archivos en public/fotos/. */
 const BANNER_BY_SLUG: Record<string, string> = {
+  todo: "cat-todo.jpg",
   alimento: "cat-alimento.jpg",
   perro: "cat-perro.jpg",
   gato: "cat-gato.jpg",
@@ -39,10 +40,11 @@ const BANNER_BY_SLUG: Record<string, string> = {
   higiene: "cat-higiene.jpg",
 };
 
-/** Foco vertical del recorte por categoría. El banner es muy panorámico (21:6) y
+/** Foco vertical del recorte por categoría. El banner es una banda baja y
  *  bg-center corta arriba/abajo; subimos el foco donde el sujeto (cabeza) queda
  *  alto en la foto. Default "center" para los que se ven bien centrados. */
 const BANNER_POS: Record<string, string> = {
+  todo: "center 45%", // perro y gato completos mirando la despensa; más arriba corta al gato
   alimento: "center 78%", // el perro come agachado: bajar el foco al plato+cabeza
   perro: "center 34%", // salvar las puntas de las orejas
   farmacia: "center 28%", // que se vea la cabeza de la veterinaria
@@ -74,6 +76,11 @@ function applyCatalogFilters(products: Product[], filters: FilterSelection): Pro
  * - U064: el criterio del orden "Recomendado para…" se explica con un popover.
  * - U067: descubrimiento por paginación con conteo claro.
  * - U062: breadcrumb coherente con el nav (Inicio › Comprar › categoría).
+ *
+ * Jerarquía del primer viewport (catálogo primero): el hero es una banda
+ * compacta con el título superpuesto a la foto — la foto contextualiza, no
+ * protagoniza — para que la primera fila de productos asome sin scroll en
+ * resoluciones estándar, tanto en móvil como en desktop.
  */
 export function CategoryView({ slug, products }: { slug: string; products: Product[] }) {
   const { activePet } = usePet();
@@ -136,26 +143,47 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
 
   return (
     // pt reducido: el breadcrumb no necesita los 72px de una sección editorial.
-    <Section spacing="md" className="pt-6 lg:pt-10">
-      <Stack gap={6}>
-        <Stack gap={3}>
-          <Breadcrumb items={breadcrumb} />
-          <h1 className="heading-1 text-text-primary">{label}</h1>
-        </Stack>
+    <Section spacing="md" className="pt-4 lg:pt-6">
+      <Stack gap={4}>
+        <Stack gap={2}>
+          <Breadcrumb items={breadcrumb} className="py-1" />
 
-        {/* Banner editorial de la categoría (foto lifestyle). Solo en los slugs
-            con foto; fallback a color de marca mientras no esté subida. */}
-        {BANNER_BY_SLUG[slug] && (
-          <div
-            className="aspect-[16/9] w-full overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft bg-cover sm:aspect-[21/6]"
-            style={{
-              backgroundImage: `url('/fotos/${BANNER_BY_SLUG[slug]}')`,
-              backgroundPosition: BANNER_POS[slug] ?? "center",
-            }}
-            role="img"
-            aria-label={`Categoría ${label}`}
-          />
-        )}
+          {/* Hero compacto: banda de altura fija — la foto contextualiza sin empujar
+              el catálogo fuera del primer viewport. Las fotos son 16:9; en móvil la
+              banda (~2.7:1) las recorta poco y la foto va full-bleed con el título
+              sobre scrim cálido (idioma de la promesa de la landing). En desktop una
+              banda full-width sería ~6:1 y "hace zoom" (recorta >70% de la foto), así
+              que la foto se acota a la mitad derecha (~3:1) y el título vive en un
+              panel brand-soft que se funde con ella. Slugs sin foto: título solo
+              (degrada sin romper). */}
+          {BANNER_BY_SLUG[slug] ? (
+            <div className="relative h-36 w-full overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft sm:h-40 lg:h-52">
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-cover lg:left-[42%]"
+                style={{
+                  backgroundImage: `url('/fotos/${BANNER_BY_SLUG[slug]}')`,
+                  backgroundPosition: BANNER_POS[slug] ?? "center",
+                }}
+              />
+              {/* Scrim inferior para legibilidad del título — solo móvil/tablet */}
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-gradient-to-t from-[rgba(28,18,13,0.62)] via-[rgba(28,18,13,0.12)] to-transparent lg:hidden"
+              />
+              {/* Fundido panel→foto — solo desktop */}
+              <div
+                aria-hidden
+                className="absolute inset-y-0 left-[42%] hidden w-32 bg-gradient-to-r from-[var(--bg-brand-soft)] to-transparent lg:block"
+              />
+              <h1 className="heading-1 absolute inset-x-5 bottom-3.5 text-white lg:inset-x-8 lg:top-1/2 lg:bottom-auto lg:w-1/3 lg:-translate-y-1/2 lg:text-text-primary">
+                {label}
+              </h1>
+            </div>
+          ) : (
+            <h1 className="heading-1 text-text-primary">{label}</h1>
+          )}
+        </Stack>
 
         {/* Realce personal (opt-in), separado de los filtros de catálogo (U043/U063) */}
         {activePet &&
@@ -169,12 +197,12 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
               }
             />
           ) : (
-            <div className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-3">
+            <div className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-2.5">
               <div>
-                <p className="text-[15px] font-semibold text-text-primary">
+                <p className="text-sm font-semibold text-text-primary">
                   ¿Mostrar primero lo ideal para {activePet.name}?
                 </p>
-                <p className="text-sm text-text-secondary">
+                <p className="text-[13px] text-text-secondary">
                   Filtramos por su especie y etapa. Puedes desactivarlo cuando quieras.
                 </p>
               </div>
@@ -192,12 +220,12 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
         {/* Invitación contextual para el anónimo: discreta, nunca bloquea el
             catálogo. El valor del perfil se explica donde es evidente (filtrar). */}
         {!activePet && (
-          <div className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-3">
+          <div className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-2.5">
             <div>
-              <p className="text-[15px] font-semibold text-text-primary">
+              <p className="text-sm font-semibold text-text-primary">
                 ¿Quieres ver primero lo ideal para tu mascota?
               </p>
-              <p className="text-sm text-text-secondary">
+              <p className="text-[13px] text-text-secondary">
                 Crea su perfil gratis en 2 minutos y filtramos por su especie, etapa y salud.
               </p>
             </div>
