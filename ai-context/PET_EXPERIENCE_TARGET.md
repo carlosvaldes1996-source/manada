@@ -147,8 +147,10 @@ El mayor salto visual: de "se siente vacío" a "la casa de Toby".
 - **Integración backend (posterior):** los datos ricos (días restantes, "su alimento", "lo de siempre", historia) provienen del backend real; hasta entonces se derivan/omiten sin romper el layout.
 - **Resultado:** el perfil alcanza la calidad de la landing usando piezas existentes.
 
-### 🔹 Bloque 4 — Subir foto + cascada + revelación
+### 🔹 Bloque 4 — Subir foto + cascada + revelación ✅ COMPLETADO (2026-07-12, D41)
 El corazón emocional. Introduce la costura de edición del perfil.
+
+> **✅ Implementado (D41 · validación UI de Carlos pendiente).** **Creado** `components/pet/pet-photo-uploader.tsx`: el avatar `xl` del hero ES la zona de subida — estado vacío **obvio** (anillo dashed + badge cámara terracota + microcopy "Agregar foto", área completa clickeable y con drop; directiva 1 cumplida); Dialog con **recorte circular en vivo** (arrastrar para encuadrar + slider de zoom; export canvas 512px JPEG) y CTA "Guardar a {nombre}"; con foto, la misma área ofrece "Cambiar foto". **Revelación primera vez:** toast *"¡Hola, {nombre}! 🐾 Ya eres parte de la manada"* + la cara entra con fade y cascadea sola (header, menú de mascotas —ahora con `PetAvatar` en vez de emoji—, PetTag, /cuenta, pedidos) porque todo lee `pet.avatarUrl` vía provider. **Storage (directiva 2 cumplida): SIN infra temporal** — data-URL en memoria + `localStorage` por mascota (`manada.pet_photos`), copy honesto *"Por ahora la foto se guarda solo en este dispositivo"*; migra del id invitado al real al hacer login y se overlaya sobre la hidratación del backend. El swap al blob store definitivo es un cambio interno de `setPetPhoto` (nuevo en el provider; recalcula `completeness` → la barra sube sola, se acabó el 88% inexplicable). `Avatar` soporta `data:`/`blob:` (`unoptimized`).
 
 > **📋 Directivas de Carlos para B4 (2026-07-11, feedback post-D37 — vinculantes al implementar):**
 > 1. **La foto faltante debe ser OBVIA** (hoy la completitud se estanca en ~88% sin explicación: la foto es la única dimensión sin superficie accionable — no tiene card en la ficha ni afordancia en el avatar). Requisitos: avatar con **estado vacío explícito**, indicador visual (+ o lápiz), **toda el área clickeable**, microcopy tipo *"Agregar foto"*. El usuario jamás debe adivinar por qué no llega al 100%.
@@ -183,8 +185,10 @@ Materia prima del moat, como experiencia.
 - **Integración backend (posterior):** guardar `line_item.metadata.pet_id` en Medusa; **subscriber `order.placed`** → set `pet.current_food` (producto + fecha + tamaño de saco) → **enciende la anticipación real** (el cálculo ya existe en `lib/anticipation.ts`).
 - **Resultado:** el vínculo alimento↔mascota es visible y coherente; la anticipación real queda "a un cable" del backend.
 
-### 🔹 Bloque 7 — Restyle de /cuenta + estados vacíos
+### 🔹 Bloque 7 — Restyle de /cuenta + estados vacíos ✅ COMPLETADO (2026-07-12, D41)
 Cierra la consistencia de toda la zona logueada.
+
+> **✅ Implementado (D41 · validación UI de Carlos pendiente).** `/cuenta` = **"tu manada primero"** (§1.4): fila de avatares al tope bajo overline "Tu manada" (clic = activa la mascota y navega al perfil; `+` con estilo del PetSwitcher → `/comenzar` — **cierra O6**); la grilla de gestión queda secundaria bajo overline "Gestión" y **solo con secciones vivas** — mueren las cards "Pronto" deshabilitadas (Suscripciones/Pagos/Boletas; `ACCOUNT_NAV` en `config/nav.ts` queda intacto para cuando existan). **Pedidos:** chip "· para {nombre}" con rostro en líneas de alimento, derivado de `order.items.product_id ↔ pet.currentFoodId` (fuente única D35; `OrderLineView.productId` nuevo en el mapper). **Direcciones:** ya cumplían el estándar (Cards + EmptyState), sin cambios. **/bienvenida:** gana rostro (cápsula con `pet`) y la card muerta "Revisa tu suscripción" pasa a "Sigue tu pedido" → `/cuenta/pedidos`. Estados vacíos: sin texto pelado en toda la zona.
 
 - **UX/UI (frontend):** `/cuenta` con la manada primero (§1.4); estados vacíos con `EmptyState` en pedidos/direcciones; confirmación/`bienvenida` con cara.
 - **Componentes crear/modificar:** **modificar** `cuenta/account-view.tsx`, `cuenta/pedidos/orders-view.tsx`, `cuenta/direcciones/addresses-view.tsx`, `bienvenida`. Reutiliza `PetAvatar`, `Card`, `Badge`, `EmptyState`, `SectionHeading`, `FeatureCard`.

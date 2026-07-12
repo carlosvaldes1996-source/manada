@@ -161,6 +161,7 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D38 | Consistencia perfil↔onboarding — salud con chips curados; regla "todo dato estructurado se edita con el patrón del funnel" |
 | D39 | Comprar ≠ definir qué come — PDP e-commerce pura + toast-puente 1-tap + `FoodSelectorDialog` |
 | D40 | Meta — refactorización documental por ownership (estado con dueño único; reglas anti-deuda) |
+| D41 | Product Completion Pass — B4 foto (andamio local honesto) + B7 /cuenta manada-first + anticipación honesta ("Pedir de nuevo") + simplificación MVP (sin "Otro"/Marcas/Ofertas ni promesas de suscripción) |
 
 ## 17. Pendientes
 
