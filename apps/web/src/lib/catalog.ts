@@ -63,6 +63,47 @@ export function filterProductsForSlug(products: Product[], slug: string): Produc
   return products;
 }
 
+/** Criterio de orden de la PLP. */
+export type SortId = "relevancia" | "precio-asc" | "precio-desc" | "descuento" | "vendidos";
+
+/**
+ * Órdenes estándar de e-commerce (precio, descuento, más vendidos) — sin
+ * innovación acá a propósito: el usuario ya sabe usarlos. "Relevancia" es el
+ * orden en que llega la lista (o "Recomendado para X" si hay personalización).
+ */
+export const SORT_OPTIONS: { value: SortId; label: string }[] = [
+  { value: "relevancia", label: "Relevancia" },
+  { value: "precio-asc", label: "Precio: menor a mayor" },
+  { value: "precio-desc", label: "Precio: mayor a menor" },
+  { value: "descuento", label: "Mayor descuento" },
+  { value: "vendidos", label: "Más vendidos" },
+];
+
+/** % de rebaja real (compareAt vs actual); 0 si no hay rebaja. */
+function discountShare(p: Product): number {
+  return p.price.compareAt ? (p.price.compareAt - p.price.current) / p.price.compareAt : 0;
+}
+
+/**
+ * Ordena una lista de productos según el criterio elegido. No muta la lista.
+ * "vendidos" usa el nº de reseñas como proxy hasta tener datos de venta reales
+ * del backend; sort es estable, así que los empates conservan la relevancia.
+ */
+export function sortProducts(products: Product[], sort: SortId): Product[] {
+  if (sort === "relevancia") return products;
+  const list = [...products];
+  switch (sort) {
+    case "precio-asc":
+      return list.sort((a, b) => a.price.current - b.price.current);
+    case "precio-desc":
+      return list.sort((a, b) => b.price.current - a.price.current);
+    case "descuento":
+      return list.sort((a, b) => discountShare(b) - discountShare(a));
+    case "vendidos":
+      return list.sort((a, b) => (b.rating?.count ?? 0) - (a.rating?.count ?? 0));
+  }
+}
+
 /** Opción de un grupo de filtros de la PLP. */
 export interface FilterGroup {
   id: string;

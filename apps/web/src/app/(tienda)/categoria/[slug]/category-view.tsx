@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Pagination } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Select } from "@/components/ui/select";
 import {
   ProductGrid,
   FiltersSidebar,
@@ -23,6 +24,9 @@ import {
   buildFilterGroups,
   categoryLabel,
   filterProductsForSlug,
+  sortProducts,
+  SORT_OPTIONS,
+  type SortId,
 } from "@/lib/catalog";
 import { SITE } from "@/config/site";
 import { pluralize } from "@/lib/format";
@@ -86,6 +90,7 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
   const { activePet } = usePet();
   const [filters, setFilters] = useState<FilterSelection>({});
   const [personalized, setPersonalized] = useState(false);
+  const [sort, setSort] = useState<SortId>("relevancia");
   const [page, setPage] = useState(1);
 
   const label = categoryLabel(slug);
@@ -122,8 +127,8 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
         (p) => p.species.includes(activePet.species) && (!activePet.stage || p.stage?.includes(activePet.stage)),
       );
     }
-    return applyCatalogFilters(list, filters);
-  }, [products, slug, personalized, activePet, filters]);
+    return sortProducts(applyCatalogFilters(list, filters), sort);
+  }, [products, slug, personalized, activePet, filters, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const safePage = Math.min(page, totalPages);
@@ -134,12 +139,23 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
     setPage(1);
   }
 
+  function changeSort(next: SortId) {
+    setSort(next);
+    setPage(1);
+  }
+
   const breadcrumb =
     slug === "todo"
       ? [{ label: "Inicio", href: "/" }, { label: "Comprar" }]
       : [{ label: "Inicio", href: "/" }, { label: "Comprar", href: "/categoria/todo" }, { label }];
 
-  const sortLabel = personalized && activePet ? `Recomendado para ${activePet.name}` : "Relevancia";
+  // El primer criterio ("relevancia") refleja el orden en que llega la lista;
+  // con personalización activa se lee como el orden recomendado (U064).
+  const sortOptions = SORT_OPTIONS.map((o) =>
+    o.value === "relevancia" && personalized && activePet
+      ? { ...o, label: `Recomendado para ${activePet.name}` }
+      : o,
+  );
 
   return (
     // pt reducido: el breadcrumb no necesita los 72px de una sección editorial.
@@ -240,9 +256,19 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
           <span className="text-sm text-text-secondary">
             {pluralize(filtered.length, "producto")}
           </span>
-          <Row gap={2} className="gap-2">
-            <span className="hidden text-sm text-text-secondary sm:inline">Orden:</span>
-            <span className="text-sm font-semibold text-text-primary">{sortLabel}</span>
+          <Row gap={2} className="items-center gap-2">
+            {/* Orden como control real (select) en ≥sm; en móvil vive dentro del
+                sheet de filtros (patrón estándar de e-commerce, sin duplicar UI). */}
+            <label htmlFor="plp-sort" className="hidden text-sm text-text-secondary sm:inline">
+              Orden:
+            </label>
+            <Select
+              id="plp-sort"
+              options={sortOptions}
+              value={sort}
+              onValueChange={(v) => changeSort(v as SortId)}
+              className="hidden h-9 w-auto gap-1.5 px-3 text-sm font-semibold sm:flex"
+            />
             {personalized && activePet && (
               <Popover>
                 <PopoverTrigger
@@ -258,7 +284,15 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
                 </PopoverContent>
               </Popover>
             )}
-            <FiltersSheet groups={facetGroups} value={filters} onChange={changeFilters} resultCount={filtered.length} />
+            <FiltersSheet
+              groups={facetGroups}
+              value={filters}
+              onChange={changeFilters}
+              resultCount={filtered.length}
+              sort={sort}
+              sortOptions={sortOptions}
+              onSortChange={changeSort}
+            />
           </Row>
         </Row>
 
