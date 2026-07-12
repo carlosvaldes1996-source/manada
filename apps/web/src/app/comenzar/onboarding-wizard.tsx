@@ -278,7 +278,19 @@ export function OnboardingWizard() {
 
           {/* Preview vivo: la mascota tomando forma */}
           <aside className="order-first lg:order-last lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-[var(--radius-xl)] border border-border-default bg-surface p-6 text-center">
+            {/* Móvil: resumen de UNA línea — la pregunta y el CTA deben caber en
+                el primer viewport; la card completa empujaba todo bajo el fold. */}
+            <div className="flex items-center gap-3 rounded-[var(--radius-pill)] border border-border-default bg-surface px-4 py-2 lg:hidden">
+              <PetAvatar pet={previewPet} size="sm" />
+              <span className="pet-name truncate text-lg">{previewPet.name}</span>
+              {liveRation && (
+                <span className="ml-auto shrink-0 text-[13px] font-semibold text-miel-700">
+                  ~{liveRation} g/día
+                </span>
+              )}
+            </div>
+
+            <div className="hidden rounded-[var(--radius-xl)] border border-border-default bg-surface p-6 text-center lg:block">
               <div className="flex flex-col items-center gap-3">
                 <PetAvatar pet={previewPet} size="xl" />
                 <div>
