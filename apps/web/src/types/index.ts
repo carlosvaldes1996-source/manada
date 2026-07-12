@@ -57,6 +57,8 @@ export interface User {
   email: string;
   comuna?: string;
   region?: string;
+  /** RUT del cliente (Medusa `metadata.rut`) — prellena el checkout en futuras compras. */
+  rut?: string;
 }
 
 /* ----------------------------- Catálogo ---------------------------------- */

@@ -17,12 +17,22 @@ const EMAILPASS = "emailpass";
 /** Customer de Medusa → `User` del dominio Manada (nombre visible + correo). */
 export function mapCustomer(customer: HttpTypes.StoreCustomer): User {
   const firstName = customer.first_name?.trim() || customer.email.split("@")[0];
+  const rut = typeof customer.metadata?.rut === "string" ? customer.metadata.rut : undefined;
   return {
     id: customer.id,
     firstName,
     lastName: customer.last_name ?? undefined,
     email: customer.email,
+    rut,
   };
+}
+
+/**
+ * Guarda el RUT en el cliente (`metadata.rut`) para prellenarlo en futuras
+ * compras. Best-effort desde el checkout: el llamador la usa sin bloquear la orden.
+ */
+export async function saveCustomerRut(rut: string): Promise<void> {
+  await medusa.store.customer.update({ metadata: { rut } });
 }
 
 /** Cliente autenticado actual, o `null` si no hay sesión válida (token ausente/expirado). */

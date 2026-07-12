@@ -8,6 +8,7 @@ import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AppShell } from "@/components/layout";
@@ -27,11 +28,14 @@ import {
   initManualPayment,
   completeCart,
   getShippingPolicy,
+  saveCustomerRut,
   type CheckoutAddress,
   type ShippingOptionView,
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
+import { formatRut, isValidRut } from "@/lib/rut";
+import { REGIONS, getComunas } from "@/lib/chile-regions";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -60,9 +64,10 @@ export default function CheckoutPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [rut, setRut] = useState("");
   const [address1, setAddress1] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("");
+  const [city, setCity] = useState(""); // comuna
+  const [province, setProvince] = useState(""); // región
   const [phone, setPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -82,6 +87,7 @@ export default function CheckoutPage() {
     if (!firstName) setFirstName(user.firstName ?? "");
     if (!lastName) setLastName(user.lastName ?? "");
     if (!email) setEmail(user.email ?? "");
+    if (!rut && user.rut) setRut(user.rut);
   }
 
   // Opciones de despacho reales del carrito.
@@ -132,13 +138,33 @@ export default function CheckoutPage() {
     policy && subtotal >= policy.freeShippingThreshold ? 0 : selectedShippingAmount;
   const total = subtotal + shippingCost;
 
+  // Región → comuna (dependiente). Se guardan por nombre, consistente con las
+  // direcciones de la cuenta (región→province, comuna→city).
+  const regionOptions: SelectOption[] = useMemo(
+    () => REGIONS.map((r) => ({ value: r.name, label: r.name })),
+    [],
+  );
+  const comunaOptions: SelectOption[] = useMemo(
+    () => getComunas(province).map((c) => ({ value: c, label: c })),
+    [province],
+  );
+
+  function handleRegionChange(next: string) {
+    setProvince(next);
+    // Si la comuna ya elegida no pertenece a la nueva región, la limpiamos.
+    if (city && !getComunas(next).includes(city)) setCity("");
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = "Cuéntanos tu nombre";
     if (!lastName.trim()) e.lastName = "Falta tu apellido";
     if (!EMAIL_RE.test(email)) e.email = "Revisa tu correo";
+    if (!rut.trim()) e.rut = "Ingresa tu RUT";
+    else if (!isValidRut(rut)) e.rut = "Revisa tu RUT";
     if (!address1.trim()) e.address1 = "Ingresa tu dirección";
-    if (!city.trim()) e.city = "Ingresa tu comuna";
+    if (!province.trim()) e.province = "Elige tu región";
+    if (!city.trim()) e.city = "Elige tu comuna";
     if (!shippingId) e.shipping = "Elige un despacho";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -158,11 +184,15 @@ export default function CheckoutPage() {
       phone: phone.trim() || undefined,
       country_code: "cl",
     };
+    const rutFormatted = formatRut(rut);
 
     setSubmitting(true);
     try {
-      // Flujo nativo de Medusa, en orden.
-      await setCheckoutInfo(cartId, email.trim(), address);
+      // Flujo nativo de Medusa, en orden. El RUT viaja en metadata (→ orden).
+      await setCheckoutInfo(cartId, email.trim(), address, rutFormatted);
+      // Cliente autenticado: guardamos el RUT para prellenar futuras compras
+      // (best-effort — nunca bloquea la orden).
+      if (user) void saveCustomerRut(rutFormatted).catch(() => {});
       await selectShippingMethod(cartId, shippingId);
       await initManualPayment(cartId);
       const { order, error } = await completeCart(cartId);
@@ -224,6 +254,7 @@ export default function CheckoutPage() {
                   <Input label="Apellido" placeholder="Valdés" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} className="flex-1" required />
                 </Row>
                 <Input type="email" label="Correo para la confirmación y el seguimiento" placeholder="tucorreo@ejemplo.cl" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} className="max-w-md" required />
+                <Input label="RUT (para tu boleta)" placeholder="12.345.678-9" inputMode="text" autoComplete="off" value={rut} onChange={(e) => setRut(e.target.value)} onBlur={() => rut.trim() && setRut(formatRut(rut))} error={errors.rut} className="max-w-md" required />
               </Block>
 
               {/* Dirección de entrega */}
@@ -231,8 +262,12 @@ export default function CheckoutPage() {
                 <Stack gap={3} className="max-w-md">
                   <Input label="Dirección" placeholder="Calle y número, depto/casa" autoComplete="street-address" value={address1} onChange={(e) => setAddress1(e.target.value)} error={errors.address1} required />
                   <Row gap={3} wrap>
-                    <Input label="Comuna" placeholder="Ñuñoa" value={city} onChange={(e) => setCity(e.target.value)} error={errors.city} className="flex-1" required />
-                    <Input label="Región" placeholder="Región Metropolitana" value={province} onChange={(e) => setProvince(e.target.value)} className="flex-1" />
+                    <div className="w-full sm:flex-1">
+                      <Select label="Región" placeholder="Elige tu región" options={regionOptions} value={province} onValueChange={handleRegionChange} error={errors.province} required />
+                    </div>
+                    <div className="w-full sm:flex-1">
+                      <Select label="Comuna" placeholder={province ? "Elige tu comuna" : "Primero elige la región"} options={comunaOptions} value={city} onValueChange={setCity} error={errors.city} disabled={!province} required />
+                    </div>
                   </Row>
                   <Input label="Teléfono (para coordinar la entrega)" placeholder="+56 9 ..." autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </Stack>

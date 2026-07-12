@@ -42,6 +42,7 @@ export {
   logoutCustomer,
   requestPasswordReset,
   resetPassword,
+  saveCustomerRut,
   type RegisterInput,
 } from "./auth";
 export {

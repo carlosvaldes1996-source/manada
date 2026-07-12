@@ -47,15 +47,25 @@ export async function listShippingOptions(cartId: string): Promise<ShippingOptio
   });
 }
 
-/** Fija email + dirección de despacho (y facturación) en el carrito. */
+/**
+ * Fija email + dirección de despacho (y facturación) en el carrito. El RUT (para
+ * la boleta) se guarda en `metadata.rut`: lo hereda la orden y queda visible en
+ * el Admin. Solución nativa mínima, sin módulo propio.
+ */
 export async function setCheckoutInfo(
   cartId: string,
   email: string,
   address: CheckoutAddress,
+  rut?: string,
 ): Promise<MedusaCart> {
   const { cart } = await medusa.store.cart.update(
     cartId,
-    { email, shipping_address: address, billing_address: address },
+    {
+      email,
+      shipping_address: address,
+      billing_address: address,
+      ...(rut ? { metadata: { rut } } : {}),
+    },
     { fields: CART_FIELDS },
   );
   return cart as unknown as MedusaCart;
