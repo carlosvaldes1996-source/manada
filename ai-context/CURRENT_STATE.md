@@ -38,7 +38,7 @@
 - **Backend Medusa v2** (`apps/backend`, 2.16.0): catálogo administrable + `subscription_price` calculado (D23) · carrito/checkout→orden con pago manual (D24) · auth de cliente + direcciones + pedidos (D26) · buscador `q` + regla única de envío `/store/shipping-policy` (D28) · **módulo custom `pet`** `/store/pets` (D34) + subscriber `order.placed` (D35) + subscriber `password-reset`. Contratos: `API.md §5–§9` · modelo: `DATABASE.md §5–§8` · setup local: `apps/backend/DEV.md`.
 - **Frontend Next.js** (`apps/web`): 100% sobre el backend real; datos demo solo en el hero de la landing (decisión de marca, D28) y el styleguide `/dev/*` (gateado en prod, D29). Arquitectura: `FRONTEND_ARCHITECTURE.md` · componentes: `COMPONENT_LIBRARY.md`.
 - **Funnel de adquisición** F1–F4 ✅ sobre catálogo real (O5, D33) — doc: `FUNNEL_TARGET.md`.
-- **Pet Experience** B1–B7 ✅ COMPLETA (B4 foto con andamio local honesto + B7 /cuenta manada-first cerrados en el Product Completion Pass, D41; B5/B6 persistidos vía `/store/pets`) — doc: `PET_EXPERIENCE_TARGET.md`. **Anticipación honesta** (D41): la cápsula invita a "Pedir de nuevo"; el reagendo/suscripción vuelven post-tracción.
+- **Pet Experience** B1–B8 ✅ COMPLETA (B4 foto con andamio local honesto + B7 /cuenta manada-first cerrados en el Product Completion Pass, D41; B5/B6 persistidos vía `/store/pets`; **B8 Home logueada = centro de control**, D42: `PetStatusCard` con retrato + línea de tiempo del saco + "Plan de {nombre}" + recompra en dos taps + necesidades) — doc: `PET_EXPERIENCE_TARGET.md`. **Anticipación honesta** (D41): la cápsula invita a "Pedir de nuevo"; el reagendo/suscripción vuelven post-tracción.
 - **Deploy:** frontend en Vercel como verificación de build, sin env vars ni dominio (D27) — doc: `DEPLOYMENT.md`. Backend aún local (ver WIP arriba).
 
 ## Frentes abiertos (en paralelo, cada uno en su chat/bloque)
@@ -48,7 +48,7 @@
 | **Infra de producción** | 🚧 Etapa 1 hecha en disco, sin commitear | Carlos: `railway login` → provisionar (ver WIP arriba) | D30 reservada · `DEPLOYMENT.md` |
 | **Terceros** | ⬜ | Mercado Pago Checkout Pro (fast-follow post-infra) → email transaccional (reset + confirmaciones) | D25 G4 · D28 |
 | **Funnel F5 — momento de registro** | ⬜ empieza por **decisión de producto**, no por código | Decidir con Carlos dónde vive la captura de cuenta | `FUNNEL_TARGET.md §1.6` |
-| **Validación UI del Completion Pass (D41)** | ⬜ implementado, sin smoke manual | Carlos recorre: foto de mascota, /cuenta, dashboard, /comenzar móvil, landing | D41 |
+| **Validación UI del Completion Pass (D41)** | ⬜ implementado, sin smoke manual | Carlos recorre: foto de mascota, /cuenta, /comenzar móvil, landing (el dashboard ya fue rediseñado y validado en D42) | D41 |
 | **Packshots de producto** | ⬜ **el hueco visual crítico**: los 6 productos muestran emoji | Conseguir packshots oficiales (marcas) + generar cama Manada → subir vía Admin | `public/fotos/README.md` §Pendientes |
 | **Foto de mascota → blob definitivo** | ⬜ hoy andamio local (localStorage) | Con la estrategia de storage app-wide: swap interno de `setPetPhoto` + PATCH `avatar_url` | D41 · `API.md §9` |
 | **Post-tracción** | ⬜ diferido | Suscripción recurrente (moat), SII, courier, WhatsApp, Webpay | D21/D22 |
@@ -59,6 +59,7 @@
 - **Providers:** `components/providers/` — `session-provider` (sesión JWT persistente) · `pet-provider` (hidrata `/store/pets` al login, empuja mascotas de invitado, `updatePet`/`assignFood` optimistas) · `cart-provider` (cart_id en localStorage). Coordinador: `hooks/use-auth-actions.ts` (login/registro/logout + `transferCart`).
 - **Backend custom:** `apps/backend/src/modules/pet` · `src/api/store/pets` (+ validators zod) · `src/subscribers/{password-reset,food-purchased}.ts` · `src/api/middlewares.ts` (`subscription_price`) · `src/lib/shipping.ts` + `src/scripts/{seed,setup-free-shipping}.ts`.
 - **Funnel/perfil:** `app/comenzar/*` (wizard + recomendación server-hydrated) · `lib/recommend.ts` (puro, recibe `products`) · `lib/anticipation.ts` · `app/(tienda)/cuenta/mascotas/*` + `components/pet/{pet-edit-dialog,food-selector-dialog,pet-tag}.tsx`.
+- **Home logueada (D42):** `app/dashboard-view.tsx` (centro de control) · `components/pet/{pet-status-card,pet-action-grid}.tsx` · `components/commerce/quick-buy-card.tsx`.
 - ⚠️ Antes de tocar `apps/web`: leer `apps/web/AGENTS.md` + docs de Next 16 en `node_modules/next/dist/docs` (cambios de ruptura). Component-system-first: mapear a tipos/componentes existentes, no reescribir.
 
 ## Modo de trabajo vigente

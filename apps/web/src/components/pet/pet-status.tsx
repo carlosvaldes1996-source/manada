@@ -3,13 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-const STAGE_LABEL: Record<LifeStage, string> = {
+export const STAGE_LABEL: Record<LifeStage, string> = {
   cachorro: "Cachorro",
   adulto: "Adulto",
   senior: "Senior",
 };
 
-const SPECIES_LABEL: Record<Pet["species"], string> = {
+export const SPECIES_LABEL: Record<Pet["species"], string> = {
   perro: "Perro",
   gato: "Gato",
   otro: "Otro",

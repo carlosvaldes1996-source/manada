@@ -162,6 +162,7 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D39 | Comprar ≠ definir qué come — PDP e-commerce pura + toast-puente 1-tap + `FoodSelectorDialog` |
 | D40 | Meta — refactorización documental por ownership (estado con dueño único; reglas anti-deuda) |
 | D41 | Product Completion Pass — B4 foto (andamio local honesto) + B7 /cuenta manada-first + anticipación honesta ("Pedir de nuevo") + simplificación MVP (sin "Otro"/Marcas/Ofertas ni promesas de suscripción) |
+| D42 | Home logueada = centro de control de la mascota — PetStatusCard (retrato + estado + línea de tiempo del saco + "Plan de {nombre}" con espacio reservado a suscripción) + recompra en dos taps + necesidades (PetActionGrid) + catálogo al final |
 
 ## 17. Pendientes
 

@@ -133,6 +133,7 @@
 | **ProductCard** | Unidad central del catálogo. Packshot (`ProductImage`) · badges · marca/nombre · rating · precio · despacho honesto · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. |
 | **ProductGrid** | Grilla 2→3→4 con estados `loading` (skeletons) y `empty` integrados. |
 | **ProductRail** | Carrusel horizontal scroll-snap (cross-sell, destacados). |
+| **QuickBuyCard** | Fila de recompra rápida ("lo de siempre", D42): miniatura + nombre + precio + Agregar en una línea. Para productos que el usuario ya conoce — repone sin pasar por el catálogo. |
 | **CategoryCard / BrandCard** | Accesos por necesidad y por marca. `CategoryCard` acepta `imageUrl` (ícono-foto por slug, con fallback cálido si la foto falta) o `icon` (emoji, respaldo/styleguide); **la variante-foto es la canónica**. |
 | **CategoryTiles** | Grid de accesos a categorías de la Home (`CATEGORIES.slice(0,4)` con íconos-foto). **Fuente única compartida** por la landing anónima (`LandingView`) y el dashboard con sesión (`DashboardView`) → ambos estados muestran las mismas tarjetas (D31; antes el logueado usaba emojis viejos). |
 | **ReviewCard** | Reseña de PDP: autor, estrellas, compra verificada, mención a la mascota. |
@@ -166,6 +167,8 @@
 | **FeedingSchedule** | Ración diaria/por comida calculada por peso+etapa (motor de anticipación). |
 | **RecommendationCard** | Recomendación personalizada (acento Miel) con motivo transparente (Popover). |
 | **AnticipationCapsule** | El momento "se adelantó por mí": días restantes, barra Miel, reagendar/suscribir, razón honesta. Entra con slide+fade + un pulso. |
+| **PetStatusCard** | Protagonista de la Home logueada (D42): retrato (columna desktop / cuadrado inline móvil), estado escaneable ("Le quedan ~11 días"), línea de tiempo del saco (Compra→Hoy→Se acaba), UNA acción dominante ("Pedir de nuevo · $" → carrito) y franja persistente "Plan de {nombre}" (alimento + entregas automáticas "Próximamente"). Degrada honesto sin alimento/peso. |
+| **PetActionGrid** | Grilla de necesidades bajo el estado ("¿Qué necesita {nombre}?"): tiles compactos por intención (Alimentación · Salud · Cuidado · Diversión · Su perfil), data-driven — los servicios futuros (veterinario, seguro…) entran como entradas del array sin rediseñar (D42). |
 
 ---
 

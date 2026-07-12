@@ -196,6 +196,13 @@ Cierra la consistencia de toda la zona logueada.
 - **Integración backend (posterior):** pedidos/direcciones ya son reales (Medusa); el chip "para {nombre}" en pedidos depende de la metadata del Bloque 6.
 - **Resultado:** la cuenta se siente cálida y "te conoce"; sin patrones nuevos.
 
+### 🔹 Bloque 8 — Home logueada: centro de control de la mascota ✅ COMPLETADO (2026-07-12, D42)
+No estaba en el plan original (la Home era "landing con sesión"); lo ordenó Carlos como rediseño de producto y quedó bajo este doc por ser la superficie logueada principal.
+
+> **✅ Implementado y validado por Carlos (3 iteraciones, D42).** La Home logueada deja de ser landing y pasa a **dashboard de la mascota**: `PetStatusCard` (retrato protagonista — columna a sangre desktop / cuadrado inline móvil —, estado escaneable, detalle observacional, **línea de tiempo del saco** Compra→Hoy→Se acaba, CTA "Pedir de nuevo · $" directo al carrito y franja persistente **"Plan de {nombre}"** con "Entregas automáticas · Próximamente" como espacio reservado a la suscripción) + `PetActionGrid` (**necesidades, no departamentos**: Alimentación · Salud · Cuidado · Diversión · Ver a {nombre}) + complementos relevantes (grilla fija, sin carrusel) + `QuickBuyCard` ("Lo de siempre") + categorías al final. Salen de la Home la RecommendationCard de salud (la cubre el tile "Salud"; sigue en el perfil) y el riel por especie. Rationale, backlog (bloque vivo "Hoy para {nombre}", timeline en la cápsula del perfil, estado "plan" cuando reviva la suscripción) y detalle completo: **D42**.
+
+---
+
 ---
 
 ## Resumen de dependencias

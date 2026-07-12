@@ -1,40 +1,52 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Bone, Cookie, Sparkles, Stethoscope } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
+import { Grid } from "@/components/ui/grid";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { AnticipationCapsule } from "@/components/pet/anticipation-capsule";
-import { PetAvatar } from "@/components/pet/pet-avatar";
-import { RecommendationCard } from "@/components/pet/recommendation-card";
-import { ProductRail } from "@/components/commerce/product-rail";
-import { CategoryTiles } from "@/components/commerce/category-tiles";
+import { useToast } from "@/components/ui/toast";
+import {
+  PetStatusCard,
+  PetActionGrid,
+  PetAvatar,
+  FoodSelectorDialog,
+  type PetAction,
+} from "@/components/pet";
+import { ProductCard, QuickBuyCard, CategoryTiles } from "@/components/commerce";
 import { AppShell } from "@/components/layout";
-import { usePet, useSession } from "@/components/providers";
+import { useCart, usePet, useSession } from "@/components/providers";
 import { petFoodAnticipation } from "@/lib/anticipation";
+import { recommendComplements } from "@/lib/recommend";
 import type { Product } from "@/types";
 
 /**
- * Panel personal del dueño con sesión iniciada (la "app" de Manada).
- *
- * Se muestra en `/` solo cuando hay sesión (Fase 3.3B); el visitante anónimo ve
- * la <LandingView>. Decisiones de IA (AUDIT_UI_UX U041/U058): un solo modelo
- * mental —panel personal—. El saludo y la cápsula se condicionan al estado real
- * (U068). La cápsula de anticipación se aísla con aire (U069); un solo riel de
- * cross-sell (U052); el nombre se alterna con "tu compañero" (U053).
+ * Home logueada = centro de control de la mascota (no una landing: el usuario
+ * ya conoce Manada). El primer viewport responde tres preguntas y nada más:
+ * ¿cómo está? (PetStatusCard) · ¿hay algo que comprar? (acción dominante
+ * "Pedir de nuevo", a carrito en un tap) · ¿qué puedo hacer ahora?
+ * (PetActionGrid, sistema escalable a servicios). Después: pocos productos
+ * muy relevantes ("nos adelantamos"), recompra rápida, y el catálogo al
+ * final — el usuario logueado viene por su mascota, no por un catálogo.
  */
 export function DashboardView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
   const { user } = useSession();
+  const { addItem } = useCart();
+  const { toast } = useToast();
   const router = useRouter();
+  // Definir qué come ≠ comprar (D39): el selector asigna sin tocar el carrito.
+  const [foodOpen, setFoodOpen] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const firstName = user?.firstName ?? "";
 
-  // Su alimento asignado (catálogo real) + anticipación derivada de él (Bloque 6):
-  // solo anticipamos cuando conocemos su alimento y su peso; si no, invitamos a
-  // completarlo — sin números inventados.
+  // Su alimento asignado (catálogo real) + anticipación derivada (B6): solo
+  // anticipamos con alimento y peso conocidos — sin números inventados.
   const currentFood = activePet?.currentFoodId
     ? products.find((p) => p.id === activePet.currentFoodId)
     : undefined;
@@ -42,120 +54,201 @@ export function DashboardView({ products }: { products: Product[] }) {
     activePet && currentFood
       ? petFoodAnticipation(activePet, currentFood, foodAssignedAt[activePet.id])
       : null;
-  const hasAnticipation = Boolean(anticipation);
 
-  // Sustantivo de especie para alternar con el nombre y bajar densidad de "Toby" (U053).
-  const speciesNoun =
-    activePet?.species === "gato" ? "tu gato" : activePet?.species === "perro" ? "tu perro" : "tu compañero";
+  // Pocos y muy relevantes (sin carrusel): cuidado de su especie, no alimento.
+  const complements = activePet ? recommendComplements(activePet, products, 4) : [];
 
-  // Riel único (catálogo REAL): pensado para la especie de la mascota activa.
-  const railProducts = activePet
-    ? products.filter((p) => p.species.includes(activePet.species)).slice(0, 6)
-    : products.slice(0, 6);
+  // Recompra en dos clics: tap 1 deja su alimento en el carrito, tap 2 es pagar.
+  async function reorder() {
+    if (!activePet || !currentFood) return;
+    if (!currentFood.variantId) {
+      router.push(`/producto/${currentFood.slug}`);
+      return;
+    }
+    setReordering(true);
+    try {
+      await addItem(currentFood);
+      toast({
+        title: `El alimento de ${activePet.name} ya está en tu carrito`,
+        description: `${currentFood.brand.name} · ${currentFood.name}${currentFood.format ? ` · ${currentFood.format}` : ""}`,
+        variant: "success",
+        action: { label: "Ir a pagar", onClick: () => router.push("/carrito") },
+      });
+    } finally {
+      setReordering(false);
+    }
+  }
+
+  // Necesidades, no departamentos: navegación por intención ("¿qué necesita?").
+  // Escalable sin rediseñar: hoy "Salud" abre farmacia; mañana la misma tile
+  // abre veterinario, vacunas o seguro. Los tiles son datos, no layout.
+  const actions: PetAction[] = activePet
+    ? [
+        currentFood
+          ? {
+              key: "alimentacion",
+              label: "Alimentación",
+              hint: [currentFood.brand.name, currentFood.format].filter(Boolean).join(" · "),
+              icon: <Bone className="size-4" />,
+              href: `/producto/${currentFood.slug}`,
+            }
+          : {
+              key: "alimentacion",
+              label: "Alimentación",
+              hint: "¿Qué come?",
+              icon: <Bone className="size-4" />,
+              onSelect: () => setFoodOpen(true),
+            },
+        {
+          key: "salud",
+          label: "Salud",
+          hint: "Farmacia y prevención",
+          icon: <Stethoscope className="size-4" />,
+          href: "/categoria/farmacia",
+        },
+        {
+          key: "cuidado",
+          label: "Cuidado",
+          hint: "Higiene y baño",
+          icon: <Sparkles className="size-4" />,
+          href: "/categoria/higiene",
+        },
+        {
+          key: "diversion",
+          label: "Diversión",
+          hint: "Premios y snacks",
+          icon: <Cookie className="size-4" />,
+          href: "/categoria/snacks",
+        },
+        {
+          key: "perfil",
+          label: `Ver a ${activePet.name}`,
+          hint: "Su perfil",
+          icon: <PetAvatar pet={activePet} size="xs" />,
+          href: "/cuenta/mascotas",
+        },
+      ]
+    : [];
 
   return (
     <AppShell>
-      {/* ── Clímax: saludo + cápsula de anticipación, aislada con aire (U069) ── */}
-      <Section spacing="lg" tone="canvas">
-        <Stack gap={8}>
-          <Stack gap={2}>
-            <span className="overline text-text-brand">
-              Hola, {firstName} 👋
-            </span>
-            {/* Su cara junto al saludo (§1.1): el panel es "su casa", no una tienda */}
-            <Row gap={4} align="center">
-              {activePet && (
-                <PetAvatar pet={activePet} size="lg" className="ring-2 ring-terracota-100" />
-              )}
-              <h1 className="display-l text-text-primary">
-                {hasAnticipation
-                  ? `Esto es lo que vimos para ${activePet!.name} hoy`
-                  : activePet
-                    ? `${activePet.name} ya es parte de tu manada`
-                    : "Cuidemos juntos a tu compañero"}
-              </h1>
-            </Row>
-            <p className="body-l max-w-2xl text-text-secondary">
-              {hasAnticipation
-                ? "Nos adelantamos a lo que necesita para que nunca le falte nada. Tú decides; nosotros avisamos a tiempo."
-                : activePet
-                  ? "Cuéntanos qué come para calcular cuánto necesita y avisarte antes de que se le acabe."
-                  : "Crea el perfil de tu mascota y nos anticiparemos a lo que necesita: comida, salud y más."}
-            </p>
-          </Stack>
-
-          {hasAnticipation ? (
-            <AnticipationCapsule
-              petName={activePet!.name}
-              pet={activePet!}
-              daysLeft={anticipation!.daysLeft}
-              percentLeft={anticipation!.percentLeft}
-              runOutDate={anticipation!.runOutDate}
-              reason={`Lo calculamos con el peso de ${activePet!.name} (${activePet!.weightKg} kg) y el tamaño del saco (${currentFood!.format}). Es una estimación; ajústala cuando quieras.`}
-              onReorder={() =>
-                currentFood
-                  ? router.push(`/producto/${currentFood.slug}`)
-                  : router.push("/categoria/alimento")
-              }
-            />
+      {/* ── 1 · Centro de control: estado + acción, todo en el primer viewport
+             (ritmo propio, más corto que spacing="sm": aquí cada px vertical
+             compite con el CTA y las acciones rápidas) ── */}
+      <Section spacing="none" className="py-6 lg:py-8">
+        <Stack gap={4}>
+          <span className="overline text-text-brand">Hola, {firstName} 👋</span>
+          {activePet ? (
+            <>
+              <PetStatusCard
+                pet={activePet}
+                food={currentFood}
+                anticipation={anticipation}
+                onReorder={currentFood ? reorder : undefined}
+                reorderPending={reordering}
+                onDefineFood={() => setFoodOpen(true)}
+              />
+              <Stack gap={2}>
+                <h2 className="heading-4 text-text-primary">
+                  ¿Qué necesita {activePet.name}?
+                </h2>
+                <PetActionGrid actions={actions} />
+              </Stack>
+            </>
           ) : (
-            <Row gap={3} wrap>
-              <Button asChild>
-                <Link href={activePet ? "/categoria/alimento" : "/comenzar"}>
-                  {activePet ? "Elegir su alimento" : "Crear perfil de mascota"}
-                </Link>
-              </Button>
-              <Button variant="secondary" asChild>
-                <Link href={activePet ? "/cuenta/mascotas" : "/categoria/todo"}>
-                  {activePet ? "Completar su perfil" : "Explorar la tienda"}
-                </Link>
-              </Button>
-            </Row>
+            <div className="rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft p-6">
+              <Stack gap={3}>
+                <h1 className="heading-2 text-text-primary">
+                  Cuidemos juntos a tu compañero
+                </h1>
+                <p className="body-m max-w-xl text-text-secondary">
+                  Crea su perfil y nos anticipamos a lo que necesita: comida, salud y más.
+                </p>
+                <Row gap={3} wrap>
+                  <Button asChild>
+                    <Link href="/comenzar">Crear perfil de mascota</Link>
+                  </Button>
+                  <Button variant="ghost" asChild>
+                    <Link href="/categoria/todo">Explorar la tienda</Link>
+                  </Button>
+                </Row>
+              </Stack>
+            </div>
           )}
         </Stack>
       </Section>
 
-      {/* ── Accesos por necesidad (navegación por necesidad, no por marca) ── */}
-      <Section spacing="md" tone="subtle">
-        <Stack gap={5}>
+      {/* ── 2 · Nos adelantamos: pocos productos, muy relevantes ── */}
+      {activePet && complements.length > 0 && (
+        <Section spacing="sm" className="pt-0">
+          <Stack gap={4}>
+            <SectionHeading
+              as="h2"
+              overline={`Para ${activePet.name}`}
+              title="Pensamos que también podría necesitar"
+            />
+            <Grid cols={2} md={4} gap={4}>
+              {complements.map((p) => (
+                <ProductCard key={p.id} product={p} showSubscribe={false} />
+              ))}
+            </Grid>
+          </Stack>
+        </Section>
+      )}
+
+      {/* Sin mascota: recomendación genérica honesta mientras no la conocemos. */}
+      {!activePet && products.length > 0 && (
+        <Section spacing="sm" className="pt-0">
+          <Stack gap={4}>
+            <SectionHeading
+              as="h2"
+              overline="Recomendado"
+              title="Lo que las familias recompran"
+            />
+            <Grid cols={2} md={4} gap={4}>
+              {products.slice(0, 4).map((p) => (
+                <ProductCard key={p.id} product={p} showSubscribe={false} />
+              ))}
+            </Grid>
+          </Stack>
+        </Section>
+      )}
+
+      {/* ── 3 · Lo de siempre: recompra rápida sin pasar por el catálogo ── */}
+      {activePet && currentFood && (
+        <Section spacing="sm" className="pt-0">
+          <Stack gap={4}>
+            <SectionHeading
+              as="h2"
+              overline="Recompra rápida"
+              title={`Lo de siempre de ${activePet.name}`}
+            />
+            <QuickBuyCard product={currentFood} />
+          </Stack>
+        </Section>
+      )}
+
+      {/* ── 4 · Explorar: el catálogo pasa al final (viene por su mascota) ── */}
+      <Section spacing="sm" tone="subtle">
+        <Stack gap={4}>
           <SectionHeading
-            overline="Comprar por necesidad"
-            title="¿Qué necesita hoy?"
+            as="h2"
+            overline="Explorar"
+            title="¿Buscas algo más?"
+            href="/categoria/todo"
+            linkLabel="Ver todo el catálogo"
           />
           <CategoryTiles />
         </Stack>
       </Section>
 
-      {/* ── Cross-sell ÚNICO en la Home (U052): lo que sueles recomprar ── */}
-      <Section spacing="md" tone="canvas">
-        <ProductRail
-          overline={activePet ? `Para ${speciesNoun}` : "Recomendado"}
-          title={
-            activePet ? "Lo que sueles darle" : "Productos que las familias recompran"
-          }
-          products={railProducts}
-          href="/categoria/todo"
-          linkLabel="Ver todo"
-        />
-      </Section>
-
-      {/* ── Recordatorio de salud (ÚNICA aparición: no se repite en PDP/perfil, U072) ── */}
       {activePet && (
-        <Section spacing="md" tone="canvas" className="pt-0">
-          <RecommendationCard
-            eyebrow={`Pensado para ${speciesNoun}`}
-            pet={activePet}
-            title="¿Ya le toca la desparasitación?"
-            description="Según su peso y la época del año, conviene revisar el calendario antiparasitario. Te ayudamos a elegir el correcto."
-            reason={`Lo sugerimos por su peso${activePet.weightKg ? ` (${activePet.weightKg} kg)` : ""} y porque conviene revisar su calendario de farmacia. Es un recordatorio, no un diagnóstico.`}
-            media={<span className="text-4xl">💊</span>}
-            action={
-              <Button variant="secondary" asChild>
-                <Link href="/categoria/farmacia">Ver opciones de farmacia</Link>
-              </Button>
-            }
-          />
-        </Section>
+        <FoodSelectorDialog
+          pet={activePet}
+          products={products}
+          open={foodOpen}
+          onOpenChange={setFoodOpen}
+        />
       )}
     </AppShell>
   );

@@ -20,6 +20,8 @@ export interface RunOutEstimate {
   percentLeft: number;
   /** Fecha estimada en que se agota. */
   runOutDate: Date;
+  /** Días transcurridos desde la compra/asignación (línea de tiempo del saco). */
+  daysSincePurchase: number;
 }
 
 /**
@@ -36,7 +38,7 @@ export function estimateRunOut(
   const percentLeft = Math.round((daysLeft / totalDays) * 100);
   const runOutDate = new Date();
   runOutDate.setDate(runOutDate.getDate() + daysLeft);
-  return { daysLeft, percentLeft, runOutDate };
+  return { daysLeft, percentLeft, runOutDate, daysSincePurchase };
 }
 
 /** kg del saco a partir del formato del producto ("3 kg" → 3; "500 g"/undefined → undefined). */

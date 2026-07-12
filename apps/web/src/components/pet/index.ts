@@ -3,6 +3,8 @@ export * from "./pet-avatar";
 export * from "./pet-tag";
 export * from "./breed-combobox";
 export * from "./pet-status";
+export * from "./pet-status-card";
+export * from "./pet-action-grid";
 export * from "./pet-card";
 export * from "./pet-switcher";
 export * from "./pet-profile-header";

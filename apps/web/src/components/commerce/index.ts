@@ -8,6 +8,7 @@ export * from "./shipping-policy-note";
 // Catálogo
 export * from "./product-image";
 export * from "./product-card";
+export * from "./quick-buy-card";
 export * from "./product-grid";
 export * from "./product-rail";
 export * from "./category-card";
