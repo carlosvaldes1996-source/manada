@@ -26,6 +26,9 @@ export interface AvatarProps {
  */
 export function Avatar({ src, alt = "", emoji, initials, size = "md", className }: AvatarProps) {
   const dimension = { xs: 20, sm: 28, md: 40, lg: 64, xl: 96 }[size];
+  // Fotos locales (recorte del uploader): el optimizador de Next no procesa
+  // data:/blob:, se sirven tal cual.
+  const isLocalSrc = Boolean(src && (src.startsWith("data:") || src.startsWith("blob:")));
   return (
     <span
       className={cn(
@@ -35,7 +38,14 @@ export function Avatar({ src, alt = "", emoji, initials, size = "md", className 
       )}
     >
       {src ? (
-        <Image src={src} alt={alt} width={dimension} height={dimension} className="size-full object-cover" />
+        <Image
+          src={src}
+          alt={alt}
+          width={dimension}
+          height={dimension}
+          unoptimized={isLocalSrc}
+          className="size-full animate-in object-cover duration-300 fade-in"
+        />
       ) : emoji ? (
         <span aria-hidden>{emoji}</span>
       ) : (

@@ -8,6 +8,11 @@ export interface PetProfileHeaderProps {
   pet: Pet;
   /** Acciones a la derecha (editar perfil, agregar foto). */
   action?: React.ReactNode;
+  /**
+   * Reemplaza el retrato estático (p. ej. `PetPhotoUploader`, que convierte el
+   * avatar en la zona de subida — B4). Sin slot, retrato de solo lectura.
+   */
+  avatarSlot?: React.ReactNode;
   className?: string;
 }
 
@@ -18,7 +23,7 @@ export interface PetProfileHeaderProps {
  * de completitud recuerda que "lo que sabemos nos deja cuidarlo mejor" (UX.md §3).
  * Vive sobre `brand-soft` con `radius-xl` para anclar la página.
  */
-export function PetProfileHeader({ pet, action, className }: PetProfileHeaderProps) {
+export function PetProfileHeader({ pet, action, avatarSlot, className }: PetProfileHeaderProps) {
   const completeness = pet.completeness ?? 0;
   return (
     <div
@@ -28,7 +33,7 @@ export function PetProfileHeader({ pet, action, className }: PetProfileHeaderPro
       )}
     >
       <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
-        <PetAvatar pet={pet} size="xl" className="ring-4 ring-terracota-100" />
+        {avatarSlot ?? <PetAvatar pet={pet} size="xl" className="ring-4 ring-terracota-100" />}
         <div className="flex flex-1 flex-col items-center gap-2 sm:items-start">
           <h1 className="heading-1 pet-name text-text-brand">{pet.name}</h1>
           <PetStatus pet={pet} show={["species", "stage", "weight", "breed"]} />

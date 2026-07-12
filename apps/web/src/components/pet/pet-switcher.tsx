@@ -5,7 +5,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronDown, PawPrint, Plus } from "lucide-react";
 import { usePet } from "@/components/providers";
 import { cn } from "@/lib/utils";
-import { PetAvatar, SPECIES_EMOJI } from "./pet-avatar";
+import { PetAvatar } from "./pet-avatar";
 
 /**
  * Selector de mascota global (DESIGN_SYSTEM §11, UX.md §3). Vive en el header y
@@ -92,9 +92,7 @@ export function PetSwitcher() {
                     pet.id === activePet.id ? "text-text-brand" : "text-text-primary",
                   )}
                 >
-                  <span className="text-lg" aria-hidden>
-                    {SPECIES_EMOJI[pet.species]}
-                  </span>
+                  <PetAvatar pet={pet} size="sm" />
                   <span className="flex-1 truncate font-medium">{pet.name}</span>
                   {pet.id === activePet.id && <Check className="size-4 shrink-0" aria-hidden />}
                 </DropdownMenu.Item>

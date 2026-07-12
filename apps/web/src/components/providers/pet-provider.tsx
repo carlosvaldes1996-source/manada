@@ -51,6 +51,14 @@ interface PetContextValue {
    * setter-only (los campos omitidos no cambian). Mismo patrón que assignFood.
    */
   updatePet: (petId: string, changes: PetProfileChanges) => void;
+  /**
+   * Guarda la foto de la mascota (B4). ANDAMIO HONESTO (directiva de Carlos):
+   * sin storage temporal en el backend — el data-URL recortado vive en memoria
+   * + `localStorage` de este dispositivo. Cuando exista la estrategia de blobs
+   * definitiva, este método sube el archivo y persiste `avatar_url` vía PATCH
+   * (la columna y el contrato ya existen); la UI no cambia.
+   */
+  setPetPhoto: (petId: string, dataUrl: string | null) => void;
   /** Fecha ISO en que se asignó el alimento actual de cada mascota (por id). */
   foodAssignedAt: Record<string, string>;
 }
@@ -69,6 +77,53 @@ const PetContext = createContext<PetContextValue | null>(null);
 /** id local de invitado (no persistido). El backend emite ids `pet_…`. */
 function isLocalId(id: string): boolean {
   return id.startsWith("local_");
+}
+
+/* ------------------------- Fotos (andamio local, B4) ------------------------ */
+
+const PHOTOS_KEY = "manada.pet_photos";
+
+/** Mapa id→data-URL de las fotos guardadas en este dispositivo. */
+function readStoredPhotos(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(PHOTOS_KEY) ?? "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredPhoto(petId: string, dataUrl: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    const photos = readStoredPhotos();
+    if (dataUrl) photos[petId] = dataUrl;
+    else delete photos[petId];
+    window.localStorage.setItem(PHOTOS_KEY, JSON.stringify(photos));
+  } catch (err) {
+    // Cuota llena o storage bloqueado: la foto vive igual en memoria esta sesión.
+    console.warn("[pets] no se pudo guardar la foto en el dispositivo", err);
+  }
+}
+
+/** Renombra la foto guardada cuando una mascota de invitado obtiene id real. */
+function migrateStoredPhoto(fromId: string, toId: string) {
+  const photos = readStoredPhotos();
+  const dataUrl = photos[fromId];
+  if (!dataUrl) return;
+  writeStoredPhoto(toId, dataUrl);
+  writeStoredPhoto(fromId, null);
+}
+
+/** Completa `avatarUrl` desde el dispositivo en mascotas hidratadas sin foto. */
+function overlayStoredPhotos(pets: Pet[]): Pet[] {
+  const photos = readStoredPhotos();
+  return pets.map((p) => {
+    if (p.avatarUrl || !photos[p.id]) return p;
+    const next = { ...p, avatarUrl: photos[p.id] };
+    next.completeness = profileCompleteness(next);
+    return next;
+  });
 }
 
 export function PetProvider({ children }: { children: React.ReactNode }) {
@@ -115,15 +170,17 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
             if (guest.currentFoodId) {
               await updateMyPet(created.id, { current_food_id: guest.currentFoodId });
             }
+            // La foto del dispositivo sigue a la mascota a su id real.
+            migrateStoredPhoto(guest.id, created.id);
             if (guest.id === activeLocalId) nextActiveId = created.id;
           } catch (err) {
             console.warn("[pets] no se pudo transferir una mascota de invitado", err);
           }
         }
 
-        // 2 · Hidratar desde la fuente única.
+        // 2 · Hidratar desde la fuente única (+ fotos guardadas en el dispositivo).
         const { pets: remote, foodAssignedAt: assignedAt } = await listMyPets();
-        setPets(remote);
+        setPets(overlayStoredPhotos(remote));
         setFoodAssignedAt(assignedAt);
         setActivePetId((prev) => {
           const candidate = nextActiveId ?? prev;
@@ -201,6 +258,18 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setPetPhoto = useCallback<PetContextValue["setPetPhoto"]>((petId, dataUrl) => {
+    setPets((prev) =>
+      prev.map((p) => {
+        if (p.id !== petId) return p;
+        const next = { ...p, avatarUrl: dataUrl ?? undefined };
+        next.completeness = profileCompleteness(next);
+        return next;
+      }),
+    );
+    writeStoredPhoto(petId, dataUrl);
+  }, []);
+
   const value = useMemo<PetContextValue>(
     () => ({
       pets,
@@ -210,9 +279,10 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       clearPets,
       assignFood,
       updatePet,
+      setPetPhoto,
       foodAssignedAt,
     }),
-    [pets, activePetId, addPet, clearPets, assignFood, updatePet, foodAssignedAt],
+    [pets, activePetId, addPet, clearPets, assignFood, updatePet, setPetPhoto, foodAssignedAt],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

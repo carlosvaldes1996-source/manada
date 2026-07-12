@@ -12,6 +12,7 @@ import {
   PetProfileHeader,
   PetEditCard,
   PetEditDialog,
+  PetPhotoUploader,
   FoodSelectorDialog,
   AnticipationCapsule,
   RecommendationCard,
@@ -96,6 +97,7 @@ export function MascotasView({ products }: { products: Product[] }) {
       <Stack gap={10}>
         <PetProfileHeader
           pet={activePet}
+          avatarSlot={<PetPhotoUploader pet={activePet} />}
           action={<Button variant="secondary" onClick={openEdit}>Editar perfil</Button>}
         />
 
