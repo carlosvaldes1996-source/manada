@@ -20,12 +20,10 @@ import { Stack, Row } from "@/components/ui/stack";
 import { Grid } from "@/components/ui/grid";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
 import { AnticipationCapsule } from "@/components/pet/anticipation-capsule";
 import { PetAvatar } from "@/components/pet/pet-avatar";
 import { useSession, usePet } from "@/components/providers";
 import { petFoodAnticipation } from "@/lib/anticipation";
-import { formatDeliveryDate } from "@/lib/format";
 import { fadeInUp } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import type { Product } from "@/types";
@@ -49,7 +47,6 @@ export function BienvenidaView({ products }: { products: Product[] }) {
   const router = useRouter();
   const { user, status, guest } = useSession();
   const { activePet, foodAssignedAt } = usePet();
-  const { toast } = useToast();
   const reduced = usePrefersReducedMotion();
 
   // Su alimento real (asignado al sumar al pedido — B6/O5) + anticipación derivada.
@@ -174,20 +171,14 @@ export function BienvenidaView({ products }: { products: Product[] }) {
             <span className="overline inline-flex items-center gap-1.5 text-text-brand">
               <Sparkles className="size-3.5" aria-hidden /> Lo primero que hicimos por {petName}
             </span>
+            {/* Informativa a propósito: acaba de comprar; ofrecer "pedir de nuevo" aquí sería absurdo */}
             <AnticipationCapsule
               petName={activePet.name}
+              pet={activePet}
               daysLeft={anticipation.daysLeft}
               percentLeft={anticipation.percentLeft}
               runOutDate={anticipation.runOutDate}
               reason={`Lo calculamos con su peso (${activePet.weightKg} kg) y el saco que acabas de pedir (${food.format}). Te avisaremos antes de que se acabe.`}
-              onReschedule={(date) =>
-                toast({
-                  title: "Entrega reagendada",
-                  description: `Llegará ${formatDeliveryDate(date)} para que a ${petName} no le falte.`,
-                  variant: "success",
-                })
-              }
-              onSubscribe={() => router.push("/cuenta/mascotas")}
             />
           </Stack>
         </Section>

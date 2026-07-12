@@ -577,7 +577,7 @@ function PetSection() {
         <PetTag pet={pet} tone="miel" label="Pensado para Toby" />
       </Demo>
       <Demo name="AnticipationCapsule" when="El momento 'se adelantó por mí'. Entra con slide+fade y un pulso Miel. Con `pet` muestra la firma de personalización con rostro." canvasClassName="block">
-        <AnticipationCapsule petName={pet.name} pet={pet} daysLeft={5} percentLeft={18} runOutDate={DEMO_SHIPPING.date} reason={DEMO_NUDGE.reason} onReschedule={() => {}} onSubscribe={() => {}} />
+        <AnticipationCapsule petName={pet.name} pet={pet} daysLeft={5} percentLeft={18} runOutDate={DEMO_SHIPPING.date} reason={DEMO_NUDGE.reason} onReorder={() => {}} />
       </Demo>
       <Demo name="PetProfileHeader" when="Cabecera del perfil: avatar, nombre como héroe y completitud." canvasClassName="block">
         <PetProfileHeader pet={pet} action={<Button variant="secondary" size="sm">Editar</Button>} />

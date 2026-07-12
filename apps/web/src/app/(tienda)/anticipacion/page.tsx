@@ -18,7 +18,7 @@ export default function AnticipacionPage() {
       <ProseBlock heading="Una sugerencia, no un cobro">
         <p>
           La anticipación es una ayuda transparente: te mostramos por qué te lo decimos y tú decides
-          si reagendar o suscribir. Sin permanencia, pausa o cancela cuando quieras.
+          si pedir de nuevo o esperar. Nunca compramos por ti.
         </p>
       </ProseBlock>
     </ContentPage>

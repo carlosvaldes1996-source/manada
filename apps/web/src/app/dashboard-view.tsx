@@ -6,14 +6,13 @@ import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { useToast } from "@/components/ui/toast";
 import { AnticipationCapsule } from "@/components/pet/anticipation-capsule";
+import { PetAvatar } from "@/components/pet/pet-avatar";
 import { RecommendationCard } from "@/components/pet/recommendation-card";
 import { ProductRail } from "@/components/commerce/product-rail";
 import { CategoryTiles } from "@/components/commerce/category-tiles";
 import { AppShell } from "@/components/layout";
 import { usePet, useSession } from "@/components/providers";
-import { formatDeliveryDate } from "@/lib/format";
 import { petFoodAnticipation } from "@/lib/anticipation";
 import type { Product } from "@/types";
 
@@ -30,7 +29,6 @@ export function DashboardView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
   const { user } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
 
   const firstName = user?.firstName ?? "";
 
@@ -64,13 +62,19 @@ export function DashboardView({ products }: { products: Product[] }) {
             <span className="overline text-text-brand">
               Hola, {firstName} 👋
             </span>
-            <h1 className="display-l text-text-primary">
-              {hasAnticipation
-                ? `Esto es lo que vimos para ${activePet!.name} hoy`
-                : activePet
-                  ? `${activePet.name} ya es parte de tu manada`
-                  : "Cuidemos juntos a tu compañero"}
-            </h1>
+            {/* Su cara junto al saludo (§1.1): el panel es "su casa", no una tienda */}
+            <Row gap={4} align="center">
+              {activePet && (
+                <PetAvatar pet={activePet} size="lg" className="ring-2 ring-terracota-100" />
+              )}
+              <h1 className="display-l text-text-primary">
+                {hasAnticipation
+                  ? `Esto es lo que vimos para ${activePet!.name} hoy`
+                  : activePet
+                    ? `${activePet.name} ya es parte de tu manada`
+                    : "Cuidemos juntos a tu compañero"}
+              </h1>
+            </Row>
             <p className="body-l max-w-2xl text-text-secondary">
               {hasAnticipation
                 ? "Nos adelantamos a lo que necesita para que nunca le falte nada. Tú decides; nosotros avisamos a tiempo."
@@ -88,14 +92,7 @@ export function DashboardView({ products }: { products: Product[] }) {
               percentLeft={anticipation!.percentLeft}
               runOutDate={anticipation!.runOutDate}
               reason={`Lo calculamos con el peso de ${activePet!.name} (${activePet!.weightKg} kg) y el tamaño del saco (${currentFood!.format}). Es una estimación; ajústala cuando quieras.`}
-              onReschedule={(date) =>
-                toast({
-                  title: "Entrega reagendada",
-                  description: `Llegará ${formatDeliveryDate(date)}. Te avisaremos un día antes.`,
-                  variant: "success",
-                })
-              }
-              onSubscribe={() =>
+              onReorder={() =>
                 currentFood
                   ? router.push(`/producto/${currentFood.slug}`)
                   : router.push("/categoria/alimento")
@@ -150,7 +147,7 @@ export function DashboardView({ products }: { products: Product[] }) {
             pet={activePet}
             title="¿Ya le toca la desparasitación?"
             description="Según su peso y la época del año, conviene revisar el calendario antiparasitario. Te ayudamos a elegir el correcto."
-            reason="Lo sugerimos por su peso (8 kg) y porque pasaron varios meses desde tu última compra de farmacia. Es un recordatorio, no un diagnóstico."
+            reason={`Lo sugerimos por su peso${activePet.weightKg ? ` (${activePet.weightKg} kg)` : ""} y porque conviene revisar su calendario de farmacia. Es un recordatorio, no un diagnóstico.`}
             media={<span className="text-4xl">💊</span>}
             action={
               <Button variant="secondary" asChild>

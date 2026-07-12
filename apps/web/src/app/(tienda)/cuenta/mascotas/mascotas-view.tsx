@@ -7,7 +7,6 @@ import { Stack } from "@/components/ui/stack";
 import { Grid } from "@/components/ui/grid";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useToast } from "@/components/ui/toast";
 import {
   PetProfileHeader,
   PetEditCard,
@@ -20,7 +19,7 @@ import {
 import { ProductRail } from "@/components/commerce/product-rail";
 import { usePet } from "@/components/providers";
 import { bagKgFromFormat, dailyRationGrams, petFoodAnticipation } from "@/lib/anticipation";
-import { formatDeliveryDate, pluralize } from "@/lib/format";
+import { pluralize } from "@/lib/format";
 import type { Product } from "@/types";
 
 /**
@@ -36,7 +35,6 @@ import type { Product } from "@/types";
  */
 export function MascotasView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
-  const { toast } = useToast();
   const router = useRouter();
   // Un solo lugar de edición (B5): la ficha y el hero abren el mismo Dialog.
   const [editOpen, setEditOpen] = useState(false);
@@ -114,14 +112,7 @@ export function MascotasView({ products }: { products: Product[] }) {
                   percentLeft={anticipation.percentLeft}
                   runOutDate={anticipation.runOutDate}
                   reason={`Lo calculamos con el peso de ${activePet.name} (${activePet.weightKg} kg) y el tamaño del saco (${currentFood.format}). Es una estimación; ajústala cuando quieras.`}
-                  onReschedule={(date) =>
-                    toast({
-                      title: "Entrega reagendada",
-                      description: `Llegará ${formatDeliveryDate(date)}. Te avisaremos un día antes.`,
-                      variant: "success",
-                    })
-                  }
-                  onSubscribe={() => router.push(`/producto/${currentFood.slug}`)}
+                  onReorder={() => router.push(`/producto/${currentFood.slug}`)}
                 />
               )}
               {specs.length > 0 && (
