@@ -46,7 +46,12 @@ const TOBY_BAG_KG = 3;
  */
 export const TOBY_ANTICIPATION: RunOutEstimate = estimateRunOut(
   TOBY_BAG_KG,
-  dailyRationGrams(DEMO_PETS[0].weightKg ?? 8, DEMO_PETS[0].stage),
+  dailyRationGrams({
+    species: DEMO_PETS[0].species,
+    stage: DEMO_PETS[0].stage,
+    weightKg: DEMO_PETS[0].weightKg ?? 8,
+    neutered: DEMO_PETS[0].neutered,
+  }),
   TOBY_DAYS_SINCE_PURCHASE,
 );
 

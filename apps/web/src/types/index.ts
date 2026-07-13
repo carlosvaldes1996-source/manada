@@ -96,6 +96,21 @@ export interface Product {
   price: Price;
   /** Formato/peso visible (ej. "3 kg"). */
   format?: string;
+  /**
+   * Energía metabolizable del alimento en kcal/kg — base del cálculo de ración
+   * (RER/MER ÷ densidad). Solo aplica a `alimento`; viene de `metadata.kcal_per_kg`.
+   */
+  kcalPerKg?: number;
+  /**
+   * Condiciones de salud para las que el alimento está formulado (vocabulario de
+   * `PET_CONDITIONS`) — habilita el score `conditionTarget` y una razón verificada.
+   */
+  suitableConditions?: string[];
+  /**
+   * Condiciones para las que el alimento NO es apropiado — puerta de
+   * contraindicación: nunca se recomienda si la mascota tiene una de estas.
+   */
+  notFor?: string[];
   rating?: { value: number; count: number };
   imageUrl?: string;
   /** ¿Admite suscripción? Si sí, se muestra el ahorro. */

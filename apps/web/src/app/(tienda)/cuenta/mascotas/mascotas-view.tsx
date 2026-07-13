@@ -66,7 +66,17 @@ export function MascotasView({ products }: { products: Product[] }) {
 
   // "Su día a día": stat-cards derivadas (mismo patrón que las specs de la PDP).
   // Degradan con gracia: la ración necesita peso; la duración, peso + saco.
-  const ration = activePet.weightKg ? dailyRationGrams(activePet.weightKg, activePet.stage) : undefined;
+  const ration = activePet.weightKg
+    ? dailyRationGrams(
+        {
+          species: activePet.species,
+          stage: activePet.stage,
+          weightKg: activePet.weightKg,
+          neutered: activePet.neutered,
+        },
+        currentFood?.kcalPerKg,
+      )
+    : undefined;
   const bagKg = bagKgFromFormat(currentFood?.format);
   const bagDuration = bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
 

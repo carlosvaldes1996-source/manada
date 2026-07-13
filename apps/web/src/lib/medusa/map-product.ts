@@ -7,6 +7,7 @@ import type {
   ProductCategory,
   Species,
 } from "@/types";
+import { PET_CONDITIONS } from "@/lib/pet";
 
 /**
  * Mapeo Medusa → dominio Manada (Fase 5 · Etapa 2).
@@ -25,7 +26,8 @@ import type {
  *   (native) · formato (título de variante) · stock (`inventory_quantity`) ·
  *   thumbnail/images (native)                              → campos nativos de Medusa
  *   brand · species · stage · subscribable ·
- *   subscription_discount_percentage · rating · review_count → `product.metadata`
+ *   subscription_discount_percentage · rating · review_count ·
+ *   kcal_per_kg · suitable_conditions · not_for            → `product.metadata`
  *   subscription_price (precio de suscripción ya calculado)  → campo calculado del
  *                                                              backend (middleware)
  */
@@ -71,6 +73,8 @@ const CATEGORY_BY_NAME: Record<string, ProductCategory> = {
 
 const VALID_SPECIES: Species[] = ["perro", "gato", "otro"];
 const VALID_STAGES: LifeStage[] = ["cachorro", "adulto", "senior"];
+/** Vocabulario de condiciones de salud (fuente única: lib/pet.ts, D38). */
+const VALID_CONDITIONS: string[] = [...PET_CONDITIONS];
 
 function slugify(value: string): string {
   return value
@@ -202,6 +206,13 @@ export function mapProduct(product: StoreProduct): Product {
   const ratingValue = metaNumber(meta, "rating");
   const reviewCount = metaNumber(meta, "review_count");
 
+  // Nutrición (solo relevante en alimento): densidad calórica + condiciones que
+  // el alimento atiende / contraindica. Habilitan el cálculo RER/MER y las
+  // puertas del motor (ver lib/recommend.ts). Ausentes → el motor degrada honesto.
+  const kcalPerKg = metaNumber(meta, "kcal_per_kg");
+  const suitableConditions = metaEnumList(meta, "suitable_conditions", VALID_CONDITIONS);
+  const notFor = metaEnumList(meta, "not_for", VALID_CONDITIONS);
+
   return {
     id: product.id,
     variantId: variant?.id,
@@ -213,6 +224,9 @@ export function mapProduct(product: StoreProduct): Product {
     stage: stage.length ? stage : undefined,
     price: toPrice(variant),
     format: variant?.title || undefined,
+    kcalPerKg,
+    suitableConditions: suitableConditions.length ? suitableConditions : undefined,
+    notFor: notFor.length ? notFor : undefined,
     rating: ratingValue !== undefined ? { value: ratingValue, count: reviewCount ?? 0 } : undefined,
     imageUrl: toImageUrl(product, category, species),
     subscribable,

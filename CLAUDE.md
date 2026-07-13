@@ -10,7 +10,7 @@
    2. `ai-context/PROJECT_MASTER.md` — visión, estrategia y resumen de decisiones.
    3. `ai-context/DECISIONS.md` — qué se decidió y por qué (append-only; **no re-litigar**). Consúltalo por entrada (D#), no completo.
    4. `ai-context/ROADMAP.md` (fases) y `ai-context/TODO.md` (detalle táctico).
-   5. El/los archivos temáticos **dueños del dominio de tu tarea** — mapa de owners en `ai-context/PROJECT_HEALTH_REPORT.md §3` (marca → `BRANDING.md` · visual → `DESIGN_SYSTEM.md` · UX → `UX.md` · stack/repo → `ARCHITECTURE.md` · frontend → `FRONTEND_ARCHITECTURE.md` + `COMPONENT_LIBRARY.md` · datos → `DATABASE.md` · contratos → `API.md` · deploy → `DEPLOYMENT.md` · funnel → `FUNNEL_TARGET.md` · perfil logueado → `PET_EXPERIENCE_TARGET.md`).
+   5. El/los archivos temáticos **dueños del dominio de tu tarea** — mapa de owners en `ai-context/PROJECT_HEALTH_REPORT.md §3` (marca → `BRANDING.md` · visual → `DESIGN_SYSTEM.md` · UX → `UX.md` · stack/repo → `ARCHITECTURE.md` · frontend → `FRONTEND_ARCHITECTURE.md` + `COMPONENT_LIBRARY.md` · datos → `DATABASE.md` · contratos → `API.md` · deploy → `DEPLOYMENT.md` · funnel → `FUNNEL_TARGET.md` · perfil logueado → `PET_EXPERIENCE_TARGET.md` · motor de recomendación/nutrición → `RECOMMENDATION_ENGINE.md`).
 3. `ai-context/history/` es archivo histórico: **no se lee por defecto** y nunca se borra.
 
 ## 🧭 Cómo continuar el proyecto en un chat nuevo

@@ -163,6 +163,8 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D40 | Meta — refactorización documental por ownership (estado con dueño único; reglas anti-deuda) |
 | D41 | Product Completion Pass — B4 foto (andamio local honesto) + B7 /cuenta manada-first + anticipación honesta ("Pedir de nuevo") + simplificación MVP (sin "Otro"/Marcas/Ofertas ni promesas de suscripción) |
 | D42 | Home logueada = centro de control de la mascota — PetStatusCard (retrato + estado + línea de tiempo del saco + "Plan de {nombre}" con espacio reservado a suscripción) + recompra en dos taps + necesidades (PetActionGrid) + catálogo al final |
+| D43 | Motor de recomendación defendible — cálculo nutricional RER/MER + densidad calórica (`kcal_per_kg`), puertas duras (nunca recomienda incompatible) vs. score de preferencia configurable, explicación verificada (sin afirmaciones no comprobadas). Determinístico, sin IA. Owner: `RECOMMENDATION_ENGINE.md` |
+| D44 | Funnel F4 rediseñado — "carta de plan": el cierre del onboarding **decide, no persuade**. Desktop en 2 columnas que convierte altura en ancho; razones on-demand (disclosure "¿Por qué esta?"); anticipación comprimida con su lugar reservado a suscripción; **"ya come otra marca" = buscador inteligente** que rearma y GUARDA el plan (misma anticipación, sin empujar el cambio de marca). Solo presentación: sin tocar backend ni la tesis de `FUNNEL_TARGET §1.5` |
 
 ## 17. Pendientes
 

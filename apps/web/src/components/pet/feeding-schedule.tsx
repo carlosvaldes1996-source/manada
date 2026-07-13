@@ -26,7 +26,12 @@ export function FeedingSchedule({ pet, mealsPerDay = 2, className }: FeedingSche
     );
   }
 
-  const perDay = dailyRationGrams(pet.weightKg, pet.stage);
+  const perDay = dailyRationGrams({
+    species: pet.species,
+    stage: pet.stage,
+    weightKg: pet.weightKg,
+    neutered: pet.neutered,
+  });
   const perMeal = Math.round(perDay / mealsPerDay);
 
   return (

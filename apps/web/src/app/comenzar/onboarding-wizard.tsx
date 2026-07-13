@@ -152,7 +152,9 @@ export function OnboardingWizard() {
     weightKg: draft.weightKg,
   };
   const liveRation =
-    draft.weightKg && draft.stage ? dailyRationGrams(draft.weightKg, draft.stage) : undefined;
+    draft.weightKg && draft.stage
+      ? dailyRationGrams({ species: draft.species ?? "otro", stage: draft.stage, weightKg: draft.weightKg })
+      : undefined;
 
   return (
     <FunnelShell step={stepIndex + 1} totalSteps={STEP_IDS.length} exitHref="/">
@@ -452,7 +454,7 @@ function WeightStep({
       <Row gap={2} className="rounded-[var(--radius-md)] bg-accent-soft px-3.5 py-2.5 text-sm text-text-primary">
         <Utensils className="mt-0.5 size-4 shrink-0 text-miel-700" aria-hidden />
         <span>
-          Comería <strong>~{dailyRationGrams(weightKg, stage)} g al día</strong>
+          Comería <strong>~{dailyRationGrams({ species, stage, weightKg })} g al día</strong>
           {weightSource !== "exacto" && " (estimado)"}. Con eso nos anticipamos a su recompra.
         </span>
       </Row>

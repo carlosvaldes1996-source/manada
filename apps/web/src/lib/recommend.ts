@@ -1,6 +1,12 @@
 import type { LifeStage, Pet, Product } from "@/types";
 import { formatCLP } from "./format";
-import { dailyRationGrams, estimateRunOut, type RunOutEstimate } from "./anticipation";
+import {
+  dailyEnergyKcal,
+  dailyRationGrams,
+  estimateRunOut,
+  REFERENCE_KCAL_PER_KG,
+  type RunOutEstimate,
+} from "./anticipation";
 
 /**
  * Motor de recomendaciones (el "se adelantó por mí").
@@ -32,42 +38,93 @@ export function pricePerKg(product: Product): number | undefined {
   return kg == null ? undefined : Math.round(product.price.current / kg);
 }
 
-/** ¿El alimento es apropiado para la etapa de la mascota? (sin etapa = universal). */
+/* ------------------------ Reglas del motor (predicados) ------------------- */
+// Predicados compartidos: el MISMO hecho decide el ranking y sostiene la razón
+// que se le muestra al dueño. Nada se afirma sin haberlo verificado aquí.
+
+/** ¿El alimento declara explícitamente la etapa de la mascota? (no "universal"). */
+function declaresStage(product: Product, pet: Pet): boolean {
+  return Boolean(product.stage?.includes(pet.stage));
+}
+
+/** ¿Apto para la etapa? Universal (sin etapa) o la incluye. */
 function stageAppropriate(product: Product, pet: Pet): boolean {
   return !product.stage || product.stage.length === 0 || product.stage.includes(pet.stage);
 }
 
-/** Puntúa qué tan bien calza un alimento con la mascota (mayor = mejor). */
+/** Condiciones de la mascota para las que ESTE alimento está formulado (verificado). */
+function targetedConditions(product: Product, pet: Pet): string[] {
+  if (!pet.conditions?.length || !product.suitableConditions?.length) return [];
+  return pet.conditions.filter((c) => product.suitableConditions!.includes(c));
+}
+
+/** Condiciones de la mascota para las que el alimento está contraindicado (seguridad). */
+function contraindicatedFor(product: Product, pet: Pet): string[] {
+  if (!pet.conditions?.length || !product.notFor?.length) return [];
+  return pet.conditions.filter((c) => product.notFor!.includes(c));
+}
+
+/* -------------------------------- Ranking --------------------------------- */
+
+/**
+ * PUERTAS DURAS (reglas obligatorias). Un alimento solo es elegible si es de la
+ * especie de la mascota, apto para su etapa y NO está contraindicado para sus
+ * condiciones. Garantía del MVP: **nunca se recomienda un alimento incompatible**.
+ */
+export function isEligibleFood(product: Product, pet: Pet): boolean {
+  return (
+    product.category === "alimento" &&
+    product.species.includes(pet.species) &&
+    stageAppropriate(product, pet) &&
+    contraindicatedFor(product, pet).length === 0
+  );
+}
+
+/**
+ * Pesos del score de PREFERENCIA (se aplica solo sobre alimentos ya elegibles).
+ * Reglas explícitas en un solo lugar: cada criterio suma su aporte, mayor total =
+ * mejor calce. Fácil de ajustar sin tocar la lógica. (Futuro: `sizeMatch`,
+ * `weightManagement`, valor por 1.000 kcal — ver RECOMMENDATION_ENGINE.md.)
+ */
+export const RANKING_WEIGHTS = {
+  stageExact: 3, // etapa declarada para la mascota (vs. fórmula universal)
+  conditionTarget: 3, // formulado para una condición de la mascota
+  availability: 2, // en stock
+  editorialRating: 1, // valoración editorial (desempate)
+} as const;
+
+/** Puntúa el calce por preferencia (asume el alimento ya pasó las puertas). */
 function scoreFood(product: Product, pet: Pet): number {
   let score = 0;
-  if (pet.stage && product.stage?.includes(pet.stage)) score += 4;
-  if (product.stock > 0) score += 2;
-  if (product.subscribable) score += 1;
-  score += (product.rating?.value ?? 0) / 10; // desempate fino por valoración
+  if (declaresStage(product, pet)) score += RANKING_WEIGHTS.stageExact;
+  if (targetedConditions(product, pet).length > 0) score += RANKING_WEIGHTS.conditionTarget;
+  if (product.stock > 0) score += RANKING_WEIGHTS.availability;
+  score += ((product.rating?.value ?? 0) / 5) * RANKING_WEIGHTS.editorialRating;
   return score;
 }
 
 /**
- * Alimentos para la especie de la mascota, ordenados de mejor a peor calce
- * (etapa, stock, valoración). Base para la recomendada y sus alternativas.
+ * Alimentos ELEGIBLES para la mascota (pasan las puertas duras), ordenados de
+ * mejor a peor calce. Base para la recomendada y sus alternativas: todo lo que
+ * sale de aquí es, por construcción, compatible con la mascota.
  */
 export function recommendFoodRanked(pet: Pet, products: Product[]): Product[] {
   return products
-    .filter((p) => p.category === "alimento" && p.species.includes(pet.species))
+    .filter((p) => isEligibleFood(p, pet))
     .sort((a, b) => scoreFood(b, pet) - scoreFood(a, pet));
 }
 
 /**
  * Mejor alimento para la mascota (la que elegiríamos): el primero del ranking.
- * Devuelve `undefined` si el catálogo no tiene nada para su especie.
+ * Devuelve `undefined` si el catálogo no tiene nada compatible para su perfil.
  */
 export function recommendFood(pet: Pet, products: Product[]): Product | undefined {
   return recommendFoodRanked(pet, products)[0];
 }
 
 /**
- * Alternativas "igual de válidas" al alimento elegido (FUNNEL_TARGET §1.5): misma
- * especie, **etapa apropiada** (nunca comida de cachorro para un adulto), en stock,
+ * Alternativas "igual de válidas" al alimento elegido (FUNNEL_TARGET §1.5): ya
+ * son elegibles (misma especie, etapa apropiada, sin contraindicación), en stock,
  * excluyendo la elegida. No son de segunda: matan la sensación de una sola vía.
  */
 export function recommendFoodAlternatives(
@@ -77,36 +134,64 @@ export function recommendFoodAlternatives(
   limit = 2,
 ): Product[] {
   return recommendFoodRanked(pet, products)
-    .filter((p) => p.id !== chosen.id && p.stock > 0 && stageAppropriate(p, pet))
+    .filter((p) => p.id !== chosen.id && p.stock > 0)
     .slice(0, limit);
 }
 
 /**
- * Las 3 razones concretas por las que este alimento le calza a la mascota,
- * atadas a su perfil (etapa · talla/peso · condición o marca). Es educación real,
- * no una aseveración: sostiene el "por qué te lo decimos" con transparencia.
+ * Razones por las que este alimento le calza a la mascota — **derivadas solo de
+ * reglas que el motor realmente ejecutó**. No se afirma nada que no se haya
+ * verificado (p. ej. una condición solo se menciona si el alimento la declara).
+ * Sostiene el "por qué te lo decimos" con transparencia honesta.
  */
 export function foodReasons(pet: Pet, food: Product): string[] {
   const reasons: string[] = [];
   const stageTxt = STAGE_LABEL[pet.stage];
 
-  reasons.push(
-    `Fórmula para ${pet.species} ${stageTxt}: la energía y la proteína que ${pet.name} necesita en esta etapa.`,
-  );
-
-  if (pet.weightKg != null) {
-    const approx = pet.weightSource && pet.weightSource !== "exacto" ? "~" : "";
-    reasons.push(`Croqueta y ración pensadas para sus ${approx}${pet.weightKg} kg.`);
+  // 1 · Etapa — verificada por la puerta (el alimento es apto para su etapa).
+  if (declaresStage(food, pet)) {
+    reasons.push(
+      `Formulado para ${pet.species} ${stageTxt}: cubre la energía y los nutrientes de esta etapa.`,
+    );
   } else {
-    reasons.push(`La ajustamos a su tamaño en cuanto nos confirmes su peso.`);
+    reasons.push(`Apto para todas las etapas, incluida la de ${pet.name} (${stageTxt}).`);
   }
 
-  if (pet.conditions?.length) {
-    reasons.push(`Sin los ingredientes que su condición (${pet.conditions.join(", ")}) no tolera.`);
-  } else if (food.rating && food.rating.value >= 4.5) {
-    reasons.push(`${food.brand.name}: una fórmula muy bien valorada por otras familias.`);
+  // 2 · Condición — SOLO si el alimento la declara. Nunca se afirma sin dato.
+  const targeted = targetedConditions(food, pet);
+  if (targeted.length > 0) {
+    reasons.push(`Formulado para su condición (${targeted.join(", ")}).`);
+  }
+
+  // 3 · Ración — cálculo real RER/MER si hay peso (transparente y verificable).
+  if (pet.weightKg != null) {
+    const approx = pet.weightSource && pet.weightSource !== "exacto" ? "~" : "";
+    const profile = {
+      species: pet.species,
+      stage: pet.stage,
+      weightKg: pet.weightKg,
+      neutered: pet.neutered,
+    };
+    const energy = dailyEnergyKcal(profile);
+    if (food.kcalPerKg) {
+      const grams = dailyRationGrams(profile, food.kcalPerKg);
+      reasons.push(
+        `Ración calculada para sus ${approx}${pet.weightKg} kg: ~${grams} g/día (${energy} kcal), según la densidad de este alimento.`,
+      );
+    } else {
+      reasons.push(
+        `Su requerimiento es ~${energy} kcal/día, calculado con sus ${approx}${pet.weightKg} kg y su etapa.`,
+      );
+    }
   } else {
-    reasons.push(`${food.brand.name}: la elegimos por su perfil, no por inventario.`);
+    reasons.push(`Calcularemos su ración exacta en cuanto nos confirmes su peso.`);
+  }
+
+  // 4 · Cierre editorial honesto — solo si hay valoración alta y queda espacio.
+  if (reasons.length < 3 && food.rating && food.rating.value >= 4.5) {
+    reasons.push(
+      `${food.brand.name}: muy bien valorada por otras familias (${food.rating.value.toFixed(1)}★).`,
+    );
   }
 
   return reasons.slice(0, 3);
@@ -148,27 +233,42 @@ export function recommendComplements(pet: Pet, products: Product[], limit = 4): 
 }
 
 export interface FoodPlan {
-  /** Ración diaria estimada en gramos (peso + etapa). */
+  /** Requerimiento energético diario (MER, kcal) — base del cálculo. */
+  energyKcal: number;
+  /** Ración diaria en gramos (MER ÷ densidad calórica del alimento). */
   rationGrams: number;
   /** Duración estimada del saco para esta mascota. */
   estimate: RunOutEstimate;
   /** Precio por kilo del saco recomendado, si aplica. */
   pricePerKg?: number;
+  /** true si se usó la densidad de referencia (el producto no declara kcal/kg). */
+  densityAssumed: boolean;
 }
 
 /**
- * Plan de alimentación de un saco recién comprado: cuánto come al día, cuántos
- * días le dura y cuándo habría que reponerlo (saco lleno → `daysSincePurchase=0`).
- * Reutiliza el motor de anticipación para que la fecha sea coherente con la app.
+ * Plan de alimentación de un saco recién comprado: cuánta energía necesita, cuánto
+ * come al día (según la densidad del alimento), cuántos días le dura y cuándo
+ * reponerlo (saco lleno → `daysSincePurchase=0`). Reutiliza el motor RER/MER para
+ * que la ración y la fecha sean coherentes en toda la app.
  */
 export function foodPlan(pet: Pet, product: Product): FoodPlan | undefined {
   if (pet.weightKg == null) return undefined;
   const kg = bagKg(product);
   if (kg == null) return undefined;
-  const rationGrams = dailyRationGrams(pet.weightKg, pet.stage);
+  const profile = {
+    species: pet.species,
+    stage: pet.stage,
+    weightKg: pet.weightKg,
+    neutered: pet.neutered,
+  };
+  const energyKcal = dailyEnergyKcal(profile);
+  const kcalPerKg = product.kcalPerKg ?? REFERENCE_KCAL_PER_KG;
+  const rationGrams = dailyRationGrams(profile, kcalPerKg);
   return {
+    energyKcal,
     rationGrams,
     estimate: estimateRunOut(kg, rationGrams, 0),
     pricePerKg: Math.round(product.price.current / kg),
+    densityAssumed: product.kcalPerKg == null,
   };
 }

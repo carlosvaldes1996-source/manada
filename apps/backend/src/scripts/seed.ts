@@ -310,6 +310,13 @@ export default async function seedManadaData({ container }: ExecArgs) {
   //                                                 lo CALCULA el backend, no se guarda)
   //   rating                           → number   (0–5)
   //   review_count                     → number
+  //   kcal_per_kg                      → number   (SOLO alimento; energía metabolizable
+  //                                                kcal/kg — base del cálculo de ración RER/MER)
+  //   suitable_conditions              → condiciones que atiende, separadas por coma
+  //                                       (vocab: Sobrepeso, Piel sensible, Problemas renales,
+  //                                        Articulaciones, Digestión sensible)
+  //   not_for                          → condiciones contraindicadas, separadas por coma
+  //                                       (mismo vocab; el motor NUNCA recomienda si calza)
   //
   // Nota: el Admin guarda metadata como strings; tanto el mapper como el
   // middleware de precio aceptan string o valor nativo (boolean/number).
@@ -351,6 +358,7 @@ export default async function seedManadaData({ container }: ExecArgs) {
             subscription_discount_percentage: 15,
             rating: 4.8,
             review_count: 212,
+            kcal_per_kg: 3700,
           },
           weight: 3000,
           status: ProductStatus.PUBLISHED,
@@ -380,6 +388,7 @@ export default async function seedManadaData({ container }: ExecArgs) {
             subscription_discount_percentage: 12,
             rating: 4.7,
             review_count: 489,
+            kcal_per_kg: 3800,
           },
           weight: 15000,
           status: ProductStatus.PUBLISHED,
@@ -409,6 +418,8 @@ export default async function seedManadaData({ container }: ExecArgs) {
             subscription_discount_percentage: 10,
             rating: 4.9,
             review_count: 76,
+            kcal_per_kg: 3900,
+            suitable_conditions: "Problemas renales",
           },
           weight: 2000,
           status: ProductStatus.PUBLISHED,
@@ -438,6 +449,7 @@ export default async function seedManadaData({ container }: ExecArgs) {
             subscription_discount_percentage: 12,
             rating: 4.6,
             review_count: 134,
+            kcal_per_kg: 4100,
           },
           weight: 2000,
           status: ProductStatus.PUBLISHED,

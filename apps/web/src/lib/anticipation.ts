@@ -1,16 +1,82 @@
-import type { LifeStage, Pet } from "@/types";
+import type { LifeStage, Pet, Species } from "@/types";
 
 /**
- * Motor de anticipación (stub con reglas estáticas — el diferenciador del producto).
- * En Fase 4 se reemplaza por datos reales de consumo. Aquí calcula, de forma
- * determinista a partir del perfil de mascota, lo que la UI "se adelanta" a ofrecer.
- * Ver DESIGN_SYSTEM §12.2 y UX.md §3.
+ * Motor de anticipación + nutrición (determinístico, sin IA).
+ *
+ * La ración ya no es un "g/kg" plano: se calcula con el estándar veterinario
+ * RER/MER (NRC 2006 / WSAVA) y la densidad calórica real del alimento, para que
+ * cada número sea reproducible y defendible frente a un veterinario. La
+ * anticipación (cuándo se acaba el saco) se deriva de esa ración. Ver UX.md §3.
  */
 
-/** Ración diaria aproximada en gramos (demo: ~18 g/kg adulto, ajustada por etapa). */
-export function dailyRationGrams(weightKg: number, stage: LifeStage): number {
-  const perKg = stage === "cachorro" ? 26 : stage === "senior" ? 15 : 18;
-  return Math.round(weightKg * perKg);
+/**
+ * Objetivo de peso (proxy de condición corporal). Hoy default `mantener`; el
+ * motor ya lo soporta para cuando el perfil lo capture (trabajo futuro).
+ */
+export type WeightGoal = "mantener" | "bajar" | "subir";
+
+/** Perfil energético mínimo para el cálculo RER/MER. */
+export interface EnergyProfile {
+  species: Species;
+  stage: LifeStage;
+  weightKg: number;
+  neutered?: boolean;
+  weightGoal?: WeightGoal;
+}
+
+/**
+ * Densidad calórica de referencia (kcal/kg de energía metabolizable) para estimar
+ * la ración cuando aún no hay un alimento elegido (onboarding, preview). Valor
+ * típico de alimento seco; en cuanto hay un producto se usa su `kcalPerKg` real.
+ */
+export const REFERENCE_KCAL_PER_KG = 3500;
+
+/**
+ * RER — Requerimiento Energético en Reposo (kcal/día). Fórmula alométrica estándar
+ * `70 × peso^0.75`, válida en todo el rango de peso.
+ */
+export function restingEnergyKcal(weightKg: number): number {
+  return 70 * Math.pow(weightKg, 0.75);
+}
+
+/**
+ * Factor MER (k), como reglas explícitas y editables: MER = RER × k. Base por
+ * especie×etapa + modificadores aditivos por esterilización y objetivo de peso
+ * (solo en adulto/senior; en crecimiento domina el factor de la etapa). Valores
+ * de referencia NRC 2006 / WSAVA — cambiar aquí ajusta todo el motor.
+ */
+const MER_BASE: Record<Species, Record<LifeStage, number>> = {
+  perro: { cachorro: 2.5, adulto: 1.8, senior: 1.4 },
+  gato: { cachorro: 2.5, adulto: 1.4, senior: 1.2 },
+  otro: { cachorro: 2.5, adulto: 1.8, senior: 1.4 }, // fallback = perro
+};
+const NEUTER_ADJUST = -0.2;
+const GOAL_ADJUST: Record<WeightGoal, number> = { mantener: 0, bajar: -0.4, subir: 0.2 };
+
+export function merFactor(pet: EnergyProfile): number {
+  let k = MER_BASE[pet.species][pet.stage];
+  if (pet.stage !== "cachorro") {
+    if (pet.neutered) k += NEUTER_ADJUST;
+    k += GOAL_ADJUST[pet.weightGoal ?? "mantener"];
+  }
+  return Math.min(5, Math.max(0.8, Math.round(k * 100) / 100));
+}
+
+/** MER — Requerimiento Energético de Mantención (kcal/día) = RER × k. */
+export function dailyEnergyKcal(pet: EnergyProfile): number {
+  return Math.round(restingEnergyKcal(pet.weightKg) * merFactor(pet));
+}
+
+/**
+ * Ración diaria en gramos = MER ÷ densidad calórica del alimento. Con el
+ * `kcalPerKg` real del producto la ración es exacta; sin él usa la densidad de
+ * referencia (estimación honesta hasta que se elige un alimento).
+ */
+export function dailyRationGrams(
+  pet: EnergyProfile,
+  kcalPerKg: number = REFERENCE_KCAL_PER_KG,
+): number {
+  return Math.round((dailyEnergyKcal(pet) * 1000) / kcalPerKg);
 }
 
 export interface RunOutEstimate {
@@ -59,14 +125,17 @@ export function bagKgFromFormat(format?: string): number | undefined {
  * alimento y la mascota reales (PET_EXPERIENCE Bloque 6).
  */
 export function petFoodAnticipation(
-  pet: { weightKg?: number; stage: LifeStage },
-  food: { format?: string },
+  pet: { weightKg?: number; stage: LifeStage; species: Species; neutered?: boolean },
+  food: { format?: string; kcalPerKg?: number },
   assignedAtISO?: string,
 ): RunOutEstimate | null {
   if (!pet.weightKg) return null;
   const bagKg = bagKgFromFormat(food.format);
   if (!bagKg) return null;
-  const ration = dailyRationGrams(pet.weightKg, pet.stage);
+  const ration = dailyRationGrams(
+    { species: pet.species, stage: pet.stage, weightKg: pet.weightKg, neutered: pet.neutered },
+    food.kcalPerKg,
+  );
   const assignedAt = assignedAtISO ? new Date(assignedAtISO).getTime() : Date.now();
   const daysSince = Math.max(0, Math.floor((Date.now() - assignedAt) / 86_400_000));
   return estimateRunOut(bagKg, ration, daysSince);

@@ -64,7 +64,18 @@ export function ProductView({
   // selector de contexto, B1) — informativas, no transaccionales (D39).
   const bagKg = product.format && /kg/i.test(product.format) ? parseFloat(product.format) : undefined;
   const isFood = product.category === "alimento";
-  const ration = isFood && activePet?.weightKg ? dailyRationGrams(activePet.weightKg, activePet.stage) : undefined;
+  const ration =
+    isFood && activePet?.weightKg
+      ? dailyRationGrams(
+          {
+            species: activePet.species,
+            stage: activePet.stage,
+            weightKg: activePet.weightKg,
+            neutered: activePet.neutered,
+          },
+          product.kcalPerKg,
+        )
+      : undefined;
   const duration = isFood && bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
   const pricePerKg = bagKg ? Math.round(product.price.current / bagKg) : undefined;
 
