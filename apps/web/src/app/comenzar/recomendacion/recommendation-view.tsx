@@ -13,7 +13,6 @@ import {
   Store,
   Repeat,
   RotateCcw,
-  ChevronRight,
   ChevronDown,
   HelpCircle,
 } from "lucide-react";
@@ -35,7 +34,7 @@ import { fade, fadeInUp } from "@/lib/motion";
 import { trackRecommendationShown, trackSubscription } from "@/lib/analytics";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
-import type { Pet, Product } from "@/types";
+import type { Product } from "@/types";
 import {
   recommendFoodRanked,
   recommendFoodAlternatives,
@@ -105,7 +104,6 @@ export function RecommendationView({ products }: { products: Product[] }) {
   // eligiendo una alternativa (recommended) o su marca de siempre (owned).
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [planMode, setPlanMode] = useState<PlanMode>("recommended");
-  const [altOpen, setAltOpen] = useState(false);
   const [brandOpen, setBrandOpen] = useState(false);
 
   const food = useMemo(
@@ -155,11 +153,10 @@ export function RecommendationView({ products }: { products: Product[] }) {
   const exitHref = isAuthed ? "/cuenta/mascotas" : STORE_HREF;
   const weightEstimated = Boolean(activePet.weightSource && activePet.weightSource !== "exacto");
 
-  /** Elegir una alternativa igual de válida (la COMPRA): rearma el plan y cierra el sheet. */
+  /** Elegir una alternativa igual de válida (la COMPRA): rearma el plan. */
   function chooseAlternative(id: string) {
     setSelectedId(id);
     setPlanMode("recommended");
-    setAltOpen(false);
   }
 
   /** Elegir la marca que ya come (la TIENE): rearma el plan en modo "owned" y cierra. */
@@ -220,6 +217,9 @@ export function RecommendationView({ products }: { products: Product[] }) {
     );
   }
 
+  // Hasta 2 alternativas lado a lado con la destacada — no una lista larga.
+  const sideAlternatives = alternatives.slice(0, 2);
+
   return (
     <FunnelShell exitHref={exitHref}>
       <Section spacing="md">
@@ -227,145 +227,57 @@ export function RecommendationView({ products }: { products: Product[] }) {
           variants={reduced ? fade : fadeInUp}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-4xl"
+          className="mx-auto w-full max-w-5xl"
         >
           <Stack gap={6}>
-            {/* Cierre del onboarding: no "paso 6" sino "listo". Sin párrafo: ya convenció. */}
+            {/* Cierre del onboarding: check + "plan listo", con la ración como prueba concreta. */}
             <Stack gap={2} align="center" className="text-center">
-              <span className="overline inline-flex items-center gap-1.5 text-text-brand">
-                <Sparkles className="size-3.5" aria-hidden /> El perfil de {activePet.name} está listo
+              <span className="grid size-12 place-items-center rounded-full bg-success-soft text-success-strong">
+                <Check className="size-6" aria-hidden />
               </span>
               <h1 className="display-l text-text-primary">
-                El plan de <span className="pet-name">{activePet.name}</span>
+                ¡Plan listo para <span className="pet-name">{activePet.name}</span>!
               </h1>
+              {plan && (
+                <p className="body-l text-text-secondary">
+                  Necesita <strong className="text-text-primary">~{plan.rationGrams} g</strong> al día
+                  {weightEstimated && " (estimado)"}
+                </p>
+              )}
             </Stack>
 
-            {/* LA CARTA DE PLAN — dos columnas en desktop: "decidir" | "el valor".
-                Convierte altura en ancho; el CTA queda arriba a la vista sin scroll. */}
-            <div className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-border-default bg-surface p-6 shadow-sm lg:flex-row lg:gap-8 lg:p-8">
-              {/* Columna A — decidir */}
-              <Stack gap={4} className="min-w-0 flex-1">
-                <Row gap={4} align="start">
-                  <div className="grid size-[84px] shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
-                    <ProductImage
-                      image={food.imageUrl}
-                      alt={`${food.brand.name} ${food.name}`}
-                      imgClassName="p-2"
-                      emojiClassName="text-4xl"
-                    />
-                  </div>
-                  <Stack gap={1} className="min-w-0 flex-1">
-                    <span className="overline text-text-secondary">{food.brand.name}</span>
-                    <h2 className="heading-3 text-text-primary">{food.name}</h2>
-                    {food.rating && <Rating value={food.rating.value} count={food.rating.count} />}
-                    <Price now={food.price.current} was={food.price.compareAt} size="lg" />
-                  </Stack>
-                </Row>
-
-                {/* Etiqueta del plan, según de qué comida esté hecho */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {isOwned ? (
-                    <>
-                      <Badge variant="neutral">La comida de {activePet.name}</Badge>
-                      <button
-                        type="button"
-                        onClick={resetToRecommended}
-                        className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-brand underline-offset-4 hover:underline"
-                      >
-                        <RotateCcw className="size-3.5" aria-hidden /> ver la que sugerimos
-                      </button>
-                    </>
-                  ) : isRecommended ? (
-                    <Badge variant="brand" icon={<Sparkles className="size-3.5" aria-hidden />}>
-                      La que elegiríamos para {activePet.name}
-                    </Badge>
-                  ) : (
-                    <>
-                      <Badge variant="neutral">Tu elección para {activePet.name}</Badge>
-                      <button
-                        type="button"
-                        onClick={resetToRecommended}
-                        className="text-[13px] font-semibold text-text-brand underline-offset-4 hover:underline"
-                      >
-                        ver la que sugerimos
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Salidas 1 y 2: me gusta (primary) · no me convence (bajo demanda) */}
-                <Stack gap={2} className="border-t border-border-default pt-4">
-                  {isOwned ? (
-                    <>
-                      <Button
-                        size="lg"
-                        block
-                        onClick={savePlan}
-                        trailingIcon={<Check className="size-4" aria-hidden />}
-                      >
-                        Guardar el plan de {activePet.name}
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={addToOrder}
-                        className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
-                      >
-                        <Repeat className="size-4" aria-hidden /> o reponerla ahora
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        size="lg"
-                        block
-                        onClick={addToOrder}
-                        trailingIcon={<ArrowRight className="size-4" aria-hidden />}
-                      >
-                        Sumar al pedido de {activePet.name}
-                      </Button>
-                      {alternatives.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setAltOpen(true)}
-                          className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
-                        >
-                          ¿No te convence? Ver otras opciones ({alternatives.length})
-                          <ChevronRight className="size-4" aria-hidden />
-                        </button>
-                      )}
-                    </>
-                  )}
-                </Stack>
-
-                {/* Razones bajo demanda: el onboarding ya convenció, no las mostramos por defecto */}
-                {!isOwned && whyReasons.length > 0 && (
-                  <WhyDisclosure petName={activePet.name} reasons={whyReasons} />
-                )}
-              </Stack>
-
-              {/* Columna B — el valor: anticipación (reservada) + una línea de datos */}
-              <Stack gap={3} className="lg:w-[320px] lg:shrink-0 lg:border-l lg:border-border-default lg:pl-8">
-                <AnticipationProposal key={food.id} petName={activePet.name} plan={plan} food={food} />
-                {plan && (
-                  <p className="text-sm text-text-secondary">
-                    Come <strong className="text-text-primary">~{plan.rationGrams} g</strong>/día
-                    {plan.pricePerKg && (
-                      <>
-                        {" · rinde "}
-                        <strong className="text-text-primary">{formatCLP(plan.pricePerKg)}</strong>/kg
-                      </>
-                    )}
-                  </p>
-                )}
-                {weightEstimated && (
-                  <p className="text-[13px] text-text-muted">
-                    Estimado con su peso aproximado — al confirmarlo, afinamos el plan.
-                  </p>
-                )}
-              </Stack>
+            {/* La destacada + hasta 2 alternativas, lado a lado (no en una lista escondida) */}
+            <div
+              className={cn(
+                "grid gap-4 items-start",
+                sideAlternatives.length > 0 && "lg:grid-cols-[minmax(0,1.35fr)_repeat(2,minmax(0,1fr))]",
+              )}
+            >
+              <FeaturedFoodCard
+                key={food.id}
+                petName={activePet.name}
+                food={food}
+                plan={plan}
+                isRecommended={isRecommended}
+                isOwned={isOwned}
+                weightEstimated={weightEstimated}
+                reasons={whyReasons}
+                onResetToRecommended={resetToRecommended}
+                onAddToOrder={addToOrder}
+                onSavePlan={savePlan}
+              />
+              {sideAlternatives.map((alt) => (
+                <AltCard
+                  key={alt.id}
+                  product={alt}
+                  angle={alternativeAngle(alt, food, activePet)}
+                  petName={activePet.name}
+                  onChoose={() => chooseAlternative(alt.id)}
+                />
+              ))}
             </div>
 
-            {/* Salidas 3 y 4: seguir mirando · ya come otra marca — de primer nivel, no enterradas */}
+            {/* Salidas de segundo nivel: seguir mirando · ya come otra marca */}
             <div className="grid gap-3 sm:grid-cols-2">
               <Button variant="ghost" block asChild>
                 <Link href={STORE_HREF}>
@@ -385,17 +297,6 @@ export function RecommendationView({ products }: { products: Product[] }) {
         </motion.div>
       </Section>
 
-      {/* Sheet "no me convence": alternativas igual de válidas, bajo demanda */}
-      <AlternativesSheet
-        open={altOpen}
-        onOpenChange={setAltOpen}
-        petName={activePet.name}
-        alternatives={alternatives}
-        chosen={food}
-        pet={activePet}
-        onChoose={chooseAlternative}
-      />
-
       {/* Sheet "ya come otra marca": buscador inteligente — su marca rearma y guarda el plan */}
       <BrandFoodSheet
         open={brandOpen}
@@ -409,7 +310,7 @@ export function RecommendationView({ products }: { products: Product[] }) {
   );
 }
 
-/* --------------------------------- Anticipación --------------------------------- */
+/* ------------------------------- Tarjeta destacada ------------------------------- */
 
 /** Días antes de que se acabe en que ofrecemos avisar (preferencia local). */
 const LEAD_OPTIONS: { days: number; label: string }[] = [
@@ -425,113 +326,263 @@ function minusDays(date: Date, days: number): Date {
 }
 
 /**
- * Módulo de anticipación — el corazón de la propuesta (FUNNEL_TARGET §1.5, principio 2),
- * comprimido a ~2 líneas pero con su lugar reservado: aquí crecerá la suscripción/recompra
- * recurrente post-tracción, sin rediseñar la pantalla. El sistema ya sabe cuándo se acaba;
- * el usuario solo confirma o ajusta (los días de aviso viven en un popover para no sumar
- * altura). Límite honesto (D29): recordatorio, nunca cobro ni envío recurrente.
+ * Tarjeta destacada — la comida elegida (recomendada, otra elegida, o la que ya tiene)
+ * con su ración y el CTA principal. "Suscribirme a este" es visualmente una suscripción
+ * pero por dentro es el mismo recordatorio de siempre (D29: nunca cobro ni envío
+ * recurrente) — el aviso real de qué implica vive junto al botón cuando se confirma.
+ * Sumar el pedido real (comprar ahora) queda como salida secundaria, sin desaparecer.
  */
-function AnticipationProposal({ petName, plan, food }: { petName: string; plan?: FoodPlan; food?: Product }) {
+function FeaturedFoodCard({
+  petName,
+  food,
+  plan,
+  isRecommended,
+  isOwned,
+  weightEstimated,
+  reasons,
+  onResetToRecommended,
+  onAddToOrder,
+  onSavePlan,
+}: {
+  petName: string;
+  food: Product;
+  plan?: FoodPlan;
+  isRecommended: boolean;
+  isOwned: boolean;
+  weightEstimated: boolean;
+  reasons: string[];
+  onResetToRecommended: () => void;
+  onAddToOrder: () => void;
+  onSavePlan: () => void;
+}) {
   const [confirmed, setConfirmed] = useState(false);
   const [leadDays, setLeadDays] = useState(5);
 
-  /**
-   * Confirmar el recordatorio = intención de recompra recurrente. Es el proxy
-   * de "suscripción" del embudo mientras el moat recurrente sigue diferido (D29).
-   */
-  function confirm() {
+  /** "Suscribirme" = confirmar el recordatorio (proxy de intención de recompra, D29). */
+  function confirmReminder() {
     setConfirmed(true);
-    if (food) trackSubscription(food, "reminder");
+    trackSubscription(food, "reminder");
   }
 
-  const eyebrow = (
-    <span className="overline inline-flex items-center gap-1.5 text-miel-700">
-      <BellRing className="size-3.5" aria-hidden /> Nos anticipamos por {petName}
-    </span>
-  );
-
-  // Sin peso no hay fecha: invitamos a completarlo (honesto, sin inventar).
-  if (!plan) {
-    return (
-      <div className="rounded-[var(--radius-lg)] border-[1.5px] border-miel-300 bg-accent-soft p-4">
-        {eyebrow}
-        <p className="mt-1.5 text-sm text-text-primary">
-          Confirma su peso y calculamos cuándo se le acaba para avisarte a tiempo.
-        </p>
-      </div>
-    );
-  }
-
-  const reminderDate = minusDays(plan.estimate.runOutDate, leadDays);
+  const compareAt = food.price.compareAt;
+  const savingsPct =
+    compareAt && compareAt > food.price.current
+      ? Math.round((1 - food.price.current / compareAt) * 100)
+      : undefined;
+  const reminderDate = plan ? minusDays(plan.estimate.runOutDate, leadDays) : undefined;
 
   return (
-    <div className="rounded-[var(--radius-lg)] border-[1.5px] border-miel-300 bg-accent-soft p-4">
-      {eyebrow}
-      {confirmed ? (
-        <div className="mt-1.5 flex items-start gap-2">
-          <Check className="mt-0.5 size-4 shrink-0 text-[var(--success)]" aria-hidden />
-          <p className="text-sm text-text-primary">
-            Te avisaremos alrededor del{" "}
-            <strong className="font-semibold">{formatDeliveryDate(reminderDate)}</strong>.{" "}
+    <div className="flex flex-col gap-4 rounded-[var(--radius-xl)] border-2 border-terracota-300 bg-surface p-6 shadow-md">
+      {/* Etiqueta del plan, según de qué comida esté hecho */}
+      <div className="flex flex-wrap items-center gap-2">
+        {isOwned ? (
+          <>
+            <Badge variant="neutral">La comida de {petName}</Badge>
             <button
               type="button"
-              onClick={() => setConfirmed(false)}
-              className="font-semibold text-text-brand underline-offset-4 hover:underline"
+              onClick={onResetToRecommended}
+              className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-brand underline-offset-4 hover:underline"
             >
-              Cambiar
+              <RotateCcw className="size-3.5" aria-hidden /> ver la que sugerimos
             </button>
-          </p>
-        </div>
-      ) : (
-        <>
-          <p className="mt-1.5 text-sm text-text-primary">
-            <strong className="price text-lg">Le durará ~{pluralize(plan.estimate.daysLeft, "día")}</strong>
-            <span className="text-text-secondary"> · aviso {formatDeliveryDate(reminderDate)}</span>
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button
-              variant="subscribe"
-              size="sm"
-              leadingIcon={<Check className="size-4" aria-hidden />}
-              onClick={confirm}
+          </>
+        ) : isRecommended ? (
+          <Badge variant="brand" icon={<Sparkles className="size-3.5" aria-hidden />}>
+            NUESTRA MEJOR RECOMENDACIÓN
+          </Badge>
+        ) : (
+          <>
+            <Badge variant="neutral">Tu elección para {petName}</Badge>
+            <button
+              type="button"
+              onClick={onResetToRecommended}
+              className="text-[13px] font-semibold text-text-brand underline-offset-4 hover:underline"
             >
-              Confirmar recordatorio
+              ver la que sugerimos
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="mx-auto grid aspect-square w-full max-w-[200px] place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+        <ProductImage
+          image={food.imageUrl}
+          alt={`${food.brand.name} ${food.name}`}
+          imgClassName="p-4"
+          emojiClassName="text-6xl"
+        />
+      </div>
+
+      <Stack gap={1} align="center" className="text-center">
+        <span className="overline text-text-secondary">{food.brand.name}</span>
+        <h2 className="heading-3 text-text-primary">{food.name}</h2>
+        {food.rating && <Rating value={food.rating.value} count={food.rating.count} />}
+        <Row gap={2} align="baseline" className="flex-wrap justify-center">
+          <Price now={food.price.current} was={compareAt} size="lg" />
+          {savingsPct !== undefined && <Badge variant="success">Ahorras {savingsPct}%</Badge>}
+        </Row>
+        {plan && (
+          <p className="text-sm text-text-secondary">
+            Come <strong className="text-text-primary">~{plan.rationGrams} g</strong>/día
+            {plan.pricePerKg && (
+              <>
+                {" · rinde "}
+                <strong className="text-text-primary">{formatCLP(plan.pricePerKg)}</strong>/kg
+              </>
+            )}
+          </p>
+        )}
+        {weightEstimated && (
+          <p className="text-[13px] text-text-muted">Estimado con su peso aproximado.</p>
+        )}
+      </Stack>
+
+      <Stack gap={2} className="border-t border-border-default pt-4">
+        {isOwned ? (
+          <>
+            <Button size="lg" block onClick={onSavePlan} trailingIcon={<Check className="size-4" aria-hidden />}>
+              Guardar el plan de {petName}
             </Button>
-            <Popover>
-              <PopoverTrigger className="text-[13px] font-semibold text-text-secondary underline-offset-4 hover:text-text-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)]">
-                Ajustar
-              </PopoverTrigger>
-              <PopoverContent className="w-auto">
-                <div className="flex flex-col gap-2">
-                  <span className="caption text-text-secondary">Avisarme…</span>
-                  <div
-                    className="flex flex-wrap gap-2"
-                    role="group"
-                    aria-label="Cuándo avisarte"
-                  >
-                    {LEAD_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.days}
-                        type="button"
-                        aria-pressed={leadDays === opt.days}
-                        onClick={() => setLeadDays(opt.days)}
-                        className={
-                          "rounded-[var(--radius-pill)] border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)] " +
-                          (leadDays === opt.days
-                            ? "border-miel-500 bg-miel-100 text-neutral-800"
-                            : "border-border-default text-text-secondary hover:bg-subtle")
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+            <button
+              type="button"
+              onClick={onAddToOrder}
+              className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
+            >
+              <Repeat className="size-4" aria-hidden /> o reponerla ahora
+            </button>
+          </>
+        ) : !plan ? (
+          <>
+            <p className="text-center text-sm text-text-secondary">
+              Confirma su peso y calculamos cuándo se le acaba para avisarte a tiempo.
+            </p>
+            <Button size="lg" block onClick={onAddToOrder} trailingIcon={<ArrowRight className="size-4" aria-hidden />}>
+              Sumar al pedido de {petName}
+            </Button>
+          </>
+        ) : confirmed ? (
+          <>
+            <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-accent-soft p-3">
+              <Check className="mt-0.5 size-4 shrink-0 text-[var(--success)]" aria-hidden />
+              <p className="text-sm text-text-primary">
+                Te avisaremos alrededor del{" "}
+                <strong className="font-semibold">{formatDeliveryDate(reminderDate!)}</strong> — solo un aviso, sin
+                cobro automático.{" "}
+                <button
+                  type="button"
+                  onClick={() => setConfirmed(false)}
+                  className="font-semibold text-text-brand underline-offset-4 hover:underline"
+                >
+                  Cambiar
+                </button>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onAddToOrder}
+              className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
+            >
+              <ArrowRight className="size-4" aria-hidden /> o sumar al pedido ahora
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-center text-sm text-text-secondary">
+              Le durará ~{pluralize(plan.estimate.daysLeft, "día")} · te avisamos{" "}
+              {formatDeliveryDate(reminderDate!)}
+            </p>
+            <Row gap={3} align="center" className="flex-wrap justify-center">
+              <Button
+                variant="subscribe"
+                size="lg"
+                leadingIcon={<BellRing className="size-4" aria-hidden />}
+                onClick={confirmReminder}
+              >
+                Suscribirme a este
+              </Button>
+              <Popover>
+                <PopoverTrigger className="text-[13px] font-semibold text-text-secondary underline-offset-4 hover:text-text-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)]">
+                  Ajustar
+                </PopoverTrigger>
+                <PopoverContent className="w-auto">
+                  <div className="flex flex-col gap-2">
+                    <span className="caption text-text-secondary">Avisarme…</span>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Cuándo avisarte">
+                      {LEAD_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.days}
+                          type="button"
+                          aria-pressed={leadDays === opt.days}
+                          onClick={() => setLeadDays(opt.days)}
+                          className={
+                            "rounded-[var(--radius-pill)] border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)] " +
+                            (leadDays === opt.days
+                              ? "border-miel-500 bg-miel-100 text-neutral-800"
+                              : "border-border-default text-text-secondary hover:bg-subtle")
+                          }
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </>
-      )}
+                </PopoverContent>
+              </Popover>
+            </Row>
+            <button
+              type="button"
+              onClick={onAddToOrder}
+              className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
+            >
+              <ArrowRight className="size-4" aria-hidden /> o sumar al pedido ahora
+            </button>
+          </>
+        )}
+      </Stack>
+
+      {!isOwned && reasons.length > 0 && <WhyDisclosure petName={petName} reasons={reasons} />}
+    </div>
+  );
+}
+
+/**
+ * Tarjeta lateral de una alternativa igual de válida (no de segunda): elegirla
+ * promueve esa comida a destacada y rearma el plan completo.
+ */
+function AltCard({
+  product,
+  angle,
+  petName,
+  onChoose,
+}: {
+  product: Product;
+  angle: string;
+  petName: string;
+  onChoose: () => void;
+}) {
+  const perKg = pricePerKg(product);
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border-default bg-surface p-5">
+      <div className="mx-auto grid size-16 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-subtle text-3xl">
+        <ProductImage image={product.imageUrl} alt={product.name} imgClassName="p-1.5" />
+      </div>
+      <Stack gap={1} align="center" className="text-center">
+        <span className="overline text-text-secondary">{product.brand.name}</span>
+        <p className="font-semibold text-text-primary">{product.name}</p>
+        <p className="text-[13px] text-text-brand">{angle}</p>
+        <Row gap={2} align="baseline" className="justify-center">
+          <Price now={product.price.current} was={product.price.compareAt} size="sm" />
+        </Row>
+        {perKg && <span className="text-[13px] text-text-secondary">{formatCLP(perKg)}/kg</span>}
+      </Stack>
+      <Stack gap={2}>
+        <Button size="sm" variant="secondary" block onClick={onChoose}>
+          Elegir para {petName}
+        </Button>
+        <Button size="sm" variant="link" block asChild>
+          <Link href={`/producto/${product.slug}`}>Ver detalle</Link>
+        </Button>
+      </Stack>
     </div>
   );
 }
@@ -563,91 +614,6 @@ function WhyDisclosure({ petName, reasons }: { petName: string; reasons: string[
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-/**
- * Sheet "no me convence" (salida 2): alternativas igual de válidas (no de segunda).
- * Elegir una rearma el plan y cierra. Bajo demanda: no infla el scroll de la pantalla.
- */
-function AlternativesSheet({
-  open,
-  onOpenChange,
-  petName,
-  alternatives,
-  chosen,
-  pet,
-  onChoose,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  petName: string;
-  alternatives: Product[];
-  chosen: Product;
-  pet: Pet;
-  onChoose: (id: string) => void;
-}) {
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        title={`Otras opciones para ${petName}`}
-        description="Igual de válidas — elige la que prefieras y rearmamos su plan."
-      >
-        <Stack gap={3}>
-          {alternatives.map((alt) => (
-            <AltRow
-              key={alt.id}
-              product={alt}
-              angle={alternativeAngle(alt, chosen, pet)}
-              petName={petName}
-              onChoose={() => onChoose(alt.id)}
-            />
-          ))}
-        </Stack>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-/** Alternativa "igual de válida": marca + nombre + "mejor si…" + precio; elegirla rearma el plan. */
-function AltRow({
-  product,
-  angle,
-  petName,
-  onChoose,
-}: {
-  product: Product;
-  angle: string;
-  petName: string;
-  onChoose: () => void;
-}) {
-  const perKg = pricePerKg(product);
-  return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border-default bg-surface p-4 sm:flex-row sm:items-center">
-      <span
-        className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-subtle text-3xl"
-        aria-hidden
-      >
-        <ProductImage image={product.imageUrl} alt={product.name} imgClassName="p-1" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <span className="overline text-text-secondary">{product.brand.name}</span>
-        <p className="font-semibold text-text-primary">{product.name}</p>
-        <p className="mt-0.5 text-[13px] text-text-brand">{angle}</p>
-        <div className="mt-1 flex items-baseline gap-2">
-          <Price now={product.price.current} size="sm" />
-          {perKg && <span className="text-[13px] text-text-secondary">· {formatCLP(perKg)}/kg</span>}
-        </div>
-      </div>
-      <Stack gap={2} className="shrink-0">
-        <Button size="sm" variant="secondary" onClick={onChoose}>
-          Elegir para {petName}
-        </Button>
-        <Button size="sm" variant="link" asChild>
-          <Link href={`/producto/${product.slug}`}>Ver detalle</Link>
-        </Button>
-      </Stack>
     </div>
   );
 }
