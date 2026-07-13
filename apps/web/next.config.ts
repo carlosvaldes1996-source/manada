@@ -31,6 +31,19 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // Proxy same-origin para la Store API de Medusa. El navegador del cliente NO
+  // puede llegar a "http://localhost:9000" (esa dirección solo existe dentro del
+  // contenedor); en cambio, pega al mismo origen público (puerto 5000, expuesto)
+  // en /backend/*, y este rewrite lo reenvía internamente al backend. El SSR
+  // sigue golpeando localhost:9000 directo (mismo contenedor, sin pasar por acá).
+  async rewrites() {
+    return [
+      {
+        source: "/backend/:path*",
+        destination: "http://localhost:9000/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

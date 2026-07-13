@@ -20,8 +20,18 @@ import Medusa from "@medusajs/js-sdk";
  * fija `jwtTokenStorageMethod` a propósito (fijarlo a "local" haría throw en server).
  */
 
+/**
+ * En el navegador, "http://localhost:9000" apunta a la máquina del visitante,
+ * no al contenedor — ahí no hay nada escuchando y toda llamada del cliente
+ * (regiones, carrito, sesión) falla con "Load failed". Por eso el navegador
+ * usa el mismo origen público (proxeado a Medusa vía rewrite en next.config.ts);
+ * el servidor (SSR) sigue golpeando localhost:9000 directo, dentro del mismo
+ * contenedor, sin pasar por el proxy.
+ */
 export const MEDUSA_BACKEND_URL =
-  process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000";
+  typeof window !== "undefined"
+    ? `${window.location.origin}/backend`
+    : (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000");
 
 const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
 
