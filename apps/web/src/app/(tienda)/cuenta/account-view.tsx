@@ -6,21 +6,24 @@ import { LogOut, Plus } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Grid } from "@/components/ui/grid";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PetAvatar } from "@/components/pet";
+import { GuestAccountPrompt } from "./guest-account-prompt";
 import { NavIcon } from "@/lib/icons";
-import { ACCOUNT_NAV, LIVE_ACCOUNT_HREFS } from "@/config/nav";
+import { ACCOUNT_NAV, COMING_SOON_ACCOUNT_HREFS, LIVE_ACCOUNT_HREFS } from "@/config/nav";
 import { useSession, useAuthActions, usePet } from "@/hooks";
+import { cn } from "@/lib/utils";
 
 /**
  * Mi cuenta — "tu manada primero" (PET_EXPERIENCE §1.4, B7):
  * - Anónimo → invita a ingresar / crear perfil (no inventa un "Carlos").
  * - Con sesión → saludo real, la MANADA al tope (avatares que navegan al perfil
  *   + alta de otra mascota, cierra O6) y la gestión degradada a secundaria.
- * Solo secciones vivas: nada de cards "Pronto" deshabilitadas (MVP terminado
- * antes que amplio). Cerrar sesión sigue siendo la única salida del estado.
+ * Gestión = secciones vivas + las PROMETIDAS (`COMING_SOON_ACCOUNT_HREFS`):
+ * la suscripción vuelve como card deshabilitada "Próximamente" — se anuncia el
+ * roadmap sin fingir que existe. Cerrar sesión sigue siendo la única salida.
  */
 export function AccountView() {
   const router = useRouter();
@@ -46,23 +49,10 @@ export function AccountView() {
 
   if (status !== "authenticated") {
     return (
-      <Section spacing="lg">
-        <EmptyState
-          icon={<span className="text-5xl">🐾</span>}
-          title="Inicia sesión para ver tu cuenta"
-          description="Entra para gestionar a tu manada, tus pedidos y tus direcciones."
-          action={
-            <Row gap={3} wrap justify="center">
-              <Button asChild>
-                <Link href="/ingresar">Ingresar</Link>
-              </Button>
-              <Button variant="secondary" asChild>
-                <Link href="/comenzar">Crear el perfil de tu mascota</Link>
-              </Button>
-            </Row>
-          }
-        />
-      </Section>
+      <GuestAccountPrompt
+        title="Inicia sesión para ver tu cuenta"
+        description="Entra para gestionar a tu manada, tus pedidos y tus direcciones."
+      />
     );
   }
 
@@ -121,22 +111,41 @@ export function AccountView() {
           </Row>
         </Stack>
 
-        {/* ── Gestión (secundaria): solo secciones vivas, sin placeholders ── */}
+        {/* ── Gestión (secundaria): secciones vivas + prometidas deshabilitadas ── */}
         <Stack gap={3}>
           <span className="overline text-text-secondary">Gestión</span>
           <Grid cols={1} md={2} gap={4}>
-            {ACCOUNT_NAV.filter((item) => LIVE_ACCOUNT_HREFS.has(item.href)).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-border-default bg-surface p-5 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-brand-soft text-text-brand">
-                  <NavIcon name={item.icon} className="size-5" />
-                </span>
-                <span className="text-[15px] font-semibold text-text-primary">{item.label}</span>
-              </Link>
-            ))}
+            {ACCOUNT_NAV.filter(
+              (item) => LIVE_ACCOUNT_HREFS.has(item.href) || COMING_SOON_ACCOUNT_HREFS.has(item.href),
+            ).map((item) => {
+              const live = LIVE_ACCOUNT_HREFS.has(item.href);
+              const base =
+                "flex items-center gap-4 rounded-[var(--radius-lg)] border border-border-default bg-surface p-5";
+              const inner = (
+                <>
+                  <span className="grid size-10 place-items-center rounded-[var(--radius-md)] bg-brand-soft text-text-brand">
+                    <NavIcon name={item.icon} className="size-5" />
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-primary">
+                    {item.label}
+                    {!live && <Badge variant="neutral">Próximamente</Badge>}
+                  </span>
+                </>
+              );
+              return live ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(base, "transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md")}
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <div key={item.href} className={cn(base, "opacity-70")} aria-disabled>
+                  {inner}
+                </div>
+              );
+            })}
           </Grid>
         </Stack>
 

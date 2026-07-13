@@ -13,7 +13,24 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductByHandle(slug);
-  return { title: product ? `${product.brand.name} · ${product.name}` : "Producto" };
+  if (!product) return { title: "Producto" };
+
+  const title = `${product.brand.name} · ${product.name}`;
+  const description = `${product.name}${product.format ? ` (${product.format})` : ""} de ${product.brand.name}. Cómpralo en Manada con despacho a domicilio en Chile.`;
+  const canonical = `/producto/${slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      ...(product.imageUrl ? { images: [{ url: product.imageUrl }] } : {}),
+    },
+  };
 }
 
 export default async function ProductoPage({

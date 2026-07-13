@@ -90,19 +90,29 @@ export const MEGA_MENU: MegaColumn[] = [
 /** Secciones de "Mi cuenta" (UX.md §2.1). */
 export const ACCOUNT_NAV: NavItem[] = [
   { label: "Mis mascotas", href: "/cuenta/mascotas", icon: "PawPrint" },
-  { label: "Mis suscripciones", href: "/cuenta/suscripciones", icon: "RefreshCw" },
+  { label: "Suscripciones", href: "/cuenta/suscripciones", icon: "RefreshCw" },
   { label: "Pedidos", href: "/cuenta/pedidos", icon: "Package" },
   { label: "Direcciones", href: "/cuenta/direcciones", icon: "MapPin" },
-  { label: "Medios de pago", href: "/cuenta/pagos", icon: "CreditCard" },
+  { label: "Mis tarjetas", href: "/cuenta/pagos", icon: "CreditCard" },
   { label: "Boletas", href: "/cuenta/boletas", icon: "Receipt" },
 ];
 
 /**
  * Rutas de "Mi cuenta" YA implementadas (fuente única). El menú móvil solo enlaza
- * estas para no generar 404; el panel de cuenta muestra el resto como "Pronto".
+ * estas para no generar 404; el panel de cuenta muestra además las prometidas
+ * (`COMING_SOON_ACCOUNT_HREFS`) como card deshabilitada.
  */
 export const LIVE_ACCOUNT_HREFS = new Set<string>([
   "/cuenta/mascotas",
   "/cuenta/pedidos",
   "/cuenta/direcciones",
+  "/cuenta/pagos",
 ]);
+
+/**
+ * Rutas de "Mi cuenta" prometidas pero aún sin experiencia real detrás: el panel
+ * las muestra deshabilitadas con badge "Próximamente" (la suscripción es el moat
+ * post-tracción, D22/D29 — se anuncia sin fingir que existe). El menú móvil NO
+ * las enlaza (solo LIVE, para no generar 404).
+ */
+export const COMING_SOON_ACCOUNT_HREFS = new Set<string>(["/cuenta/suscripciones"]);

@@ -19,6 +19,7 @@ sesión; si hay que regenerarlas, ver los prompts en el chat.
 | `login-manana.jpg`    | `/ingresar` · panel lateral                    | Mujer en pijama alimentando a su gato ("Hola de nuevo") |
 | `nosotros-hogar.jpg`  | `/nosotros` · "Por qué existimos"              | Perro comiendo su alimento en casa |
 | `nosotros-peso.jpg`   | `/nosotros` · "Cómo lo hacemos"                | Persona registrando el peso de su gato con el teléfono |
+| `bienvenida.jpg`      | `/bienvenida` · hero (ambas variantes)         | Perro recibiendo la caja de su pedido en la puerta de casa (4:3) |
 
 ## Banners de categoría (`/categoria/[slug]`)
 
@@ -32,6 +33,7 @@ Uno por categoría; se eligen por slug en `category-view.tsx` (`BANNER_BY_SLUG`)
 | `cat-farmacia.jpg`    | farmacia    | Veterinaria auscultando a un perro |
 | `cat-accesorios.jpg`  | accesorios  | Correa, pechera de cuero y juguetes sobre lino |
 | `cat-higiene.jpg`     | higiene     | Perro envuelto en toalla tras el baño |
+| `cat-todo.jpg`        | todo        | Despensa de casa con insumos de mascota + perro y gato mirando (foco `center 45%`) |
 
 ## Íconos de categoría (Home · "Todo en un lugar")
 
@@ -75,7 +77,10 @@ Regla: cada foto tiene un propósito; nada "porque sí".
 - **Especificación común:** cuadrado ≥1200×1200, fondo neutro cálido
   consistente entre todos (los packshots conviven en grillas), JPG q82.
 
-### P2 · Banner de `/categoria/todo` — la puerta principal de la tienda
+### P2 · Banner de `/categoria/todo` — ✅ RESUELTO 2026-07-12
+
+`cat-todo.jpg` colocado + entrada `todo` en `BANNER_BY_SLUG`/`BANNER_POS`
+(`center 45%`). Spec original (por si hay que regenerar):
 
 - **Pantalla / ubicación:** PLP "Todo el catálogo" (destino de "Explorar la
   tienda"). Único slug de entrada frecuente **sin** banner (`BANNER_BY_SLUG`).
@@ -94,7 +99,10 @@ Regla: cada foto tiene un propósito; nada "porque sí".
   side light, terracotta and honey color palette, shallow depth of field,
   photorealistic, no visible brand logos, no text, 16:9."*
 
-### P3 · `/bienvenida` — celebración con rostro (opcional, deleite)
+### P3 · `/bienvenida` — ✅ RESUELTO 2026-07-12
+
+`bienvenida.jpg` colocado en el hero de ambas variantes (logueado e invitado),
+reemplazando el círculo 🎉. Spec original (por si hay que regenerar):
 
 - **Pantalla/ubicación:** hero de la bienvenida post-compra (hoy: 🎉 sobre
   círculo). Con B4, la mascota real ya aparece en el pill de perfil — el slot

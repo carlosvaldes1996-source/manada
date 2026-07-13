@@ -6,7 +6,7 @@ import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { HeaderSearch } from "./header-search";
-import { useCart } from "@/components/providers";
+import { useCart, usePet } from "@/components/providers";
 import { PetSwitcher } from "@/components/pet/pet-switcher";
 import { Logo } from "./logo";
 import { Navbar } from "./navbar";
@@ -27,6 +27,10 @@ export interface HeaderProps {
  * en móvil, el <MobileNav>. Las variantes "checkout" y "marketing" reducen el chrome.
  */
 export function Header({ variant = "default" }: HeaderProps) {
+  // Onboarding completado = hay una mascota activa (invitado o con sesión). La
+  // variante "marketing" solo se monta para anónimos, así que basta con esto.
+  const { activePet } = usePet();
+
   if (variant === "marketing") {
     // Chrome de visitante con TIENDA navegable: el anónimo puede buscar,
     // recorrer categorías y comprar sin cuenta (e-commerce como piso).
@@ -43,8 +47,14 @@ export function Header({ variant = "default" }: HeaderProps) {
             <Button variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
               <Link href="/ingresar">Ingresar</Link>
             </Button>
+            {/* Onboarding ya hecho (mascota activa): el CTA formaliza la cuenta
+                conservando la mascota, en vez de reiniciar el alta ("Comenzar"). */}
             <Button size="sm" asChild>
-              <Link href="/comenzar">Comenzar</Link>
+              {activePet ? (
+                <Link href="/crear-cuenta">Crear cuenta</Link>
+              ) : (
+                <Link href="/comenzar">Comenzar</Link>
+              )}
             </Button>
             <CartButton />
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Truck } from "lucide-react";
@@ -34,6 +34,7 @@ import {
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
+import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
 import { formatRut, isValidRut } from "@/lib/rut";
 import { REGIONS, getComunas } from "@/lib/chile-regions";
 
@@ -59,6 +60,15 @@ export default function CheckoutPage() {
   const { user } = useSession();
   const router = useRouter();
   const cartId = cart?.id;
+
+  // Inició el checkout: se dispara una vez, cuando ya hay ítems que pagar.
+  const beganCheckoutRef = useRef(false);
+  useEffect(() => {
+    if (!beganCheckoutRef.current && items.length > 0) {
+      beganCheckoutRef.current = true;
+      trackBeginCheckout(items, subtotal);
+    }
+  }, [items, subtotal]);
 
   // Datos del comprador (compra como invitado o cliente autenticado).
   const [firstName, setFirstName] = useState("");
@@ -200,6 +210,9 @@ export default function CheckoutPage() {
         setSubmitError(error ?? "No se pudo completar la orden. Intenta de nuevo.");
         return;
       }
+      // Compra realizada: se mide ANTES de vaciar el carrito (aún tenemos los
+      // ítems). `transaction_id` = nº de orden → deduplica en GA4/Ads.
+      trackPurchase({ transactionId: String(order.display_id), value: order.total, items });
       // Orden creada: vaciamos el carrito (uno nuevo) y vamos a la confirmación.
       await clear();
       router.push(`/checkout/confirmacion?orden=${order.display_id}`);

@@ -6,7 +6,11 @@ import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 
-export const metadata: Metadata = { title: "¡Compra confirmada!" };
+// Página post-compra, atada a una orden concreta (nº en la URL): nunca se indexa.
+export const metadata: Metadata = {
+  title: "¡Compra confirmada!",
+  robots: { index: false, follow: false },
+};
 
 /**
  * Confirmación post-compra (Fase 5 · Etapa 3, D24). La orden ya está creada en

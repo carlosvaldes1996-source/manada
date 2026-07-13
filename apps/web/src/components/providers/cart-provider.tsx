@@ -13,6 +13,7 @@ import {
   setLineItemQuantity,
   transferCartToCustomer,
 } from "@/lib/medusa/cart";
+import { trackAddToCart } from "@/lib/analytics";
 
 /**
  * Estado del carrito sobre carritos REALES de Medusa (Fase 5 · Etapa 3, D24).
@@ -104,8 +105,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const current = await ensureCart();
-      const updated = await addLineItem(current.id, product.variantId, opts?.quantity ?? 1);
+      const quantity = opts?.quantity ?? 1;
+      const updated = await addLineItem(current.id, product.variantId, quantity);
       setCart(updated);
+      // Punto único del funnel para "add_to_cart": PLP, PDP, recomendación y
+      // recompra del dashboard pasan todas por aquí (una sola instrumentación).
+      trackAddToCart(product, quantity);
     },
     [ensureCart, setCart],
   );

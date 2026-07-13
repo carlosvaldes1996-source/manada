@@ -12,7 +12,15 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  return { title: categoryLabel(slug) };
+  const label = categoryLabel(slug);
+  const description = `${label} para tu mascota en Manada: alimento, accesorios y farmacia con despacho a domicilio en Chile.`;
+  const canonical = `/categoria/${slug}`;
+  return {
+    title: label,
+    description,
+    alternates: { canonical },
+    openGraph: { type: "website", title: label, description, url: canonical },
+  };
 }
 
 export default async function CategoriaPage({

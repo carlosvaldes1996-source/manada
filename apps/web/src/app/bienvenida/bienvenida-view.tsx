@@ -74,9 +74,13 @@ export function BienvenidaView({ products }: { products: Product[] }) {
             animate={reduced ? undefined : "visible"}
           >
             <Stack gap={5} align="center" className="mx-auto max-w-2xl text-center">
-              <span className="grid size-16 place-items-center rounded-full bg-surface text-3xl shadow-sm" aria-hidden>
-                🎉
-              </span>
+              {/* Foto lifestyle (perro recibiendo su caja en la puerta). Fallback a color de marca. */}
+              <div
+                className="aspect-[4/3] w-full max-w-md overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft bg-cover bg-center shadow-sm"
+                style={{ backgroundImage: "url('/fotos/bienvenida.jpg')" }}
+                role="img"
+                aria-label="Un perro recibe feliz la caja de su pedido en la puerta de casa"
+              />
               <Badge variant="success">
                 <PartyPopper className="size-3.5" aria-hidden /> Pedido confirmado
               </Badge>
@@ -137,9 +141,13 @@ export function BienvenidaView({ products }: { products: Product[] }) {
           animate={reduced ? undefined : "visible"}
         >
           <Stack gap={5} align="center" className="mx-auto max-w-2xl text-center">
-            <span className="grid size-16 place-items-center rounded-full bg-surface text-3xl shadow-sm" aria-hidden>
-              🎉
-            </span>
+            {/* Foto lifestyle (perro recibiendo su caja en la puerta). Fallback a color de marca. */}
+            <div
+              className="aspect-[4/3] w-full max-w-md overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft bg-cover bg-center shadow-sm"
+              style={{ backgroundImage: "url('/fotos/bienvenida.jpg')" }}
+              role="img"
+              aria-label="Un perro recibe feliz la caja de su pedido en la puerta de casa"
+            />
             <Badge variant="brand">
               <PartyPopper className="size-3.5" aria-hidden /> Ya eres parte de la manada
             </Badge>

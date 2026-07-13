@@ -21,9 +21,14 @@ import { useSession } from "./session-provider";
  *
  * FUENTE DE VERDAD (D34): con sesión, las mascotas viven en el backend
  * (`/store/pets`, módulo `pet`) — al autenticarse se hidratan desde ahí y toda
- * mutación se persiste. El INVITADO opera en memoria (ids `local_…`); al
- * iniciar sesión sus mascotas se EMPUJAN al backend (espejo de `transferCart`,
- * API.md §9.1) y la memoria se reemplaza por lo hidratado.
+ * mutación se persiste. El INVITADO opera en memoria (ids `local_…`).
+ *
+ * Adopción de mascotas de invitado: SOLO el registro "valor primero" (cuenta
+ * nueva) las EMPUJA al backend (espejo de `transferCart`, API.md §9.1) — lo
+ * enciende `useAuthActions.register` vía `requestGuestTransfer()`. El LOGIN a
+ * una cuenta existente NO las adopta: solo hidrata las mascotas reales y la
+ * memoria (con la mascota temporal del onboarding) se reemplaza por lo
+ * hidratado, para no mezclar estados temporales con el perfil del usuario.
  */
 interface PetContextValue {
   pets: Pet[];
@@ -36,6 +41,13 @@ interface PetContextValue {
    * empuja en la próxima sincronización). Por defecto la deja activa.
    */
   addPet: (pet: Pet, opts?: { activate?: boolean }) => Promise<Pet>;
+  /**
+   * Marca que la PRÓXIMA transición a `authenticated` debe adoptar las mascotas
+   * de invitado (empujarlas al backend). Solo la llama el registro "valor
+   * primero" (`useAuthActions.register`); el login a una cuenta existente NO,
+   * para no mezclar la mascota temporal del onboarding con el perfil real.
+   */
+  requestGuestTransfer: () => void;
   /** Vacía las mascotas (cerrar sesión). */
   clearPets: () => void;
   /**
@@ -148,33 +160,43 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
 
   /** Guard de sincronización en curso (evita el doble efecto de StrictMode). */
   const syncingRef = useRef(false);
+  /** Intención de adoptar las mascotas de invitado en la próxima autenticación
+   *  (solo el registro la enciende; ver `requestGuestTransfer`). */
+  const transferGuestsRef = useRef(false);
 
-  // Al autenticarse: empujar las mascotas de invitado y luego hidratar TODO
-  // desde el backend (una sola fuente). Al recargar con sesión persistida, la
-  // memoria arranca vacía → es solo hidratación.
+  // Al autenticarse: hidratar TODO desde el backend (una sola fuente). Solo el
+  // registro "valor primero" empuja además las mascotas de invitado; el login a
+  // una cuenta existente NO (la memoria del onboarding se descarta al hidratar).
+  // Al recargar con sesión persistida, la memoria arranca vacía → es solo hidratación.
   useEffect(() => {
     if (status !== "authenticated" || syncingRef.current) return;
     syncingRef.current = true;
 
+    // Leer y consumir el intent: si no lo encendió el registro, no adoptamos nada.
+    const transferGuests = transferGuestsRef.current;
+    transferGuestsRef.current = false;
+
     void (async () => {
       try {
-        // 1 · Push de mascotas locales (espejo de transferCart). Se conserva
-        //     también su alimento asignado (el backend re-estampa la fecha).
-        const locals = petsRef.current.filter((p) => isLocalId(p.id));
-        const activeLocalId = activePetIdRef.current;
+        // 1 · Push de mascotas locales (espejo de transferCart) — SOLO en registro.
+        //     Se conserva también su alimento asignado (el backend re-estampa la fecha).
         let nextActiveId: string | null = null;
 
-        for (const guest of locals) {
-          try {
-            const created = await createMyPet(guest);
-            if (guest.currentFoodId) {
-              await updateMyPet(created.id, { current_food_id: guest.currentFoodId });
+        if (transferGuests) {
+          const locals = petsRef.current.filter((p) => isLocalId(p.id));
+          const activeLocalId = activePetIdRef.current;
+          for (const guest of locals) {
+            try {
+              const created = await createMyPet(guest);
+              if (guest.currentFoodId) {
+                await updateMyPet(created.id, { current_food_id: guest.currentFoodId });
+              }
+              // La foto del dispositivo sigue a la mascota a su id real.
+              migrateStoredPhoto(guest.id, created.id);
+              if (guest.id === activeLocalId) nextActiveId = created.id;
+            } catch (err) {
+              console.warn("[pets] no se pudo transferir una mascota de invitado", err);
             }
-            // La foto del dispositivo sigue a la mascota a su id real.
-            migrateStoredPhoto(guest.id, created.id);
-            if (guest.id === activeLocalId) nextActiveId = created.id;
-          } catch (err) {
-            console.warn("[pets] no se pudo transferir una mascota de invitado", err);
           }
         }
 
@@ -208,6 +230,10 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     setPets((prev) => [...prev, final]);
     if (opts?.activate ?? true) setActivePetId(final.id);
     return final;
+  }, []);
+
+  const requestGuestTransfer = useCallback(() => {
+    transferGuestsRef.current = true;
   }, []);
 
   const clearPets = useCallback(() => {
@@ -276,13 +302,14 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       activePet: pets.find((p) => p.id === activePetId) ?? null,
       setActivePetId,
       addPet,
+      requestGuestTransfer,
       clearPets,
       assignFood,
       updatePet,
       setPetPhoto,
       foodAssignedAt,
     }),
-    [pets, activePetId, addPet, clearPets, assignFood, updatePet, setPetPhoto, foodAssignedAt],
+    [pets, activePetId, addPet, requestGuestTransfer, clearPets, assignFood, updatePet, setPetPhoto, foodAssignedAt],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;

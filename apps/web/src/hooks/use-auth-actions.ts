@@ -14,7 +14,9 @@ import {
  *
  * - `login` / `register`: autentican (lib/medusa) → **transfieren el carrito de
  *   invitado** al cliente (`transferCart`) → refrescan sesión. Así la orden que
- *   complete queda ligada a su cuenta y aparece en su historial.
+ *   complete queda ligada a su cuenta y aparece en su historial. Solo el
+ *   `register` (cuenta nueva) adopta además la mascota del onboarding
+ *   (`requestGuestTransfer`); el `login` a una cuenta existente no la mezcla.
  * - `logout`: cierra la sesión real, olvida el carrito local y limpia mascotas.
  *
  * Devuelven `{ ok, error }` con el mensaje ya traducido para la UI.
@@ -40,7 +42,7 @@ function toMessage(err: unknown, fallback: string): string {
 export function useAuthActions() {
   const { refresh, signOut } = useSession();
   const { transferToCustomer, reset } = useCart();
-  const { clearPets } = usePet();
+  const { clearPets, requestGuestTransfer } = usePet();
 
   const login = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
@@ -60,6 +62,9 @@ export function useAuthActions() {
     async (input: RegisterInput): Promise<AuthResult> => {
       try {
         await registerCustomer(input);
+        // Cuenta nueva: adoptar la mascota del onboarding en la transición a
+        // `authenticated` que dispara `refresh()` (el intent es síncrono).
+        requestGuestTransfer();
         await transferToCustomer();
         await refresh();
         return { ok: true };
@@ -67,7 +72,7 @@ export function useAuthActions() {
         return { ok: false, error: toMessage(err, "No pudimos crear tu cuenta.") };
       }
     },
-    [refresh, transferToCustomer],
+    [refresh, transferToCustomer, requestGuestTransfer],
   );
 
   const logout = useCallback(async () => {

@@ -125,8 +125,9 @@ navegador el token vive en `localStorage` (**sesión persistente**) y viaja como
   Medusa emite el evento `auth.password_reset`. Respuesta **anti-enumeración** (no
   revela si el correo existe). Pantalla `/recuperar`.
 - **Entrega del token:** subscriber del backend `apps/backend/src/subscribers/password-reset.ts`
-  (evento `auth.password_reset`). **Dev:** loguea el enlace `/recuperar/nueva?token=…`.
-  **Prod:** se reemplaza por email transaccional **sin tocar el frontend** (email diferido, D25 G4).
+  (evento `auth.password_reset`) → **email transaccional real** vía Notification Module + Resend
+  (plantilla `reset-password`, D45 · ver §11). **Dev sin `RESEND_API_KEY`:** el provider loguea el
+  enlace `/recuperar/nueva?token=…` (mismo DX que antes). El frontend no cambió.
 - **Fijar nueva:** `auth.updateProvider("customer","emailpass",{password}, token)`.
   Pantalla `/recuperar/nueva?token=…` → al éxito, `/ingresar`.
 
@@ -148,10 +149,9 @@ El checkout de invitado (§6.2) sigue **idéntico**; para el cliente autenticado
 se **prellenan** nombre/correo desde la sesión. Guest checkout nunca se bloquea.
 
 ### 7.6 Pendiente (recomendaciones, no implementadas)
-Email transaccional (entrega real del enlace de recuperación + confirmaciones);
-**reclamo de órdenes de invitado** al registrarse con el mismo correo
-(`order.requestTransfer`, nativo, requiere email); selección de dirección guardada
-dentro del checkout.
+Email transaccional ✅ **implementado** (D45, §11). Sigue pendiente: **reclamo de órdenes de
+invitado** al registrarse con el mismo correo (`order.requestTransfer`, nativo, requiere email);
+selección de dirección guardada dentro del checkout.
 
 ---
 
@@ -232,3 +232,71 @@ neutered: boolean|null, conditions: string[]|null, avatar_url: string|null,
 current_food_id: string|null, food_assigned_at: string(ISO)|null, created_at, updated_at }`.
 Mapper del front: `StorePet → Pet` (camelCase; `completeness` NO se almacena — es derivada
 y se calcula en el front). Modelo de datos en `DATABASE.md §8`.
+
+---
+
+## 10. Contrato de medios de pago (`/store/payment-methods`) — módulo custom `payment-method`
+
+Referencias a las tarjetas guardadas del cliente para la vista "Mis tarjetas" de
+`/cuenta/pagos`. Segundo módulo custom (patrón idéntico a `pet`, §9). Encapsulado en
+`apps/web/src/lib/medusa/payment-methods.ts`; el frontend no conoce la forma del
+backend fuera del mapper.
+
+### 10.1 Decisión de arquitectura (evaluación Mercado Pago, 2026-07-12)
+- **Persistencia interna de REFERENCIAS, no gestión directa de tokens MP** en esta etapa:
+  MP aún no está provisionado (fast-follow post-infra, D25 G4) y la integración elegida
+  es **Checkout Pro**, donde MP hospeda las tarjetas del comprador — la API de
+  Customers & Cards solo se vuelve necesaria con Checkout API/suscripciones (post-tracción).
+- La tabla `saved_card` guarda SOLO presentación (franquicia, últimos 4, vencimiento) y
+  punteros a la pasarela (`gateway`, `gateway_customer_id`, `gateway_card_id`), mapeo 1:1
+  con el objeto `card` de MP → integrar MP después es llenar datos, no migrar esquema.
+- **Nunca se almacena PAN/CVV** (alcance PCI cero). Por eso **no existe POST**: las filas
+  nacen server-side en la integración de pago (checkout/webhook MP), jamás desde un
+  formulario propio.
+
+### 10.2 Endpoints
+- Autenticación y alcance idénticos a §9.1: `authenticate("customer", ["bearer","session"])`
+  + publishable key; propiedad por `customer_id` del `auth_context`; ajeno → **404**.
+- **`GET /store/payment-methods`** → `{ payment_methods: SavedCard[] }` (orden `created_at` desc).
+- **`DELETE /store/payment-methods/:id`** → `{ id, object: "saved_card", deleted: true }`.
+  Soft delete (auditable). Al integrar MP, el servicio además revoca la card en MP
+  (`DELETE /v1/customers/{gateway_customer_id}/cards/{gateway_card_id}`) sin cambio de contrato.
+
+### 10.3 `SavedCard` (shape del backend)
+`{ id, customer_id, gateway: "mercadopago", gateway_customer_id: string|null,
+gateway_card_id: string|null, brand: string ("visa"|"master"|"amex"|…, ids de MP),
+last4: string, exp_month: number, exp_year: number, created_at, updated_at }`.
+Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `expiry` "MM/AA").
+
+---
+
+## 11. Contrato de emails transaccionales — IMPLEMENTADO (D45)
+
+> Owner técnico: `apps/backend/src/modules/resend/`. **No hay contrato de storefront**: los
+> emails los dispara el backend al reaccionar a **eventos nativos de Medusa** — el frontend no
+> cambia y no hay endpoints nuevos.
+
+### 11.1 Arquitectura
+- **Notification Module nativo** de Medusa (registrado en `medusa-config.ts`; en v2 no viene por
+  defecto) + **provider custom Resend** (`src/modules/resend`, `AbstractNotificationProviderService`).
+- **Sistema de plantillas reutilizable** en `src/modules/resend/emails/`: `theme.ts` (tokens de marca
+  espejo de `globals.css` + `formatCLP`), `base.tsx` (`EmailLayout` + componentes comunes
+  `Title`/`Paragraph`/`Button`/`Panel`/`DataRow`/`Divider`), plantillas `*.tsx`, y registro central
+  `index.ts` (`EmailTemplate` id → `{ subject, render }`). **Agregar un email = 1 `.tsx` + 1 entrada.**
+- **Envío:** los subscribers llaman `notificationModuleService.createNotifications({ to, channel:"email", template, data })`;
+  el provider resuelve la plantilla, renderiza React Email y envía por Resend.
+- **Modo DEV:** sin `RESEND_API_KEY` el provider **loguea** el email (destinatario, asunto, enlace) en
+  vez de enviar → no bloquea dev ni el arranque. Prod se activa con la env var (`DEPLOYMENT.md`).
+
+### 11.2 Emails ↔ eventos (los 4 críticos)
+| Email | Evento nativo | Subscriber | Filtro / notas |
+|---|---|---|---|
+| Bienvenida | `customer.created` | `customer-created.ts` | solo si `has_account` (no a invitados de checkout) |
+| Recuperar contraseña | `auth.password_reset` | `password-reset.ts` | reemplaza el `console.log`; `data.url` = enlace de un solo uso |
+| Compra realizada | `order.placed` | `order-placed-email.ts` | subscriber **separado** de `food-purchased.ts` (anticipación, D35) |
+| Pedido enviado | `shipment.created` | `order-shipped.ts` | orden resuelta desde el fulfillment (link nativo); respeta `no_notification` |
+
+### 11.3 Suscripción — DIFERIDA
+No se implementan emails de suscripción: **no existen eventos de suscripción recurrente** en el
+backend (moat post-tracción, D22/D29). Con esta estructura, agregarlos es trivial cuando existan
+(nueva `.tsx` + entrada en el registro + subscriber). Sin trabajo muerto.

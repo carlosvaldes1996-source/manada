@@ -17,8 +17,9 @@
 | Servicio | Estado | Dónde |
 |---|---|---|
 | **Frontend** (`apps/web`, Next.js) | 🟢 **Desplegado en Vercel** — build verde, **modo staging (sin backend)** | proyecto `manada-web` |
-| **Backend** (`apps/backend`, Medusa v2) | 🟠 **No desplegado**, pero el despliegue a **Railway está en curso** — config endurecida + `railway.json` verificados en local, sin commitear (D30 reservada; punto exacto en `CURRENT_STATE.md §WIP`) | Railway (decidido en la sesión WIP: servicio único `shared`, build nativo sin Docker) |
-| **Base de datos / Redis** | 🔴 No provisionados en la nube | pendiente (Postgres/Redis gestionados) |
+| **Backend** (`apps/backend`, Medusa v2) | 🟠 **No desplegado**, pero **listo para desplegar** — config endurecida + módulo `file` anclado + `railway.json` + `.env.template` completo, verificados con `medusa build` verde, sin commitear (D30 reservada; runbook en §4.1) | Railway (servicio único `shared`, build nativo sin Docker) |
+| **Base de datos / Redis** | 🔴 No provisionados en la nube | pendiente (Postgres/Redis gestionados en Railway) |
+| **Almacenamiento de archivos** | 🟠 Config lista (provider local anclado a `MEDUSA_BACKEND_URL`); requiere **Railway Volume** en `.medusa/server/static` | Railway Volume (MVP, sin S3) |
 | **Dominio `tumanada.cl`** | 🔴 **No conectado** — nada "vivo" de cara al público | pendiente (lanzamiento) |
 
 > **Regla de oro (D22 · D27):** durante el desarrollo **no** se sostiene un entorno de producción a medias. El objetivo es que el **primer deploy de *producción* salga 100 % funcional**, no ir parchando. Hoy el deploy de Vercel es solo **verificación de build**; el sitio en vivo muestra el catálogo "apagado" porque no hay backend público, y **no se conecta ningún dominio** hasta el lanzamiento.
@@ -71,7 +72,28 @@
 
 > Ambas son `NEXT_PUBLIC_` → se **hornean en el bundle en build time**. Cambiar su valor exige **redeploy** del frontend. Plantilla local en `apps/web/.env.example`.
 
-**Secrets del backend (cuando exista, viven en Railway/Render, no en Vercel):** `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `COOKIE_SECRET`, `STORE_CORS`/`ADMIN_CORS`/`AUTH_CORS` (deben incluir el dominio del frontend). Hoy en dev usan valores por defecto (D25 los marcó como deuda de lanzamiento).
+**Variables del backend (viven en Railway, servicio backend → *Variables*; nunca en Vercel).** Plantilla completa y comentada: `apps/backend/.env.template`.
+
+| Variable | Valor en producción | Notas |
+|---|---|---|
+| `NODE_ENV` | `production` | Activa cookies seguras, logs JSON y apaga el modo dev. **Setearla explícitamente.** |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | Referencia interna al Postgres del proyecto (Railway la resuelve). |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` | Sin ella, módulos in-memory (no recomendado en prod). |
+| `JWT_SECRET` | cadena aleatoria larga | `openssl rand -base64 32`. Sin fallback inseguro en el código. |
+| `COOKIE_SECRET` | cadena aleatoria larga | idem. |
+| `STORE_CORS` | `https://tumanada.cl,https://www.tumanada.cl,https://manada-web.vercel.app` | Orígenes del storefront. **Debe incluir el dominio del frontend.** |
+| `ADMIN_CORS` | `https://api.tumanada.cl` | La propia URL pública del backend (donde vive `/app`). |
+| `AUTH_CORS` | `https://tumanada.cl,https://www.tumanada.cl,https://api.tumanada.cl` | Orígenes que hacen login (storefront + Admin). |
+| `MEDUSA_BACKEND_URL` | `https://api.tumanada.cl` | URL pública del backend. La usa el Admin **y** las URLs de los archivos subidos (`/static/...`). |
+| `MEDUSA_WORKER_MODE` | `shared` (default) | MVP: un solo servicio. Se separa server/worker con tracción. |
+
+Hoy en dev usan valores por defecto (D25 los marcó como deuda de lanzamiento).
+
+**Almacenamiento de archivos (packshots subidos desde el Admin).** El backend usa el **provider local** de Medusa (`@medusajs/medusa/file-local`, configurado en `medusa-config.ts`): guarda en `<cwd>/static` y sirve en `${MEDUSA_BACKEND_URL}/static/...`. **MVP-first: no se agrega S3** (no hay infra externa nueva). Pero el filesystem de Railway es **efímero** → sin persistencia, las imágenes se pierden en cada deploy. Solución: **montar un Railway Volume** en el directorio `static` del server construido (mount path `/app/apps/backend/.medusa/server/static`). Con tracción/crecimiento del catálogo se migra a S3/R2 (cambio solo de config del módulo `file`).
+
+**Email transaccional (D45 · Resend):** `RESEND_API_KEY`, `RESEND_FROM` (ej. `Manada <hola@tumanada.cl>`) y `STOREFRONT_URL` (base de los CTAs y del enlace de recuperación). **Sin `RESEND_API_KEY` el provider entra en modo DEV** (loguea los emails, no envía) → no bloquea el arranque. Para producción: setear las tres en Railway y **verificar el dominio `tumanada.cl` en Resend** (registros SPF/DKIM) para poder enviar desde un remitente propio; hasta entonces sirve el sandbox `onboarding@resend.dev`. Plantilla local: `apps/backend/.env.template`.
+
+**Tracking — GTM (D46 · en Vercel, frontend):** `NEXT_PUBLIC_GTM_ID` (`GTM-XXXXXXX`) = contenedor de Google Tag Manager, **único punto de integración de medición**. GA4, Meta Pixel y Google Ads se conectan **dentro de GTM**, no en el código. Es `NEXT_PUBLIC_` → se hornea en build; cambiarla exige **redeploy**. **Sin este valor no se carga GTM ni se miden eventos** (por diseño: dev/preview quedan limpios). La app ya emite al `dataLayer` los 6 hitos del embudo (`onboarding_start`, `recommendation_shown`, `add_to_cart`, `begin_checkout`, `purchase`, `subscription`) con esquema `ecommerce` de GA4. Plantilla local: `apps/web/.env.example`. **Pasos manuales (fuera del código):** crear contenedor GTM → crear propiedad **GA4** y su tag de configuración dentro de GTM → mapear los 6 eventos a tags GA4 → publicar el contenedor → **Google Search Console** (verificar dominio + enviar `https://tumanada.cl/sitemap.xml`) → **Meta Pixel** y **Google Ads** (conversion linker + import de conversiones desde GA4) si se harán campañas.
 
 ---
 
@@ -91,6 +113,21 @@ El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerra
 
 > Estado fino, decisiones de la sesión y punto exacto de continuación: **`CURRENT_STATE.md §WIP`** (el detalle se consolida aquí + D30 al validar cada etapa).
 
+### 4.1 · Runbook de despliegue (orden a seguir)
+
+> Config lista en código (2026-07-13): `medusa-config.ts` endurecido + módulo `file` con `backend_url` anclado, `railway.json` (build nativo pnpm, migraciones en `preDeployCommand`, healthcheck `/health`), `.env.template` completo. Falta **solo** provisionar y setear variables. Ejecutar en este orden:
+
+1. **Railway — proyecto + servicios.** `railway login` → `railway init` (proyecto `manada`) → agregar **PostgreSQL** y **Redis** (`railway add`). Crear el **servicio backend** desde el repo (root = raíz del monorepo; el `railway.json` de la raíz define build/start/migraciones).
+2. **Volumen de archivos.** Crear un **Volume** en el servicio backend, mount path `/app/apps/backend/.medusa/server/static` (persiste los packshots subidos por Admin).
+3. **Variables del backend** (§2, tabla): `NODE_ENV=production`, `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `REDIS_URL=${{Redis.REDIS_URL}}`, `JWT_SECRET`/`COOKIE_SECRET` (aleatorios), `STORE_CORS`/`ADMIN_CORS`/`AUTH_CORS`, `MEDUSA_BACKEND_URL`, `STOREFRONT_URL`, y (cuando esté) `RESEND_API_KEY`/`RESEND_FROM`. Si aún no hay dominio, usar primero la URL `*.up.railway.app` en `MEDUSA_BACKEND_URL`/CORS y ajustar al conectar `tumanada.cl`.
+4. **Deploy + gate.** `railway up` (o auto-deploy por Git). El `preDeployCommand` corre `medusa db:migrate`. Gate: `curl https://<backend>.up.railway.app/health` → **200**.
+5. **Bootstrap de datos (una vez).** Dentro del contenedor (`railway ssh` / shell del servicio): crear admin (`npx medusa user -e ... -p ...`) y correr el seed (`pnpm --filter @manada/backend exec medusa exec ./src/scripts/seed.ts`). Luego setear envío gratis (`setup-free-shipping.ts`) si aplica.
+6. **Publishable key de prod.** Obtenerla en Admin (`/app` → Settings → Publishable API Keys, key "Manada Web").
+7. **Vercel — env vars.** `NEXT_PUBLIC_MEDUSA_BACKEND_URL` = URL pública del backend · `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` = `pk_...` del paso 6 · (`NEXT_PUBLIC_GTM_ID` si ya hay contenedor). Son `NEXT_PUBLIC_` → **redeploy** del frontend.
+8. **Smoke.** En la URL de Vercel: catálogo hidrata · agregar al carrito · checkout → orden real (aparece en Admin). Verificar que las imágenes de producto cargan desde `${MEDUSA_BACKEND_URL}/static/...`.
+9. **Resend en vivo.** Verificar dominio `tumanada.cl` en Resend (SPF/DKIM) → setear `RESEND_API_KEY`/`RESEND_FROM=Manada <hola@tumanada.cl>` en Railway → probar recuperación de contraseña (llega el email).
+10. **Dominio.** Conectar `tumanada.cl` (Vercel, frontend) y `api.tumanada.cl` (Railway, backend); ajustar CORS + `MEDUSA_BACKEND_URL` + env vars de Vercel al dominio final y **redeploy**.
+
 ---
 
 ## 5 · Checklist — "Primer deploy de producción funcional"
@@ -105,6 +142,10 @@ Se marca cuando la tienda funciona de punta a punta de cara al público:
 - [ ] Smoke en la URL de Vercel: catálogo hidrata · carrito · checkout → orden real.
 - [ ] (Si aplica) rama `production` definida (§3).
 - [ ] Dominio `tumanada.cl` conectado en Vercel + DNS + SSL.
+- [ ] Email transaccional en vivo: `RESEND_API_KEY`/`RESEND_FROM`/`STOREFRONT_URL` en Railway + dominio verificado en Resend (D45).
+- [ ] **Tracking (D46):** contenedor **GTM** creado + `NEXT_PUBLIC_GTM_ID` en Vercel (→ redeploy) · propiedad **GA4** conectada dentro de GTM con los 6 eventos mapeados y contenedor publicado · smoke con GTM Preview (los eventos llegan al `dataLayer`).
+- [ ] **Search Console:** dominio `tumanada.cl` verificado + `sitemap.xml` enviado.
+- [ ] (Si aplica) **Meta Pixel** / **Google Ads** conectados dentro de GTM para campañas.
 - [ ] Recién entonces: **Mercado Pago** (Checkout Pro) — posterior, no bloquea el primer prod funcional del flujo manual.
 
 ---

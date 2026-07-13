@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, HelpCircle, Check, Scale, Utensils } from "lucide-react";
@@ -17,6 +17,7 @@ import { usePet } from "@/components/providers";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { findBreed, estimateWeightFromBreed, sizeBucketsForSpecies, midpoint } from "@/lib/breeds";
 import { profileCompleteness } from "@/lib/pet";
+import { trackOnboardingStart } from "@/lib/analytics";
 import { fade, fadeInUp } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,11 @@ export function OnboardingWizard() {
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState<Draft>({});
   const stepId: StepId = STEP_IDS[stepIndex];
+
+  // Tope del embudo: se entró al alta de mascota (una vez por montaje).
+  useEffect(() => {
+    trackOnboardingStart();
+  }, []);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));

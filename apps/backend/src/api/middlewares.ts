@@ -106,6 +106,12 @@ function augmentProducts(
  */
 const petsAuth = authenticate("customer", ["bearer", "session"]);
 
+/**
+ * Autenticación de cliente para `/store/payment-methods` (API.md §10): mismo
+ * esquema que `/store/pets` — la propiedad se impone en las rutas.
+ */
+const paymentMethodsAuth = authenticate("customer", ["bearer", "session"]);
+
 export default defineMiddlewares({
   routes: [
     {
@@ -132,6 +138,16 @@ export default defineMiddlewares({
       matcher: "/store/pets/:id",
       method: ["PATCH"],
       middlewares: [petsAuth, validateAndTransformBody(StoreUpdatePet)],
+    },
+    {
+      matcher: "/store/payment-methods",
+      method: ["GET"],
+      middlewares: [paymentMethodsAuth],
+    },
+    {
+      matcher: "/store/payment-methods/:id",
+      method: ["DELETE"],
+      middlewares: [paymentMethodsAuth],
     },
   ],
 });

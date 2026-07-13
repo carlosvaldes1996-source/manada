@@ -32,6 +32,7 @@ import { ProductImage } from "@/components/commerce/product-image";
 import { PetAvatar } from "@/components/pet/pet-avatar";
 import { usePet, useCart, useSession } from "@/components/providers";
 import { fade, fadeInUp } from "@/lib/motion";
+import { trackRecommendationShown, trackSubscription } from "@/lib/analytics";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 import type { Pet, Product } from "@/types";
@@ -136,6 +137,17 @@ export function RecommendationView({ products }: { products: Product[] }) {
   useEffect(() => {
     if (!activePet) router.replace("/comenzar");
   }, [activePet, router]);
+
+  // Momento "aha" del embudo: se mostró la recomendación (una vez por producto
+  // recomendado, para no re-disparar al re-render).
+  const shownRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activePet && recommended && shownRef.current !== recommended.id) {
+      shownRef.current = recommended.id;
+      trackRecommendationShown(activePet, recommended);
+    }
+  }, [activePet, recommended]);
+
   if (!activePet) return null;
 
   // Salir sin descartar el journey: tienda (invitado) o sus mascotas (con sesión).
@@ -333,7 +345,7 @@ export function RecommendationView({ products }: { products: Product[] }) {
 
               {/* Columna B — el valor: anticipación (reservada) + una línea de datos */}
               <Stack gap={3} className="lg:w-[320px] lg:shrink-0 lg:border-l lg:border-border-default lg:pl-8">
-                <AnticipationProposal key={food.id} petName={activePet.name} plan={plan} />
+                <AnticipationProposal key={food.id} petName={activePet.name} plan={plan} food={food} />
                 {plan && (
                   <p className="text-sm text-text-secondary">
                     Come <strong className="text-text-primary">~{plan.rationGrams} g</strong>/día
@@ -419,9 +431,18 @@ function minusDays(date: Date, days: number): Date {
  * el usuario solo confirma o ajusta (los días de aviso viven en un popover para no sumar
  * altura). Límite honesto (D29): recordatorio, nunca cobro ni envío recurrente.
  */
-function AnticipationProposal({ petName, plan }: { petName: string; plan?: FoodPlan }) {
+function AnticipationProposal({ petName, plan, food }: { petName: string; plan?: FoodPlan; food?: Product }) {
   const [confirmed, setConfirmed] = useState(false);
   const [leadDays, setLeadDays] = useState(5);
+
+  /**
+   * Confirmar el recordatorio = intención de recompra recurrente. Es el proxy
+   * de "suscripción" del embudo mientras el moat recurrente sigue diferido (D29).
+   */
+  function confirm() {
+    setConfirmed(true);
+    if (food) trackSubscription(food, "reminder");
+  }
 
   const eyebrow = (
     <span className="overline inline-flex items-center gap-1.5 text-miel-700">
@@ -472,7 +493,7 @@ function AnticipationProposal({ petName, plan }: { petName: string; plan?: FoodP
               variant="subscribe"
               size="sm"
               leadingIcon={<Check className="size-4" aria-hidden />}
-              onClick={() => setConfirmed(true)}
+              onClick={confirm}
             >
               Confirmar recordatorio
             </Button>

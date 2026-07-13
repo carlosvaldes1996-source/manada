@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SITE } from "@/config/site";
+import { useSession, usePet } from "@/components/providers";
 
 export interface LogoProps {
   /** Solo isotipo (app icon/favicon/avatar) vs. lockup completo. */
@@ -16,6 +19,15 @@ export interface LogoProps {
  * La huella usa Terracota; sobre fondos oscuros, `tone="inverse"`.
  */
 export function Logo({ variant = "lockup", href = "/", tone = "default", className }: LogoProps) {
+  const { status } = useSession();
+  const { activePet } = usePet();
+  // Continuidad del journey: un invitado que ya creó su mascota no debe caer en
+  // la landing de "reinicio". Su home es la tienda (con su mascota en el
+  // selector); con sesión, "/" ya es su dashboard. Solo se ajusta el home por
+  // defecto — un `href` explícito (o `null`) se respeta tal cual.
+  const resolvedHref =
+    href === "/" && status === "anonymous" && activePet ? "/categoria/todo" : href;
+
   const content = (
     <span
       className={cn(
@@ -29,9 +41,9 @@ export function Logo({ variant = "lockup", href = "/", tone = "default", classNa
     </span>
   );
 
-  if (href === null) return content;
+  if (resolvedHref === null) return content;
   return (
-    <Link href={href} aria-label={`${SITE.name} — inicio`} className="inline-flex">
+    <Link href={resolvedHref} aria-label={`${SITE.name} — inicio`} className="inline-flex">
       {content}
     </Link>
   );

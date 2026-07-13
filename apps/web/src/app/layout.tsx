@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Hanken_Grotesk } from "next/font/google";
 import { AppProviders } from "@/components/providers";
+import {
+  GoogleTagManager,
+  GoogleTagManagerNoScript,
+} from "@/components/analytics/google-tag-manager";
 import { SITE } from "@/config/site";
 import "./globals.css";
 
@@ -36,13 +40,25 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   applicationName: SITE.name,
+  // Canonical por defecto (la home). Las páginas indexables (PLP/PDP) declaran
+  // el suyo. `metadataBase` resuelve las rutas relativas a producción.
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "es_CL",
+    url: SITE.url,
     siteName: SITE.name,
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.description,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+  },
+  // Deja indexar el sitio; las páginas privadas/transaccionales se excluyen en
+  // `robots.ts` (crawl) y con `robots: { index: false }` puntual donde importa.
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
@@ -61,7 +77,9 @@ export default function RootLayout({
       className={`${fraunces.variable} ${hanken.variable} h-full`}
     >
       <body className="min-h-full flex flex-col antialiased">
+        <GoogleTagManagerNoScript />
         <AppProviders>{children}</AppProviders>
+        <GoogleTagManager />
       </body>
     </html>
   );

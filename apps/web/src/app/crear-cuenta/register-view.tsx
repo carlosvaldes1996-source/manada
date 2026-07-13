@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { PetAvatar } from "@/components/pet/pet-avatar";
 import { useToast } from "@/components/ui/toast";
-import { useSession, usePet } from "@/components/providers";
+import { useSession, usePet, useCart } from "@/components/providers";
 import { useAuthActions } from "@/hooks";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,6 +36,13 @@ export function RegisterView({
   const { status } = useSession();
   const { register } = useAuthActions();
   const { activePet } = usePet();
+  const { count } = useCart();
+
+  // Destino tras registrar: al carrito solo si hay algo que pagar (llegó desde
+  // "Sumar al pedido"); si el carrito está vacío (registro para GUARDAR la
+  // mascota) va al home logueado —centro de control con las acciones de la
+  // mascota— y no a un carrito vacío que se siente un callejón sin salida.
+  const postAuthHref = count > 0 ? "/carrito" : "/";
 
   const [firstName, setFirstName] = useState(defaultName);
   const [email, setEmail] = useState(defaultEmail);
@@ -44,10 +51,10 @@ export function RegisterView({
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Si ya hay sesión, no tiene sentido registrarse: al carrito.
+  // Si ya hay sesión, no tiene sentido registrarse: al destino según contexto.
   useEffect(() => {
-    if (status === "authenticated") router.replace("/carrito");
-  }, [status, router]);
+    if (status === "authenticated") router.replace(postAuthHref);
+  }, [status, router, postAuthHref]);
   if (status === "authenticated") return null;
 
   async function submit(e: React.FormEvent) {
@@ -65,7 +72,7 @@ export function RegisterView({
     const { ok, error } = await register({ firstName, email, password });
     if (ok) {
       toast({ title: "¡Cuenta creada!", description: "Ya eres parte de la manada.", variant: "success" });
-      router.push("/carrito");
+      router.push(postAuthHref);
     } else {
       setFormError(error ?? "No pudimos crear tu cuenta.");
       setLoading(false);

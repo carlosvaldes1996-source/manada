@@ -2,6 +2,9 @@
 .env
 .DS_Store
 /uploads
+# Archivos subidos por el Admin (packshots). En prod viven en el Railway Volume
+# montado en .medusa/server/static, no en git.
+/static
 /node_modules
 yarn-error.log
 

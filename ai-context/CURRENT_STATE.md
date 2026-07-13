@@ -6,7 +6,7 @@
 > | **Purpose** | Foto del estado actual: qué es real, qué frentes están abiertos y cuál es el siguiente paso. Se **reescribe** al cerrar cada hito (no se apila; la narración histórica vive en `DECISIONS.md`). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-12 |
+> | **Last Updated** | 2026-07-13 |
 > | **Depends On** | DECISIONS.md, ROADMAP.md |
 > | **Supersedes** | `history/05-bitacora-avances-2026-07.md` (versión-bitácora archivada) |
 > | **Source of Truth** | ✅ del *estado actual y el siguiente paso*. Único dueño del estado: ningún otro doc lo repite. |
@@ -26,16 +26,17 @@
 >
 > **Decisiones de esa sesión:** (1) topología Railway = **un solo servicio `shared`** (server/worker se separa con tracción); (2) operación = **CLI de Railway dirigida por Claude**, Carlos solo autentica; (3) **infra live primero con pago manual, Mercado Pago como fast-follow** antes del dominio público; (4) **build nativo, sin Docker** (validado).
 >
-> **Etapa 1 (Railway backend) — 1A + 1B HECHOS y verificados localmente, EN DISCO SIN COMMITEAR:**
+> **Etapa 1 (Railway backend) — 1A + 1B + 1C HECHOS y verificados localmente, EN DISCO SIN COMMITEAR:**
 > - **1A ·** `apps/backend/medusa-config.ts` endurecido: sin fallback `"supersecret"`; módulos Redis (cache/event-bus/workflow-engine) condicionados a `REDIS_URL` (dev sigue in-memory); `workerMode` (`MEDUSA_WORKER_MODE`, default `shared`); `admin.backendUrl` (`MEDUSA_BACKEND_URL`). `tsc` + `medusa build` verdes.
 > - **1B ·** `railway.json` (raíz) para despliegue nativo pnpm sin Docker: build `pnpm install --frozen-lockfile && pnpm --filter @manada/backend build && cd apps/backend/.medusa/server && npm install`; start `medusa start` desde `.medusa/server`; migraciones en `preDeployCommand`; healthcheck `/health`. El artefacto de prod bootea en local → `/health` → 200.
+> - **1C · (2026-07-13, sesión modo infra)** cerrado el hueco de **almacenamiento de archivos**: módulo `file` (provider local `@medusajs/medusa/file-local`) con `backend_url` anclado a `MEDUSA_BACKEND_URL` (antes: default `localhost:9000/static`, roto en prod). MVP-first: **sin S3** → persistencia con **Railway Volume** en `.medusa/server/static` (paso manual). `.env.template` reescrito production-ready (NODE_ENV, CORS con dominio del front, MEDUSA_BACKEND_URL, secrets fuertes, Resend). `medusa build` verde. **Runbook ordenado en `DEPLOYMENT.md §4.1`.**
 > - Railway CLI 5.26.0 instalada. **Nada provisionado aún → US$0.**
 >
-> **▶️ Punto exacto de continuación:** falta que Carlos corra **`railway login`**. Luego: `railway whoami` → `railway init` (proyecto `manada`) → `railway add` PostgreSQL (Etapa 2, acoplada: Medusa no arranca sin DB) → `railway up` → gate `curl https://<backend>.up.railway.app/health` → 200. Después Redis (E3) → Secrets fuertes (E4) → CORS (E5). **DECISIONS.md D30 + DEPLOYMENT.md + commit/push van al cerrar la etapa validada.**
+> **▶️ Punto exacto de continuación:** todo el código de infra está listo; sigue **provisionar**. Carlos corre **`railway login`** y luego el **runbook de `DEPLOYMENT.md §4.1`** paso a paso (proyecto → Postgres+Redis → Volume → variables → `railway up` → gate `/health` 200 → seed/admin → publishable key → env vars Vercel → smoke → Resend → dominio). **DECISIONS.md D30 + commit/push van al cerrar la etapa validada en vivo.**
 
 ## Qué está construido y es real (fuentes de verdad)
 
-- **Backend Medusa v2** (`apps/backend`, 2.16.0): catálogo administrable + `subscription_price` calculado (D23) · carrito/checkout→orden con pago manual (D24) · auth de cliente + direcciones + pedidos (D26) · buscador `q` + regla única de envío `/store/shipping-policy` (D28) · **módulo custom `pet`** `/store/pets` (D34) + subscriber `order.placed` (D35) + subscriber `password-reset`. Contratos: `API.md §5–§9` · modelo: `DATABASE.md §5–§8` · setup local: `apps/backend/DEV.md`.
+- **Backend Medusa v2** (`apps/backend`, 2.16.0): catálogo administrable + `subscription_price` calculado (D23) · carrito/checkout→orden con pago manual (D24) · auth de cliente + direcciones + pedidos (D26) · buscador `q` + regla única de envío `/store/shipping-policy` (D28) · **módulo custom `pet`** `/store/pets` (D34) + subscriber `order.placed` (D35) + **emails transaccionales** (D45): Notification Module nativo + provider Resend (`src/modules/resend`) con 4 emails críticos (bienvenida, reset, compra, envío) sobre un layout/componentes reutilizables; modo DEV loguea sin API key. Contratos: `API.md §5–§9` + email en `API.md` · modelo: `DATABASE.md §5–§8` · setup local: `apps/backend/DEV.md`.
 - **Frontend Next.js** (`apps/web`): 100% sobre el backend real; datos demo solo en el hero de la landing (decisión de marca, D28) y el styleguide `/dev/*` (gateado en prod, D29). Arquitectura: `FRONTEND_ARCHITECTURE.md` · componentes: `COMPONENT_LIBRARY.md`.
 - **Funnel de adquisición** F1–F4 ✅ sobre catálogo real (O5, D33) — doc: `FUNNEL_TARGET.md`. **F4 rediseñado (D44, commit `d274925`): "carta de plan" en 2 columnas (altura→ancho), razones on-demand, anticipación comprimida con lugar reservado a suscripción, y "ya come otra marca" como buscador inteligente que rearma/GUARDA el plan. Solo presentación (sin tocar backend); smoke visual en vivo pendiente.** La recomendación (F4) corre sobre el **motor defendible** (D43): cálculo nutricional RER/MER + densidad calórica, puertas duras (nunca recomienda incompatible) vs. score de preferencia, explicación verificada. Determinístico, sin IA — doc: `RECOMMENDATION_ENGINE.md`.
 - **Pet Experience** B1–B8 ✅ COMPLETA (B4 foto con andamio local honesto + B7 /cuenta manada-first cerrados en el Product Completion Pass, D41; B5/B6 persistidos vía `/store/pets`; **B8 Home logueada = centro de control**, D42: `PetStatusCard` con retrato + línea de tiempo del saco + "Plan de {nombre}" + recompra en dos taps + necesidades) — doc: `PET_EXPERIENCE_TARGET.md`. **Anticipación honesta** (D41): la cápsula invita a "Pedir de nuevo"; el reagendo/suscripción vuelven post-tracción.
@@ -46,7 +47,8 @@
 | Frente | Estado | Siguiente acción | Referencia |
 |---|---|---|---|
 | **Infra de producción** | 🚧 Etapa 1 hecha en disco, sin commitear | Carlos: `railway login` → provisionar (ver WIP arriba) | D30 reservada · `DEPLOYMENT.md` |
-| **Terceros** | ⬜ | Mercado Pago Checkout Pro (fast-follow post-infra) → email transaccional (reset + confirmaciones) | D25 G4 · D28 |
+| **Terceros** | 🟡 email ✅ (código), Mercado Pago ⬜ | **Email transaccional HECHO** (D45): 4 emails críticos sobre el Notification Module nativo + Resend; falta setear `RESEND_API_KEY` + verificar dominio en Resend. Sigue: Mercado Pago Checkout Pro (fast-follow post-infra) | D45 · D25 G4 · D28 |
+| **SEO & Tracking** | 🟢 código HECHO (D46), config de terceros ⬜ | Código en disco sin commitear: `robots.ts`/`sitemap.ts`/`opengraph-image` + metadata PDP/PLP; GTM montado + capa `lib/analytics` con los 6 eventos del embudo. **Manual pendiente:** crear contenedor GTM + `NEXT_PUBLIC_GTM_ID` en Vercel, propiedad GA4 dentro de GTM, Search Console (verificar + enviar sitemap), y Meta Pixel/Ads si aplica | D46 |
 | **Funnel F5 — momento de registro** | ⬜ empieza por **decisión de producto**, no por código | Decidir con Carlos dónde vive la captura de cuenta | `FUNNEL_TARGET.md §1.6` |
 | **Validación UI del Completion Pass (D41)** | ⬜ implementado, sin smoke manual | Carlos recorre: foto de mascota, /cuenta, /comenzar móvil, landing (el dashboard ya fue rediseñado y validado en D42) | D41 |
 | **Smoke en vivo del rediseño F4 (D44)** | ⬜ commiteado/pusheado, aprobado en revisión; sin smoke en vivo | Recorrer con backend levantado: Sumar → carrito Medusa · "ya come otra marca" → buscador → Guardar (PATCH `current_food_id`) · layout 2 columnas desktop/mobile | D44 · `FUNNEL_TARGET.md` |
