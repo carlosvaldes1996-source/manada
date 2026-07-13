@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "Storefront (web)"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Backend (Medusa)"
+
 [[workflows.workflow]]
 name = "Storefront (web)"
 author = "agent"
@@ -32,6 +36,18 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow]]
+name = "Backend (Medusa)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @manada/backend exec medusa develop"
+waitForPort = 9000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -39,3 +55,6 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"

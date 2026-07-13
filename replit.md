@@ -4,10 +4,12 @@ Tienda e-commerce (mascotas) en Chile. Monorepo pnpm con storefront Next.js (`ap
 
 ## Run & Operate (en Replit)
 
-- Storefront: workflow **"Storefront (web)"** → `pnpm --filter @manada/web exec next dev -H 0.0.0.0 -p 5000` (preview en `/`).
-- Backend Medusa (aún no configurado aquí): requiere Postgres, migraciones y seed. Ver `apps/backend/DEV.md`.
+- Storefront: workflow **"Storefront (web)"** → `next dev -H 0.0.0.0 -p 5000` (preview en `/`).
+- Backend Medusa: workflow **"Backend (Medusa)"** → `medusa develop` (puerto 9000, incluye Admin en `/app`). Usa la BD PostgreSQL de Replit (`DATABASE_URL` del entorno).
 - pnpm del entorno: 10.26.1 (nix). El campo `packageManager` del repo fija 10.33.2; se desactivó la auto-gestión de versiones en `~/.npmrc` (`manage-package-manager-versions=false`) para que pnpm no intente autoinstalarla.
-- El storefront lee `apps/web/.env.local` (no versionado): `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_GTM_ID`.
+- El storefront lee `apps/web/.env.local` (no versionado): `NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000`, `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (creada por el seed), `NEXT_PUBLIC_GTM_ID`.
+- El backend lee `apps/backend/.env` (no versionado): CORS + `JWT_SECRET`/`COOKIE_SECRET` (generados en dev). `DATABASE_URL` viene del entorno de Replit, no se fija en el archivo.
+- Setup de BD (ya ejecutado): `pnpm migrate:backend` → crear admin (`medusa user`) → `pnpm seed:backend`. Ver `apps/backend/DEV.md`.
 
 ## Stack
 
