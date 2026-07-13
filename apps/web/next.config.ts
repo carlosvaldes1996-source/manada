@@ -17,6 +17,17 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // No exponer la versión de Next en las respuestas.
   poweredByHeader: false,
+  // El preview de Replit sirve la app a través de un proxy iframe (origen distinto).
+  // Next 16 bloquea peticiones dev cross-origin salvo que el origen esté permitido.
+  allowedDevOrigins: [
+    ...(process.env.REPLIT_DEV_DOMAIN ? [process.env.REPLIT_DEV_DOMAIN] : []),
+    ...(process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(",") : []),
+    ".replit.dev",
+    ".repl.co",
+    ".replit.app",
+    ".picard.replit.dev",
+    ".riker.replit.dev",
+  ],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
