@@ -32,7 +32,9 @@ interface Draft {
   breed?: string;
 }
 
-const STEP_IDS = ["especie", "nombre", "raza", "etapa", "peso"] as const;
+// Primer paso "basico" agrupa especie + nombre + raza en una sola pantalla
+// (evita 3 clics de "Continuar" seguidos); luego etapa y peso siguen sueltos.
+const STEP_IDS = ["basico", "etapa", "peso"] as const;
 type StepId = (typeof STEP_IDS)[number];
 
 /**
@@ -81,6 +83,25 @@ export function OnboardingWizard() {
     setDraft((d) => ({ ...d, weightKg, weightSource }));
 
   /**
+   * Al cambiar de especie, la raza elegida deja de ser válida (las listas son
+   * por especie) y cualquier peso derivado de ella queda obsoleto. Limpiamos
+   * raza + peso estimado/por rango; el peso EXACTO (tecleado por el dueño) se
+   * conserva. Importa ahora que especie y raza conviven en la misma pantalla.
+   */
+  const onSpeciesChange = (species: Species) =>
+    setDraft((d) => {
+      if (d.species === species) return d;
+      const keepExact = d.weightSource === "exacto";
+      return {
+        ...d,
+        species,
+        breed: undefined,
+        weightKg: keepExact ? d.weightKg : undefined,
+        weightSource: keepExact ? d.weightSource : undefined,
+      };
+    });
+
+  /**
    * Al elegir raza, pre-estimamos el peso desde la raza reconocida (§1.1
    * "pre-estimado desde raza"), salvo que el dueño ya lo haya fijado exacto.
    * Al pasar a Mestizo/manual se descarta el estimado previo (se re-elige por
@@ -100,9 +121,7 @@ export function OnboardingWizard() {
 
   const canContinue = useMemo(() => {
     switch (stepId) {
-      case "especie": return Boolean(draft.species);
-      case "nombre": return Boolean(draft.name?.trim());
-      case "raza": return Boolean(draft.breed?.trim());
+      case "basico": return Boolean(draft.species && draft.name?.trim() && draft.breed?.trim());
       case "etapa": return Boolean(draft.stage);
       case "peso": return true; // peso no bloqueante: siempre hay estimación o "no sé" (F3)
       default: return true;
@@ -184,54 +203,58 @@ export function OnboardingWizard() {
                 className="flex-1"
               >
                 <Stack gap={6} className="max-w-xl">
-                  {/* Especie */}
-                  {stepId === "especie" && (
-                    <Question
-                      title="¿Quién es tu nuevo integrante?"
-                      why="Así te mostramos solo lo que le sirve a su especie."
-                    >
-                      <RadioGroup
-                        value={draft.species}
-                        onValueChange={(v) => set("species", v as Species)}
-                        aria-label="Especie"
-                        className="sm:grid-cols-3"
+                  {/* Datos básicos: especie + nombre + raza, juntos en una sola
+                      pantalla para no pedir "Continuar" tres veces seguidas. */}
+                  {stepId === "basico" && (
+                    <Stack gap={6}>
+                      <Stack gap={2}>
+                        <h1 className="heading-1 text-text-primary">Cuéntanos de tu mascota</h1>
+                        <p className="body-m inline-flex items-start gap-1.5 text-text-secondary">
+                          <Scale className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
+                          Con estos datos armamos su perfil y afinamos lo que le recomendamos.
+                        </p>
+                      </Stack>
+
+                      <SubField
+                        label="¿Quién es tu nuevo integrante?"
+                        why="Así te mostramos solo lo que le sirve a su especie."
                       >
-                        {SPECIES.map((s) => (
-                          <RadioCard key={s.value} value={s.value} title={s.label} icon={<span>{s.emoji}</span>} />
-                        ))}
-                      </RadioGroup>
-                    </Question>
-                  )}
+                        <RadioGroup
+                          value={draft.species}
+                          onValueChange={(v) => onSpeciesChange(v as Species)}
+                          aria-label="Especie"
+                          className="sm:grid-cols-3"
+                        >
+                          {SPECIES.map((s) => (
+                            <RadioCard key={s.value} value={s.value} title={s.label} icon={<span>{s.emoji}</span>} />
+                          ))}
+                        </RadioGroup>
+                      </SubField>
 
-                  {/* Nombre */}
-                  {stepId === "nombre" && (
-                    <Question
-                      title="¿Cómo se llama?"
-                      why="Para hablarte de él por su nombre, no como 'tu mascota'."
-                    >
-                      <Input
-                        label="Nombre"
-                        placeholder="Ej: Toby"
-                        autoFocus
-                        value={draft.name ?? ""}
-                        onChange={(e) => set("name", e.target.value)}
-                        className="max-w-sm"
-                      />
-                    </Question>
-                  )}
+                      <SubField
+                        label="¿Cómo se llama?"
+                        why="Para hablarte de él por su nombre, no como 'tu mascota'."
+                      >
+                        <Input
+                          aria-label="Nombre"
+                          placeholder="Ej: Toby"
+                          value={draft.name ?? ""}
+                          onChange={(e) => set("name", e.target.value)}
+                          className="max-w-sm"
+                        />
+                      </SubField>
 
-                  {/* Raza */}
-                  {stepId === "raza" && (
-                    <Question
-                      title={`¿Qué raza es ${petName}?`}
-                      why="Con su raza estimamos el peso y afinamos lo que le recomendamos. Si no la sabes, elige Mestizo."
-                    >
-                      <BreedCombobox
-                        species={draft.species ?? "otro"}
-                        value={draft.breed}
-                        onChange={onBreedChange}
-                      />
-                    </Question>
+                      <SubField
+                        label={`¿Qué raza es ${petName}?`}
+                        why="Con su raza estimamos el peso y afinamos lo que le recomendamos. Si no la sabes, elige Mestizo."
+                      >
+                        <BreedCombobox
+                          species={draft.species ?? "otro"}
+                          value={draft.breed}
+                          onChange={onBreedChange}
+                        />
+                      </SubField>
+                    </Stack>
                   )}
 
                   {/* Etapa */}
@@ -357,6 +380,30 @@ function Question({
           <Scale className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
           {why}
         </p>
+      </Stack>
+      {children}
+    </Stack>
+  );
+}
+
+/**
+ * Sub-pregunta dentro de un paso combinado (p. ej. "básico"): etiqueta + su
+ * "por qué", más liviana que Question para que varias convivan en una pantalla.
+ */
+function SubField({
+  label,
+  why,
+  children,
+}: {
+  label: React.ReactNode;
+  why: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Stack gap={3}>
+      <Stack gap={1}>
+        <h2 className="heading-3 text-text-primary">{label}</h2>
+        <p className="body-s text-text-secondary">{why}</p>
       </Stack>
       {children}
     </Stack>
