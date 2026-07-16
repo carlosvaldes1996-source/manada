@@ -280,6 +280,7 @@ export function OnboardingWizard() {
                           value={draft.stage}
                           onValueChange={(v) => set("stage", v as LifeStage)}
                           aria-label="Etapa de vida"
+                          className="grid-cols-3"
                         >
                           {STAGES.map((s) => (
                             <RadioCard key={s.value} value={s.value} title={s.label} description={s.hint} />
