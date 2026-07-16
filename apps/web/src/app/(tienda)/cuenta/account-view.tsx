@@ -26,12 +26,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PetAvatar } from "@/components/pet";
+import { PetAvatar, PetStatusCard } from "@/components/pet";
 import { GuestAccountPrompt } from "./guest-account-prompt";
 import { useSession, useAuthActions, usePet } from "@/hooks";
+import { useCart } from "@/components/providers";
+import { useToast } from "@/components/ui/toast";
 import { listOrders, type OrderView } from "@/lib/medusa";
 import { formatCLP, formatDateLong, pluralize } from "@/lib/format";
+import { petFoodAnticipation } from "@/lib/anticipation";
 import { cn } from "@/lib/utils";
+import type { Product } from "@/types";
 
 /* ─── Servicios de Manada (placeholder — se agendarán en el futuro) ─── */
 const SERVICES = [
@@ -42,11 +46,43 @@ const SERVICES = [
   { id: "grooming", icon: Star, label: "Grooming express", duration: 45, price: 9990 },
 ];
 
-export function AccountView() {
+export function AccountView({ products = [] }: { products?: Product[] }) {
   const router = useRouter();
   const { user, status, isLoading } = useSession();
   const { logout } = useAuthActions();
-  const { pets, setActivePetId } = usePet();
+  const { pets, setActivePetId, activePet, foodAssignedAt } = usePet();
+  const { addItem } = useCart();
+  const { toast } = useToast();
+  const [reordering, setReordering] = useState(false);
+
+  // Alimento activo + anticipación (misma lógica que el dashboard).
+  const currentFood = activePet?.currentFoodId
+    ? products.find((p) => p.id === activePet.currentFoodId)
+    : undefined;
+  const anticipation =
+    activePet && currentFood
+      ? petFoodAnticipation(activePet, currentFood, foodAssignedAt[activePet.id])
+      : null;
+
+  async function reorder() {
+    if (!activePet || !currentFood) return;
+    if (!currentFood.variantId) {
+      router.push(`/producto/${currentFood.slug}`);
+      return;
+    }
+    setReordering(true);
+    try {
+      await addItem(currentFood);
+      toast({
+        title: `El alimento de ${activePet.name} ya está en tu carrito`,
+        description: `${currentFood.brand.name} · ${currentFood.name}`,
+        variant: "success",
+        action: { label: "Ir a pagar", onClick: () => router.push("/carrito") },
+      });
+    } finally {
+      setReordering(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -150,19 +186,30 @@ export function AccountView() {
                   <h2 className="heading-3 text-text-primary">Suscripciones Activas</h2>
                 </Row>
 
-                {/* Empty state — cuando no haya suscripciones reales */}
-                <div className="flex flex-col items-center gap-4 rounded-[var(--radius-lg)] border border-dashed border-border-default py-8 text-center">
-                  <Package className="size-10 text-text-muted" aria-hidden />
-                  <Stack gap={1} align="center">
-                    <p className="font-semibold text-text-primary">No tienes suscripciones</p>
-                    <p className="text-sm text-text-secondary">
-                      Olvídate de comprar comida a última hora.
-                    </p>
-                  </Stack>
-                  <Button asChild>
-                    <Link href="/comenzar">Crear plan para mi mascota</Link>
-                  </Button>
-                </div>
+                {activePet && currentFood ? (
+                  /* Card de estado cuando hay mascota con alimento asignado */
+                  <PetStatusCard
+                    pet={activePet}
+                    food={currentFood}
+                    anticipation={anticipation}
+                    onReorder={reorder}
+                    reorderPending={reordering}
+                  />
+                ) : (
+                  /* Empty state — sin mascota o sin alimento asignado */
+                  <div className="flex flex-col items-center gap-4 rounded-[var(--radius-lg)] border border-dashed border-border-default py-8 text-center">
+                    <Package className="size-10 text-text-muted" aria-hidden />
+                    <Stack gap={1} align="center">
+                      <p className="font-semibold text-text-primary">No tienes suscripciones</p>
+                      <p className="text-sm text-text-secondary">
+                        Olvídate de comprar comida a última hora.
+                      </p>
+                    </Stack>
+                    <Button asChild>
+                      <Link href="/comenzar">Crear plan para mi mascota</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

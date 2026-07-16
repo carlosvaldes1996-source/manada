@@ -1,21 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { Product } from "@/types";
 import { useSession } from "@/components/providers";
 import { LandingView } from "./landing-view";
-import { DashboardView } from "./dashboard-view";
 
 /**
- * Conmutador de Home según sesión (Fase 3.3B · resuelve U041/U058), como cliente.
- * El catálogo real llega ya hidratado desde el server component `page.tsx` y se
- * pasa a ambas vistas; la decisión landing vs. dashboard depende del estado de
- * sesión (solo disponible en cliente).
+ * Conmutador de Home según sesión: los usuarios autenticados van directo a
+ * /cuenta (panel unificado), los anónimos ven la landing.
  */
 export function HomeSwitch({ products }: { products: Product[] }) {
   const { status } = useSession();
-  return status === "authenticated" ? (
-    <DashboardView products={products} />
-  ) : (
-    <LandingView products={products} />
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/cuenta");
+    }
+  }, [status, router]);
+
+  // Mientras resuelve la sesión o redirige, muestra la landing como placeholder.
+  if (status === "authenticated") return null;
+
+  return <LandingView products={products} />;
 }
