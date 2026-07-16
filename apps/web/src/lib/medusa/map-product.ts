@@ -5,6 +5,7 @@ import type {
   Price,
   Product,
   ProductCategory,
+  ProductVariant,
   Species,
 } from "@/types";
 import { PET_CONDITIONS } from "@/lib/pet";
@@ -45,13 +46,10 @@ type StoreProduct = HttpTypes.StoreProduct & { subscription_price?: number | nul
 type StoreVariant = HttpTypes.StoreProductVariant;
 
 /**
- * MVP: el storefront NO ofrece suscripción todavía (el motor de entregas
- * recurrentes es el moat, posterior al MVP). Hasta cablearlo de verdad, el
- * catálogo se expone como **compra única**: así la UI nunca muestra un precio,
- * badge ni CTA de suscripción que hoy no se cobra ni se cumple. Interruptor
- * único y reversible: al implementar la suscripción real, poner en `true`.
+ * Interruptor de suscripción. `true` = la UI muestra el Plan Manada en la PDP.
+ * El backend calcula `subscription_price`; el frontend solo lo consume.
  */
-const SUBSCRIPTIONS_ENABLED = false;
+const SUBSCRIPTIONS_ENABLED = true;
 
 /** Emoji placeholder por categoría hasta tener packshots reales (U090). */
 const CATEGORY_EMOJI: Record<ProductCategory, string> = {
@@ -197,7 +195,7 @@ export function mapProduct(product: StoreProduct): Product {
     ? metaNumber(meta, "subscription_discount_percentage")
     : undefined;
   // Precio de suscripción: lo calcula el backend; el frontend NO recalcula. Solo
-  // se expone si la suscripción está habilitada (hoy no, ver SUBSCRIPTIONS_ENABLED).
+  // se expone si la suscripción está habilitada.
   const subscriptionPrice =
     subscribable && typeof product.subscription_price === "number"
       ? product.subscription_price
@@ -206,12 +204,19 @@ export function mapProduct(product: StoreProduct): Product {
   const ratingValue = metaNumber(meta, "rating");
   const reviewCount = metaNumber(meta, "review_count");
 
-  // Nutrición (solo relevante en alimento): densidad calórica + condiciones que
-  // el alimento atiende / contraindica. Habilitan el cálculo RER/MER y las
-  // puertas del motor (ver lib/recommend.ts). Ausentes → el motor degrada honesto.
   const kcalPerKg = metaNumber(meta, "kcal_per_kg");
   const suitableConditions = metaEnumList(meta, "suitable_conditions", VALID_CONDITIONS);
   const notFor = metaEnumList(meta, "not_for", VALID_CONDITIONS);
+
+  // Todas las variantes ordenadas por rank, para el selector de tamaño en la PDP.
+  const allVariants: ProductVariant[] = [...(product.variants ?? [])]
+    .sort((a, b) => (a.variant_rank ?? 0) - (b.variant_rank ?? 0))
+    .map((v) => ({
+      variantId: v.id!,
+      title: v.title || "—",
+      price: toPrice(v),
+      stock: toStock(v),
+    }));
 
   return {
     id: product.id,
@@ -224,6 +229,8 @@ export function mapProduct(product: StoreProduct): Product {
     stage: stage.length ? stage : undefined,
     price: toPrice(variant),
     format: variant?.title || undefined,
+    description: product.description ?? undefined,
+    variants: allVariants.length > 1 ? allVariants : undefined,
     kcalPerKg,
     suitableConditions: suitableConditions.length ? suitableConditions : undefined,
     notFor: notFor.length ? notFor : undefined,

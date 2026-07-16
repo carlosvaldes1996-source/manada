@@ -83,6 +83,15 @@ export interface Price {
   compareAt?: number;
 }
 
+/** Variante de producto (distinto tamaño/peso). */
+export interface ProductVariant {
+  variantId: string;
+  /** Etiqueta visible, ej. "3 kg" o "15 kg". */
+  title: string;
+  price: Price;
+  stock: number;
+}
+
 export interface Product {
   id: string;
   /** ID de la variante primaria en Medusa — necesario para agregar al carrito. */
@@ -96,6 +105,10 @@ export interface Product {
   price: Price;
   /** Formato/peso visible (ej. "3 kg"). */
   format?: string;
+  /** Descripción larga del producto (Medusa `description`). */
+  description?: string;
+  /** Todas las variantes disponibles, ordenadas por rank (para el selector de tamaño). */
+  variants?: ProductVariant[];
   /**
    * Energía metabolizable del alimento en kcal/kg — base del cálculo de ración
    * (RER/MER ÷ densidad). Solo aplica a `alimento`; viene de `metadata.kcal_per_kg`.
