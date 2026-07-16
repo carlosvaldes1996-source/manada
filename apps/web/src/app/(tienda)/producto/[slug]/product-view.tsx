@@ -158,7 +158,6 @@ export function ProductView({
       label: `Le dura a ${activePet?.name ?? "tu mascota"}`,
       value: `~${pluralize(duration, "día")}`,
     });
-  if (pricePerKg) specs.push({ label: "Precio por kilo", value: formatCLP(pricePerKg) });
 
   return (
     <Section spacing="md" className="pt-6 lg:pt-10">
