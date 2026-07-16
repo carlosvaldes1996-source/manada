@@ -222,24 +222,24 @@ export function RecommendationView({ products }: { products: Product[] }) {
 
   return (
     <FunnelShell exitHref={exitHref}>
-      <Section spacing="md">
+      <Section spacing="sm">
         <motion.div
           variants={reduced ? fade : fadeInUp}
           initial="hidden"
           animate="visible"
           className="mx-auto w-full max-w-5xl"
         >
-          <Stack gap={6}>
+          <Stack gap={4}>
             {/* Cierre del onboarding: check + "plan listo", con la ración como prueba concreta. */}
-            <Stack gap={2} align="center" className="text-center">
-              <span className="grid size-12 place-items-center rounded-full bg-success-soft text-success-strong">
-                <Check className="size-6" aria-hidden />
+            <Stack gap={1} align="center" className="text-center">
+              <span className="grid size-10 place-items-center rounded-full bg-success-soft text-success-strong">
+                <Check className="size-5" aria-hidden />
               </span>
               <h1 className="display-l text-text-primary">
                 ¡Plan listo para <span className="pet-name">{activePet.name}</span>!
               </h1>
               {plan && (
-                <p className="body-l text-text-secondary">
+                <p className="body-m text-text-secondary">
                   Necesita <strong className="text-text-primary">~{plan.rationGrams} g</strong> al día
                   {weightEstimated && " (estimado)"}
                 </p>
@@ -372,7 +372,7 @@ function FeaturedFoodCard({
   const reminderDate = plan ? minusDays(plan.estimate.runOutDate, leadDays) : undefined;
 
   return (
-    <div className="flex flex-col gap-4 rounded-[var(--radius-xl)] border-2 border-terracota-300 bg-surface p-6 shadow-md">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-xl)] border-2 border-terracota-300 bg-surface p-4 shadow-md">
       {/* Etiqueta del plan, según de qué comida esté hecho */}
       <div className="flex flex-wrap items-center gap-2">
         {isOwned ? (
@@ -404,12 +404,12 @@ function FeaturedFoodCard({
         )}
       </div>
 
-      <div className="mx-auto grid aspect-square w-full max-w-[200px] place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+      <div className="mx-auto grid aspect-square w-full max-w-[150px] place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
         <ProductImage
           image={food.imageUrl}
           alt={`${food.brand.name} ${food.name}`}
-          imgClassName="p-4"
-          emojiClassName="text-6xl"
+          imgClassName="p-3"
+          emojiClassName="text-5xl"
         />
       </div>
 
@@ -437,7 +437,7 @@ function FeaturedFoodCard({
         )}
       </Stack>
 
-      <Stack gap={2} className="border-t border-border-default pt-4">
+      <Stack gap={2} className="border-t border-border-default pt-3">
         {isOwned ? (
           <>
             <Button size="lg" block onClick={onSavePlan} trailingIcon={<Check className="size-4" aria-hidden />}>
