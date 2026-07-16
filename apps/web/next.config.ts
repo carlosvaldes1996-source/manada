@@ -6,9 +6,13 @@ import type { NextConfig } from "next";
  * conservadoras y no afectan el funcionamiento: evitan MIME-sniffing, framing de
  * terceros (clickjacking) y fuerzan HTTPS.
  */
+// X-Frame-Options se omite en dev para que el preview de Replit (iframe cross-origin) funcione.
+// En producción se activa SAMEORIGIN para proteger contra clickjacking.
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  ...(process.env.NODE_ENV === "production"
+    ? [{ key: "X-Frame-Options", value: "SAMEORIGIN" }]
+    : []),
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
