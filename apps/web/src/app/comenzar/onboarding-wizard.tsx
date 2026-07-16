@@ -194,7 +194,7 @@ export function OnboardingWizard() {
               e.preventDefault();
               next();
             }}
-            className="flex min-h-[420px] flex-col"
+            className="flex flex-col"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -263,10 +263,10 @@ export function OnboardingWizard() {
                   {/* Etapa + peso: la edad primero, y en la misma pantalla si se sabe
                       el peso o se estima — sin una pantalla aparte para el peso. */}
                   {stepId === "etapa" && (
-                    <Stack gap={6}>
-                      <Stack gap={2}>
+                    <Stack gap={4}>
+                      <Stack gap={1}>
                         <h1 className="heading-1 text-text-primary">Un par de datos más de {petName}</h1>
-                        <p className="body-m inline-flex items-start gap-1.5 text-text-secondary">
+                        <p className="body-s inline-flex items-start gap-1.5 text-text-secondary">
                           <Scale className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
                           Con esto afinamos su ración diaria y cuándo se le acaba la comida.
                         </p>
@@ -307,7 +307,7 @@ export function OnboardingWizard() {
             </AnimatePresence>
 
             {/* Navegación */}
-            <Row gap={3} className="mt-8 border-t border-border-default pt-5">
+            <Row gap={3} className="mt-5 border-t border-border-default pt-4">
               <Button type="button" variant="ghost" onClick={back} leadingIcon={<ArrowLeft className="size-4" aria-hidden />}>
                 {stepIndex === 0 ? "Volver" : "Atrás"}
               </Button>
