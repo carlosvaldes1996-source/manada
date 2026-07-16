@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack } from "@/components/ui/stack";
 import { Grid } from "@/components/ui/grid";
@@ -103,6 +105,14 @@ export function MascotasView({ products }: { products: Product[] }) {
   return (
     <Section spacing="md">
       <Stack gap={10}>
+        <Link
+          href="/cuenta"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-text-primary"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Volver a mi cuenta
+        </Link>
+
         <PetProfileHeader
           pet={activePet}
           avatarSlot={<PetPhotoUploader pet={activePet} />}
