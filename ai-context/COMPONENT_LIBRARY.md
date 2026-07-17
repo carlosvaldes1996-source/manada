@@ -133,6 +133,7 @@
 | **ProductCard** | Unidad central del catálogo. Packshot (`ProductImage`) · badges · marca/nombre · rating · precio · despacho honesto · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. |
 | **ProductGrid** | Grilla 2→3→4 con estados `loading` (skeletons) y `empty` integrados. |
 | **ProductRail** | Carrusel horizontal scroll-snap (cross-sell, destacados). |
+| **VariantSelector** | Selector de formato/talla de la PDP (chips sobre `Chip`, D48). Solo se renderiza con **>1 variante** (`Product.variants`); con una sola no hay nada que elegir y el formato se muestra en la ficha. Variante sin stock = chip deshabilitado. La PDP deriva precio/$-kg/duración/`variantId` de la variante elegida; el default es la primaria. |
 | **QuickBuyCard** | Fila de recompra rápida ("lo de siempre", D42): miniatura + nombre + precio + Agregar en una línea. Para productos que el usuario ya conoce — repone sin pasar por el catálogo. |
 | **CategoryCard / BrandCard** | Accesos por necesidad y por marca. `CategoryCard` acepta `imageUrl` (ícono-foto por slug, con fallback cálido si la foto falta) o `icon` (emoji, respaldo/styleguide); **la variante-foto es la canónica**. |
 | **CategoryTiles** | Grid de accesos a categorías de la Home (`CATEGORIES.slice(0,4)` con íconos-foto). **Fuente única compartida** por la landing anónima (`LandingView`) y el dashboard con sesión (`DashboardView`) → ambos estados muestran las mismas tarjetas (D31; antes el logueado usaba emojis viejos). |

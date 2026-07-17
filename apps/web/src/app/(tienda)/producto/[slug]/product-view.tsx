@@ -8,10 +8,10 @@ import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
 import { Separator } from "@/components/ui/separator";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import {
   SubscriptionBox,
@@ -19,6 +19,7 @@ import {
   ProductImage,
   ProductRail,
   StockBadge,
+  VariantSelector,
 } from "@/components/commerce";
 import { usePet, useCart } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -41,6 +42,8 @@ import type { Product } from "@/types";
  * - U052: un ÚNICO riel de cross-sell ("Suele combinarse con").
  * - U064: el criterio de "para tu mascota" es transparente en el copy.
  */
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 export function ProductView({
   product,
   products,
@@ -54,15 +57,34 @@ export function ProductView({
   const { addItem } = useCart();
   const { toast } = useToast();
   const router = useRouter();
-  const sub = useSubscription(product);
   const [qty, setQty] = useState(1);
 
-  const soldOut = product.stock <= 0;
+  // Variante (formato/talla) elegida. Por defecto, la primaria: la misma que
+  // muestra la tarjeta de catálogo, para que no haya salto de precio al abrir.
+  const variants = product.variants ?? [];
+  const [selectedVariantId, setSelectedVariantId] = useState(product.variantId);
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? variants[0];
+
+  // Producto según la variante elegida: precio, formato, stock y variantId reflejan
+  // la talla seleccionada. Todo lo que cotiza o agrega al carrito usa `selected`.
+  const selected: Product = selectedVariant
+    ? {
+        ...product,
+        variantId: selectedVariant.id,
+        price: selectedVariant.price,
+        format: selectedVariant.format,
+        stock: selectedVariant.stock,
+      }
+    : product;
+
+  const sub = useSubscription(selected);
+
+  const soldOut = selected.stock <= 0;
 
   // Specs de valor (U044): ración diaria, duración del saco y precio por kilo.
-  // Se calculan para la MASCOTA ACTIVA del header (el switcher global es el
-  // selector de contexto, B1) — informativas, no transaccionales (D39).
-  const bagKg = product.format && /kg/i.test(product.format) ? parseFloat(product.format) : undefined;
+  // Se recalculan para la VARIANTE elegida (bagKg y precio cambian con el formato)
+  // y la MASCOTA ACTIVA del header — informativas, no transaccionales (D39).
+  const bagKg = selected.format && /kg/i.test(selected.format) ? parseFloat(selected.format) : undefined;
   const isFood = product.category === "alimento";
   const ration =
     isFood && activePet?.weightKg
@@ -73,13 +95,13 @@ export function ProductView({
             weightKg: activePet.weightKg,
             neutered: activePet.neutered,
           },
-          product.kcalPerKg,
+          selected.kcalPerKg,
         )
       : undefined;
   const duration = isFood && bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
-  const pricePerKg = bagKg ? Math.round(product.price.current / bagKg) : undefined;
+  const pricePerKg = bagKg ? Math.round(selected.price.current / bagKg) : undefined;
 
-  const unitPrice = sub.isSubscribed ? sub.effectivePrice : product.price.current;
+  const unitPrice = sub.isSubscribed ? sub.effectivePrice : selected.price.current;
 
   // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
   // categoría (complemento, no otro saco igual) → "completar su rutina".
@@ -93,7 +115,7 @@ export function ProductView({
     .slice(0, 6);
 
   function add() {
-    addItem(product, {
+    addItem(selected, {
       quantity: qty,
       subscriptionWeeks: sub.isSubscribed ? sub.frequency : undefined,
     });
@@ -133,7 +155,7 @@ export function ProductView({
   if (ration) specs.push({ label: "Ración diaria", value: `~${ration} g` });
   if (duration) specs.push({ label: `Le dura a ${activePet?.name ?? "tu mascota"}`, value: `~${pluralize(duration, "día")}` });
   if (pricePerKg) specs.push({ label: "Precio por kilo", value: formatCLP(pricePerKg) });
-  if (specs.length === 0 && product.format) specs.push({ label: "Formato", value: product.format });
+  if (specs.length === 0 && selected.format) specs.push({ label: "Formato", value: selected.format });
 
   return (
     // pt reducido (mismo criterio que la PLP): breadcrumb cerca del nav.
@@ -162,20 +184,44 @@ export function ProductView({
             />
           </div>
 
-          {/* Caja de compra */}
-          <Stack gap={4}>
+          {/* Caja de compra — orden del boceto: nombre → descripción → formato →
+              specs de valor → [Plan Manada] → Compra única */}
+          <Stack gap={5}>
             <Stack gap={2}>
               <span className="overline text-text-secondary">{product.brand.name}</span>
               <h1 className="heading-1 text-text-primary">{product.name}</h1>
+              {(product.species.length > 0 || (product.stage?.length ?? 0) > 0) && (
+                <Row gap={2} wrap className="pt-0.5">
+                  {product.stage?.map((s) => (
+                    <Badge key={s} variant="neutral">
+                      {capitalize(s)}
+                    </Badge>
+                  ))}
+                  {product.species.map((s) => (
+                    <Badge key={s} variant="neutral">
+                      {capitalize(s)}
+                    </Badge>
+                  ))}
+                </Row>
+              )}
             </Stack>
 
-            <Row gap={3} wrap>
-              <Price now={unitPrice} was={product.price.compareAt} size="xl" />
-              <StockBadge stock={product.stock} />
-            </Row>
+            {/* Descripción real del catálogo, arriba (como el boceto). */}
+            {product.description && (
+              <p className="body-m text-text-secondary">{product.description}</p>
+            )}
 
-            {/* Módulo de specs de valor ARRIBA (U044/U096). Grid responsive:
-                apila en móvil para no truncar las etiquetas. */}
+            {/* Selector de formato/talla: solo aparece si el producto tiene más de
+                una variante; si tiene una sola, se muestra en las specs. */}
+            <VariantSelector
+              variants={variants}
+              selectedId={selected.variantId}
+              onSelect={setSelectedVariantId}
+              label="Selecciona el tamaño"
+            />
+
+            {/* Módulo de specs de valor (U044/U096) — recalculado por variante.
+                Grid responsive: apila en móvil para no truncar las etiquetas. */}
             {specs.length > 0 && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {specs.map((s) => (
@@ -204,10 +250,13 @@ export function ProductView({
               </p>
             )}
 
-            {/* Suscripción primero (U045) + reaseguro visible (U046) */}
+            {/* Suscripción primero (U045) + reaseguro visible (U046). Gated por
+                SUBSCRIPTIONS_ENABLED (D29): con suscripciones apagadas hoy, este
+                bloque no se renderiza y la PDP muestra solo la compra única; el
+                layout ya deja su lugar reservado (boceto "Plan Manada"). */}
             {product.subscribable && (
               <Stack gap={2}>
-                <SubscriptionBox product={product} controller={sub} />
+                <SubscriptionBox product={selected} controller={sub} />
                 <p className="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
                   <ShieldCheck className="size-4 text-[var(--success)]" aria-hidden />
                   Sin permanencia: pausa o cancela cuando quieras, sin costo.
@@ -217,25 +266,34 @@ export function ProductView({
 
             <Separator />
 
-            {/* CTA único (U045): cantidad + acción primaria */}
-            <Row gap={3} align="stretch" className="gap-3">
-              {!soldOut && (
-                <QuantitySelector value={qty} onChange={setQty} min={1} max={Math.min(product.stock, 10)} />
-              )}
-              <Button
-                size="lg"
-                block
-                onClick={add}
-                disabled={soldOut}
-                leadingIcon={sub.isSubscribed ? <RefreshCw className="size-4" aria-hidden /> : undefined}
-              >
-                {soldOut
-                  ? "Sin stock por ahora"
-                  : sub.isSubscribed
-                    ? "Suscribir y agregar"
-                    : "Agregar al carrito"}
-              </Button>
-            </Row>
+            {/* Compra única (U045): precio de la variante elegida + cantidad + CTA */}
+            <Stack gap={3}>
+              <Row justify="between" align="end" wrap gap={3}>
+                <Stack gap={1}>
+                  <span className="overline text-text-secondary">Compra única</span>
+                  <Price now={unitPrice} was={selected.price.compareAt} size="xl" />
+                </Stack>
+                <StockBadge stock={selected.stock} />
+              </Row>
+              <Row gap={3} align="stretch" className="gap-3">
+                {!soldOut && (
+                  <QuantitySelector value={qty} onChange={setQty} min={1} max={Math.min(selected.stock, 10)} />
+                )}
+                <Button
+                  size="lg"
+                  block
+                  onClick={add}
+                  disabled={soldOut}
+                  leadingIcon={sub.isSubscribed ? <RefreshCw className="size-4" aria-hidden /> : undefined}
+                >
+                  {soldOut
+                    ? "Sin stock por ahora"
+                    : sub.isSubscribed
+                      ? "Suscribir y agregar"
+                      : "Agregar al carrito"}
+                </Button>
+              </Row>
+            </Stack>
 
             <ShippingPolicyNote policy={policy} size="md" />
 
@@ -246,38 +304,28 @@ export function ProductView({
           </Stack>
         </div>
 
-        {/* Detalle en pestañas */}
-        <Tabs defaultValue="descripcion" className="mt-2">
-          <TabsList>
-            <TabsTrigger value="descripcion">Descripción</TabsTrigger>
-            <TabsTrigger value="detalle">Ficha técnica</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="descripcion">
-            <p className="body-m max-w-2xl text-text-secondary">
-              {product.name} de {product.brand.name}. Una fórmula pensada para acompañar a{" "}
-              {activePet?.name ?? "tu mascota"} en su día a día. Te avisamos antes de que se acabe
-              para que nunca le falte.
-            </p>
-          </TabsContent>
-
-          <TabsContent value="detalle">
-            <dl className="grid max-w-md grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <dt className="text-text-secondary">Marca</dt>
-              <dd className="text-text-primary">{product.brand.name}</dd>
-              <dt className="text-text-secondary">Formato</dt>
-              <dd className="text-text-primary">{product.format ?? "—"}</dd>
-              <dt className="text-text-secondary">Para</dt>
-              <dd className="text-text-primary">{product.species.join(", ")}</dd>
-              {product.stage && (
-                <>
-                  <dt className="text-text-secondary">Etapa</dt>
-                  <dd className="text-text-primary">{product.stage.join(", ")}</dd>
-                </>
-              )}
-            </dl>
-          </TabsContent>
-        </Tabs>
+        {/* Ficha técnica (la descripción ya vive arriba, junto al nombre). */}
+        <div className="mt-2 max-w-md">
+          <h2 className="heading-3 mb-3 text-text-primary">Ficha técnica</h2>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <dt className="text-text-secondary">Marca</dt>
+            <dd className="text-text-primary">{product.brand.name}</dd>
+            <dt className="text-text-secondary">{variants.length > 1 ? "Formatos" : "Formato"}</dt>
+            <dd className="text-text-primary">
+              {variants.length > 1
+                ? variants.map((v) => v.format).join(" · ")
+                : (product.format ?? "—")}
+            </dd>
+            <dt className="text-text-secondary">Para</dt>
+            <dd className="text-text-primary">{product.species.join(", ")}</dd>
+            {product.stage && (
+              <>
+                <dt className="text-text-secondary">Etapa</dt>
+                <dd className="text-text-primary">{product.stage.join(", ")}</dd>
+              </>
+            )}
+          </dl>
+        </div>
 
         {/* Cross-sell ÚNICO (U052) */}
         {related.length > 0 && (

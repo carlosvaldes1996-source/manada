@@ -5,6 +5,7 @@ import type {
   Price,
   Product,
   ProductCategory,
+  ProductVariant,
   Species,
 } from "@/types";
 import { PET_CONDITIONS } from "@/lib/pet";
@@ -160,6 +161,23 @@ function toStock(variant: StoreVariant | undefined): number {
   return variant.inventory_quantity ?? 0;
 }
 
+/**
+ * Todas las variantes de compra (formatos/tallas), ordenadas por precio
+ * ascendente — con formatos de peso ("1 kg" < "3 kg" < "7.5 kg") esto equivale
+ * a menor→mayor tamaño. La PDP muestra un selector solo cuando hay más de una;
+ * si el producto tiene una sola, se expone esa única disponible.
+ */
+function toVariants(product: StoreProduct): ProductVariant[] {
+  return (product.variants ?? [])
+    .map((v) => ({
+      id: v.id,
+      format: v.title || "Único",
+      price: toPrice(v),
+      stock: toStock(v),
+    }))
+    .sort((a, b) => a.price.current - b.price.current);
+}
+
 /** Imagen: thumbnail → primera imagen → emoji placeholder (por especie/categoría). */
 function toImageUrl(product: StoreProduct, category: ProductCategory, species: Species[]): string {
   const image = product.thumbnail ?? product.images?.[0]?.url;
@@ -218,12 +236,14 @@ export function mapProduct(product: StoreProduct): Product {
     variantId: variant?.id,
     slug: product.handle,
     name: displayName(product.title, brandName),
+    description: product.description ?? undefined,
     brand,
     category,
     species,
     stage: stage.length ? stage : undefined,
     price: toPrice(variant),
     format: variant?.title || undefined,
+    variants: toVariants(product),
     kcalPerKg,
     suitableConditions: suitableConditions.length ? suitableConditions : undefined,
     notFor: notFor.length ? notFor : undefined,
