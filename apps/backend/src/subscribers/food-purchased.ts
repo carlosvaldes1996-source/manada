@@ -42,7 +42,19 @@ export default async function foodPurchasedHandler({
   );
   if (purchasedProductIds.size === 0) return;
 
-  const ownPets = await pets.listPets({ customer_id: order.customer_id });
+  // Mascotas del cliente vía el Module Link Customer↔Pet (traversal nativo).
+  const {
+    data: [customer],
+  } = await query.graph({
+    entity: "customer",
+    fields: ["pets.id", "pets.name", "pets.current_food_id"],
+    filters: { id: order.customer_id },
+  });
+  const ownPets = (customer?.pets ?? []) as {
+    id: string;
+    name: string;
+    current_food_id: string | null;
+  }[];
   const matched = ownPets.filter(
     (p) => p.current_food_id && purchasedProductIds.has(p.current_food_id),
   );
