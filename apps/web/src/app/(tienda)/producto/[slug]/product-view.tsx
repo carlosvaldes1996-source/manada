@@ -21,6 +21,7 @@ import {
   StockBadge,
   VariantSelector,
 } from "@/components/commerce";
+import { PlanManadaPreview } from "./plan-manada-preview";
 import { usePet, useCart } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
@@ -43,6 +44,14 @@ import type { Product } from "@/types";
  * - U064: el criterio de "para tu mascota" es transparente en el copy.
  */
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Preview de diseño de la card "Plan Manada" (D48). OCULTA por defecto: la
+ * suscripción sigue apagada (D29), así que la card no se vende ni ejecuta nada
+ * (CTA inerte). Se mantiene completa y toggeable como material para el bloque de
+ * suscripción futuro; poner en `true` solo para revisarla en local.
+ */
+const SHOW_PLAN_MANADA_PREVIEW = false;
 
 export function ProductView({
   product,
@@ -263,6 +272,10 @@ export function ProductView({
                 </p>
               </Stack>
             )}
+
+            {/* Preview de diseño de la card Plan Manada — oculta (D29 apagado);
+                CTA inerte. Ver SHOW_PLAN_MANADA_PREVIEW arriba. */}
+            {SHOW_PLAN_MANADA_PREVIEW && isFood && <PlanManadaPreview product={selected} />}
 
             <Separator />
 
