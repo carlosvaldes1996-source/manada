@@ -48,38 +48,48 @@ function metaNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+type AnyVariant = {
+  variant_rank?: number | null;
+  calculated_price?: { calculated_amount?: number | null } | null;
+  subscription_price?: number | null;
+};
+
 type AnyProduct = {
   metadata?: Record<string, unknown> | null;
-  variants?: {
-    variant_rank?: number | null;
-    calculated_price?: { calculated_amount?: number | null } | null;
-  }[];
+  variants?: AnyVariant[];
   subscription_price?: number | null;
 };
 
 /**
- * Calcula e inyecta `subscription_price` en un producto. Devuelve `null` si no es
- * suscribible, si no hay descuento, o si la respuesta no trae precio calculado
- * (p. ej. cuando el caller no pidió `variants.calculated_price`).
+ * Calcula e inyecta `subscription_price` **por variante** (multi-formato): cada
+ * formato tiene su propio precio de suscripción, derivado de su precio base y del
+ * `subscription_discount_percentage` del producto. Devuelve `null` por variante si
+ * el producto no es suscribible, no hay descuento, o no vino el precio calculado.
+ *
+ * Compatibilidad: se conserva `product.subscription_price` (= variante primaria)
+ * para el consumidor actual del front. Hoy todo esto está DORMIDO
+ * (`SUBSCRIPTIONS_ENABLED=false`); queda listo para cuando aterrice la suscripción.
  */
 function withSubscriptionPrice(product: AnyProduct): AnyProduct {
   const meta = product.metadata ?? {};
   const subscribable = metaBool(meta.subscribable);
   const pct = metaNumber(meta.subscription_discount_percentage);
+  const variants = product.variants ?? [];
 
-  let subscriptionPrice: number | null = null;
-  if (subscribable && pct > 0) {
-    const variants = product.variants ?? [];
-    const primary = [...variants].sort(
-      (a, b) => (a.variant_rank ?? 0) - (b.variant_rank ?? 0),
-    )[0];
-    const base = primary?.calculated_price?.calculated_amount;
-    if (typeof base === "number") {
-      subscriptionPrice = roundCLP(base * (1 - pct / 100));
-    }
+  const priceFor = (variant: AnyVariant): number | null => {
+    if (!subscribable || pct <= 0) return null;
+    const base = variant.calculated_price?.calculated_amount;
+    return typeof base === "number" ? roundCLP(base * (1 - pct / 100)) : null;
+  };
+
+  for (const variant of variants) {
+    variant.subscription_price = priceFor(variant);
   }
 
-  product.subscription_price = subscriptionPrice;
+  const primary = [...variants].sort(
+    (a, b) => (a.variant_rank ?? 0) - (b.variant_rank ?? 0),
+  )[0];
+  product.subscription_price = primary ? priceFor(primary) : null;
   return product;
 }
 

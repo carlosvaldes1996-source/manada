@@ -296,9 +296,10 @@ export default async function seedManadaData({ container }: ExecArgs) {
 
   // ─────────────────────────────────────────────────────────────────────────
   // Metadata propia de Manada (atributos de merchandising que no son nativos de
-  // Medusa). Viven en `product.metadata` para que sean 100% administrables desde
-  // el Admin de Medusa (sección Metadata del producto) SIN tocar código: agregar
-  // productos nuevos = crearlos en el Admin y llenar estas claves. El frontend
+  // Medusa). Viven en `product.metadata` pero se capturan con el widget validado
+  // "Atributos Manada" (`src/admin/widgets/product-manada-attributes.tsx`) en la
+  // ficha del producto — NO en el editor de metadata cruda: así los valores que
+  // deciden el motor (especie/etapa/condiciones) nunca se escriben mal. El frontend
   // NO infiere nada; lee estos valores tal cual (ver apps/web/src/lib/medusa/map-product.ts).
   //
   // Convención de claves (documentada en ai-context/DATABASE.md):
@@ -308,8 +309,7 @@ export default async function seedManadaData({ container }: ExecArgs) {
   //   subscribable                     → boolean  (¿admite suscripción?)
   //   subscription_discount_percentage → number   (% de ahorro; el precio de suscripción
   //                                                 lo CALCULA el backend, no se guarda)
-  //   rating                           → number   (0–5)
-  //   review_count                     → number
+  //   ingredients                      → string   (texto libre; se captura en el widget)
   //   kcal_per_kg                      → number   (SOLO alimento; energía metabolizable
   //                                                kcal/kg — base del cálculo de ración RER/MER)
   //   suitable_conditions              → condiciones que atiende, separadas por coma
@@ -356,8 +356,6 @@ export default async function seedManadaData({ container }: ExecArgs) {
             stage: "adulto",
             subscribable: true,
             subscription_discount_percentage: 15,
-            rating: 4.8,
-            review_count: 212,
             kcal_per_kg: 3700,
           },
           weight: 3000,
@@ -386,8 +384,6 @@ export default async function seedManadaData({ container }: ExecArgs) {
             stage: "adulto",
             subscribable: true,
             subscription_discount_percentage: 12,
-            rating: 4.7,
-            review_count: 489,
             kcal_per_kg: 3800,
           },
           weight: 15000,
@@ -416,8 +412,6 @@ export default async function seedManadaData({ container }: ExecArgs) {
             stage: "adulto,senior",
             subscribable: true,
             subscription_discount_percentage: 10,
-            rating: 4.9,
-            review_count: 76,
             kcal_per_kg: 3900,
             suitable_conditions: "Problemas renales",
           },
@@ -447,8 +441,6 @@ export default async function seedManadaData({ container }: ExecArgs) {
             stage: "cachorro",
             subscribable: true,
             subscription_discount_percentage: 12,
-            rating: 4.6,
-            review_count: 134,
             kcal_per_kg: 4100,
           },
           weight: 2000,
@@ -475,8 +467,6 @@ export default async function seedManadaData({ container }: ExecArgs) {
             brand: "NexGard",
             species: "perro",
             subscribable: false,
-            rating: 4.5,
-            review_count: 58,
           },
           weight: 50,
           status: ProductStatus.PUBLISHED,
@@ -502,8 +492,6 @@ export default async function seedManadaData({ container }: ExecArgs) {
             brand: "Manada",
             species: "perro,gato",
             subscribable: false,
-            rating: 4.4,
-            review_count: 41,
           },
           weight: 1200,
           status: ProductStatus.PUBLISHED,
@@ -515,6 +503,52 @@ export default async function seedManadaData({ container }: ExecArgs) {
               sku: "MANADA-CAMA-ORTO-M",
               options: { Talla: "M" },
               prices: [{ amount: 39990, currency_code: "clp" }],
+            },
+          ],
+          sales_channels: salesChannelLink,
+        },
+        {
+          // Ejemplo de la convención MULTI-FORMATO (Fase 4): UN alimento, VARIOS
+          // formatos como VARIANTES (nunca productos duplicados). El peso vive en
+          // cada variante (`weight`, gramos); marca/especie/etapa/kcal son del
+          // PRODUCTO (compartidos por todos los formatos). Handle SIN el formato.
+          title: "Royal Canin — Mini Puppy",
+          handle: "royal-canin-mini-puppy",
+          category_ids: [cat("Alimento")],
+          description:
+            "Alimento seco para cachorros de razas pequeñas. Disponible en 1 kg, 3 kg y 7.5 kg.",
+          metadata: {
+            brand: "Royal Canin",
+            species: "perro",
+            stage: "cachorro",
+            subscribable: true,
+            subscription_discount_percentage: 15,
+            kcal_per_kg: 3800,
+          },
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          options: [{ title: "Formato", values: ["1 kg", "3 kg", "7.5 kg"] }],
+          variants: [
+            {
+              title: "1 kg",
+              sku: "RC-MINI-PUPPY-1KG",
+              weight: 1000,
+              options: { Formato: "1 kg" },
+              prices: [{ amount: 12990, currency_code: "clp" }],
+            },
+            {
+              title: "3 kg",
+              sku: "RC-MINI-PUPPY-3KG",
+              weight: 3000,
+              options: { Formato: "3 kg" },
+              prices: [{ amount: 29990, currency_code: "clp" }],
+            },
+            {
+              title: "7.5 kg",
+              sku: "RC-MINI-PUPPY-7-5KG",
+              weight: 7500,
+              options: { Formato: "7.5 kg" },
+              prices: [{ amount: 59990, currency_code: "clp" }],
             },
           ],
           sales_channels: salesChannelLink,
