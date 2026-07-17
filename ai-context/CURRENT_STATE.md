@@ -6,7 +6,7 @@
 > | **Purpose** | Foto del estado actual: qué es real, qué frentes están abiertos y cuál es el siguiente paso. Se **reescribe** al cerrar cada hito (no se apila; la narración histórica vive en `DECISIONS.md`). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-16 |
+> | **Last Updated** | 2026-07-17 |
 > | **Depends On** | DECISIONS.md, ROADMAP.md |
 > | **Supersedes** | `history/05-bitacora-avances-2026-07.md` (versión-bitácora archivada) |
 > | **Source of Truth** | ✅ del *estado actual y el siguiente paso*. Único dueño del estado: ningún otro doc lo repite. |
@@ -44,7 +44,7 @@
 |---|---|---|---|
 | **Infra de producción** | 🟢 **EN VIVO** (D30) | Backend Railway + frontend Vercel + `tumanada.cl` operativos. Fast-follow: Resend, packshots, Search Console | D30 · `DEPLOYMENT.md` |
 | **Terceros** | 🟡 email código ✅ · Resend en vivo ⬜ · Mercado Pago ⬜ | Falta setear `RESEND_API_KEY` + verificar dominio en Resend + `STOREFRONT_URL`→`www.tumanada.cl` (hoy los emails se loguean, no se envían). Después: Mercado Pago Checkout Pro | D45 · D30 |
-| **SEO & Tracking** | 🟢 **EN VIVO** (D46/D30): GTM+GA4 midiendo en Tiempo real | Falta **Search Console** (verificar `tumanada.cl` con GTM + enviar sitemap) y, si hay campañas, Meta Pixel/Ads dentro de GTM. Menor: base canónica del sitemap (`tumanada.cl` vs `www`) | D46 · D30 |
+| **SEO & Tracking** | 🟢 **EN VIVO** (D46/D30): GTM+GA4 midiendo en Tiempo real. **Auditoría SEO cerrada (D48):** 3 fixes 🔴 de indexabilidad (canonical heredado, host ápex→www, og:image roto) + JSON-LD (Organization/WebSite/Product/Breadcrumb) + favicon/apple-icon/manifest + noindex en búsqueda/recomendación. Base canónica ahora unificada en `www` | Falta **Search Console** (verificar dominio por DNS TXT + enviar `sitemap.xml`) y, si hay campañas, Meta Pixel/Ads dentro de GTM. Post-tráfico: `sameAs` en Organization + `aggregateRating` cuando haya reseñas reales | D48 · D46 · D30 |
 | **Funnel F5 — momento de registro** | ⬜ empieza por **decisión de producto**, no por código | Decidir con Carlos dónde vive la captura de cuenta | `FUNNEL_TARGET.md §1.6` |
 | **Validación UI del Completion Pass (D41)** | ⬜ implementado, sin smoke manual | Carlos recorre: foto de mascota, /cuenta, /comenzar móvil, landing (el dashboard ya fue rediseñado y validado en D42) | D41 |
 | **Smoke en vivo del rediseño F4 (D44)** | ⬜ commiteado/pusheado, aprobado en revisión; sin smoke en vivo | Recorrer con backend levantado: Sumar → carrito Medusa · "ya come otra marca" → buscador → Guardar (PATCH `current_food_id`) · layout 2 columnas desktop/mobile | D44 · `FUNNEL_TARGET.md` |

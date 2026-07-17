@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { categoryLabel } from "@/lib/catalog";
 import { listProducts } from "@/lib/medusa";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbLd } from "@/lib/structured-data";
 import { CategoryView } from "./category-view";
 
 // El catálogo se hidrata desde el backend en cada request (no en el build).
@@ -30,5 +32,14 @@ export default async function CategoriaPage({
 }) {
   const { slug } = await params;
   const products = await listProducts();
-  return <CategoryView slug={slug} products={products} />;
+  const breadcrumb = breadcrumbLd([
+    { name: "Inicio", path: "/" },
+    { name: categoryLabel(slug), path: `/categoria/${slug}` },
+  ]);
+  return (
+    <>
+      <JsonLd data={breadcrumb} />
+      <CategoryView slug={slug} products={products} />
+    </>
+  );
 }

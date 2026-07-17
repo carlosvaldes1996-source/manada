@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { searchProducts } from "@/lib/medusa";
 import { SearchView } from "./search-view";
 
-export const metadata: Metadata = { title: "Buscar" };
+export const metadata: Metadata = {
+  title: "Buscar",
+  // Resultados de búsqueda internos: contenido fino/duplicado → fuera del índice
+  // (se sigue rastreando enlaces). Evita canibalizar las PLP/PDP reales.
+  robots: { index: false, follow: true },
+};
 
 // La búsqueda depende de `q` en cada request → dinámica.
 export const dynamic = "force-dynamic";

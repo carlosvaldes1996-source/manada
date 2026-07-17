@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 
-export const metadata: Metadata = { title: "Cambios y devoluciones" };
+export const metadata: Metadata = {
+  title: "Cambios y devoluciones",
+  description:
+    "Garantía de sabor de Manada: si a tu mascota no le gusta, lo cambiamos o te devolvemos el dinero dentro de 30 días. Sin letra chica.",
+  alternates: { canonical: "/devoluciones" },
+};
 
 export default function DevolucionesPage() {
   return (

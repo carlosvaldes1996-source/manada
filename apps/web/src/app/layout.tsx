@@ -5,6 +5,8 @@ import {
   GoogleTagManager,
   GoogleTagManagerNoScript,
 } from "@/components/analytics/google-tag-manager";
+import { JsonLd } from "@/components/seo/json-ld";
+import { organizationLd, websiteLd } from "@/lib/structured-data";
 import { SITE } from "@/config/site";
 import "./globals.css";
 
@@ -40,9 +42,10 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   applicationName: SITE.name,
-  // Canonical por defecto (la home). Las páginas indexables (PLP/PDP) declaran
-  // el suyo. `metadataBase` resuelve las rutas relativas a producción.
-  alternates: { canonical: "/" },
+  // OJO: NO se declara `alternates.canonical` aquí. En el App Router el canonical
+  // se HEREDA a las páginas hijas; si el layout raíz lo fija a "/", cada página sin
+  // canonical propio (nosotros, ayuda, …) se auto-declara duplicado de la home y no
+  // se indexa. Cada página indexable declara SU canonical (home incluida). (D48)
   openGraph: {
     type: "website",
     locale: "es_CL",
@@ -77,6 +80,7 @@ export default function RootLayout({
       className={`${fraunces.variable} ${hanken.variable} h-full`}
     >
       <body className="min-h-full flex flex-col antialiased">
+        <JsonLd data={[organizationLd(), websiteLd()]} />
         <GoogleTagManagerNoScript />
         <AppProviders>{children}</AppProviders>
         <GoogleTagManager />

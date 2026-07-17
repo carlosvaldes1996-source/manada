@@ -3,7 +3,12 @@ import Link from "next/link";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { SITE } from "@/config/site";
 
-export const metadata: Metadata = { title: "Ayuda" };
+export const metadata: Metadata = {
+  title: "Ayuda",
+  description:
+    "Centro de ayuda de Manada: dudas sobre despacho y cobertura, cambios y devoluciones, y cómo funcionan nuestras anticipaciones.",
+  alternates: { canonical: "/ayuda" },
+};
 
 export default function AyudaPage() {
   return (

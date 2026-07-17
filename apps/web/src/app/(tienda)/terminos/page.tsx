@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { SITE } from "@/config/site";
 
-export const metadata: Metadata = { title: "Términos y condiciones" };
+export const metadata: Metadata = {
+  title: "Términos y condiciones",
+  description:
+    "Condiciones de uso de Manada (tumanada.cl): precios en CLP con IVA, boleta por cada compra, despacho honesto y contacto.",
+  alternates: { canonical: "/terminos" },
+};
 
 export default function TerminosPage() {
   return (

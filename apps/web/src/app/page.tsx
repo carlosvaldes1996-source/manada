@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { listProducts } from "@/lib/medusa";
 import { HomeSwitch } from "./home-switch";
 
@@ -7,6 +8,9 @@ import { HomeSwitch } from "./home-switch";
  * que depende del estado de sesión (cliente). Una sola superficie en `/`.
  */
 export const dynamic = "force-dynamic";
+
+// Canonical propio de la home (ya no se hereda del layout raíz, ver layout.tsx).
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function HomePage() {
   const products = await listProducts();

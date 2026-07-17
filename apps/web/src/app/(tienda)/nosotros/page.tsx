@@ -3,7 +3,12 @@ import { Section } from "@/components/ui/section";
 import { Stack } from "@/components/ui/stack";
 import { SITE } from "@/config/site";
 
-export const metadata: Metadata = { title: "Nuestra historia" };
+export const metadata: Metadata = {
+  title: "Nuestra historia",
+  description:
+    "Manada nació de una idea simple: cuidar es anticiparse. Conoce por qué existimos y cómo cuidamos a tu mascota en Chile.",
+  alternates: { canonical: "/nosotros" },
+};
 
 /**
  * Nuestra historia. Página de conexión emocional con la marca: hero de texto +

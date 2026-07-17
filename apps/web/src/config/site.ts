@@ -5,7 +5,10 @@
 export const SITE = {
   name: "Manada",
   domain: "tumanada.cl",
-  url: "https://tumanada.cl",
+  // Host canónico = www (el ápex `tumanada.cl` redirige 308 → www en Vercel, D30).
+  // `url` alimenta metadataBase, canonicals, OG, sitemap y robots: TODO debe
+  // apuntar al destino final para no encadenar redirecciones (SEO, auditoría D48).
+  url: "https://www.tumanada.cl",
   tagline: "Cuidamos a quien más quieres",
   description:
     "El e-commerce de mascotas que te conoce como nadie y se anticipa a lo que tu compañero necesita. Alimento, accesorios y farmacia con suscripción inteligente.",

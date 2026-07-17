@@ -3,7 +3,12 @@ import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { getShippingPolicy } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Despacho y cobertura" };
+export const metadata: Metadata = {
+  title: "Despacho y cobertura",
+  description:
+    "Despacho honesto en Manada: el costo real siempre antes de pagar, envío gratis sobre el umbral y cobertura en la Región Metropolitana.",
+  alternates: { canonical: "/despacho" },
+};
 
 // El costo/umbral vienen de la política real del backend (fuente única).
 export const dynamic = "force-dynamic";

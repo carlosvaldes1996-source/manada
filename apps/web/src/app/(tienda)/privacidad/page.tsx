@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { SITE } from "@/config/site";
 
-export const metadata: Metadata = { title: "Política de privacidad" };
+export const metadata: Metadata = {
+  title: "Política de privacidad",
+  description:
+    "Cómo Manada cuida los datos tuyos y de tu mascota: qué datos usamos, para qué y tus derechos. No vendemos tus datos.",
+  alternates: { canonical: "/privacidad" },
+};
 
 export default function PrivacidadPage() {
   return (

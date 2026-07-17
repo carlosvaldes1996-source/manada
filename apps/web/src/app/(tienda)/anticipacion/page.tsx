@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 
-export const metadata: Metadata = { title: "Cómo anticipamos" };
+export const metadata: Metadata = {
+  title: "Cómo anticipamos",
+  description:
+    "Cómo Manada se anticipa: calculamos cuándo se le acaba el alimento con el perfil de tu mascota y te avisamos antes. Tú decides.",
+  alternates: { canonical: "/anticipacion" },
+};
 
 export default function AnticipacionPage() {
   return (
