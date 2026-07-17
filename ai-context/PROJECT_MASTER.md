@@ -150,7 +150,7 @@ Ver `DECISIONS.md` para la bitácora completa con rationale. Resumen LOCKED:
 | D27 | Fase 5 · Infra — Frontend desplegado en **Vercel** (staging sin backend; monorepo verificado; `main`=prod provisional) → `DEPLOYMENT.md` |
 | D28 | Fase 5 · Etapa B — **Tienda coherente y honesta** (buscador real, cross-sell real, regla única de envío del backend + promoción automática de envío gratis, auditoría de copy) → **flujo propio del MVP cerrado** |
 | D29 | Fase 5 · Endurecimiento pre-lanzamiento (7 correcciones de bajo riesgo; suscripción atenuada `SUBSCRIPTIONS_ENABLED=false` → compra única) |
-| D30 | **RESERVADA** — cierre de la etapa de infraestructura de producción (WIP; ver `CURRENT_STATE.md`) |
+| D30 | **Infraestructura de producción EN VIVO** (2026-07-16) — backend Medusa en **Railway** (Postgres+Redis+volumen de archivos, build nativo, `PORT=9000`, secrets/CORS reales) + frontend en **Vercel** con dominio **`tumanada.cl`** (SSL) + seed de prod (6 productos, publishable key, promo envío gratis) + admin + **tracking GTM/GA4 en vivo**. Cierra la deuda de infra de D25/D27/D29 → `DEPLOYMENT.md` |
 | D31 | Paridad logueado/no-logueado — `CategoryTiles` compartido + principio 9 de la Component Library |
 | D32 | Funnel F4 — recomendación consultiva "El plan de {mascota}" (sobre estado local) |
 | D33 | Integración O5 — funnel sobre catálogo real; muere `lib/data/catalog`; demo solo hero/styleguide |

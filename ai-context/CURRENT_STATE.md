@@ -6,7 +6,7 @@
 > | **Purpose** | Foto del estado actual: qué es real, qué frentes están abiertos y cuál es el siguiente paso. Se **reescribe** al cerrar cada hito (no se apila; la narración histórica vive en `DECISIONS.md`). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-13 |
+> | **Last Updated** | 2026-07-16 |
 > | **Depends On** | DECISIONS.md, ROADMAP.md |
 > | **Supersedes** | `history/05-bitacora-avances-2026-07.md` (versión-bitácora archivada) |
 > | **Source of Truth** | ✅ del *estado actual y el siguiente paso*. Único dueño del estado: ningún otro doc lo repite. |
@@ -20,19 +20,15 @@
 
 **Etapa vigente declarada por Carlos (D38):** prioridad a **consistencia visual, UX y sensación de producto terminado** por sobre agregar capacidades. El backend está consolidado.
 
-## 🚧 WIP — Infraestructura de producción (Etapa 1, código sin commitear · 2026-07-09)
+## ✅ Infraestructura de producción — EN VIVO (2026-07-16, D30)
 
-> **Nota de continuidad (no es cierre de etapa; D30 queda RESERVADA para documentarla al validar).** Arrancó el **cierre de infra + terceros**. Rol: DevOps/CTO, etapa por etapa (plan → implementar → verificar → documentar → commit → push). **Orden acordado:** Railway → PostgreSQL → Redis → Secrets → CORS → Vercel env vars → Smoke test → Mercado Pago → Dominio → Lanzamiento.
->
-> **Decisiones de esa sesión:** (1) topología Railway = **un solo servicio `shared`** (server/worker se separa con tracción); (2) operación = **CLI de Railway dirigida por Claude**, Carlos solo autentica; (3) **infra live primero con pago manual, Mercado Pago como fast-follow** antes del dominio público; (4) **build nativo, sin Docker** (validado).
->
-> **Etapa 1 (Railway backend) — 1A + 1B + 1C HECHOS y verificados localmente, EN DISCO SIN COMMITEAR:**
-> - **1A ·** `apps/backend/medusa-config.ts` endurecido: sin fallback `"supersecret"`; módulos Redis (cache/event-bus/workflow-engine) condicionados a `REDIS_URL` (dev sigue in-memory); `workerMode` (`MEDUSA_WORKER_MODE`, default `shared`); `admin.backendUrl` (`MEDUSA_BACKEND_URL`). `tsc` + `medusa build` verdes.
-> - **1B ·** `railway.json` (raíz) para despliegue nativo pnpm sin Docker: build `pnpm install --frozen-lockfile && pnpm --filter @manada/backend build && cd apps/backend/.medusa/server && npm install`; start `medusa start` desde `.medusa/server`; migraciones en `preDeployCommand`; healthcheck `/health`. El artefacto de prod bootea en local → `/health` → 200.
-> - **1C · (2026-07-13, sesión modo infra)** cerrado el hueco de **almacenamiento de archivos**: módulo `file` (provider local `@medusajs/medusa/file-local`) con `backend_url` anclado a `MEDUSA_BACKEND_URL` (antes: default `localhost:9000/static`, roto en prod). MVP-first: **sin S3** → persistencia con **Railway Volume** en `.medusa/server/static` (paso manual). `.env.template` reescrito production-ready (NODE_ENV, CORS con dominio del front, MEDUSA_BACKEND_URL, secrets fuertes, Resend). `medusa build` verde. **Runbook ordenado en `DEPLOYMENT.md §4.1`.**
-> - Railway CLI 5.26.0 instalada. **Nada provisionado aún → US$0.**
->
-> **▶️ Punto exacto de continuación:** todo el código de infra está listo; sigue **provisionar**. Carlos corre **`railway login`** y luego el **runbook de `DEPLOYMENT.md §4.1`** paso a paso (proyecto → Postgres+Redis → Volume → variables → `railway up` → gate `/health` 200 → seed/admin → publishable key → env vars Vercel → smoke → Resend → dominio). **DECISIONS.md D30 + commit/push van al cerrar la etapa validada en vivo.**
+> **La tienda está pública y operativa.** Backend Medusa en **Railway** + frontend Next.js en **Vercel** con dominio propio. Cierra la deuda de infra de D25/D27/D29 (topología acordada: un solo servicio `shared`, build nativo pnpm sin Docker).
+
+- **Backend:** `https://manadabackend-production.up.railway.app` — Railway (proyecto `creative-creation`, servicio `@manada/backend`). `/health` 200 · **Postgres + Redis** gestionados · **volumen** `@manada/backend-volume` en `/app/apps/backend/.medusa/server/static` (packshots persisten, sin S3). Build por `railway.json` (nativo, migraciones en `preDeployCommand`). Vars reales: `NODE_ENV=production`, `PORT=9000` (fix de un 502: Medusa quedaba en 8080), secrets aleatorios, CORS con `tumanada.cl`+`www`+vercel, `MEDUSA_BACKEND_URL`, `MEDUSA_WORKER_MODE=shared`.
+- **Datos de prod (seed corrido una vez):** región Chile/CLP, sales channel, **publishable key** `pk_0fe6…`, 6 productos con precio, 2 opciones de envío, promo `ENVIO_GRATIS_30K` (gratis ≥ $30.000). **Admin:** `.../app` (carlosvaldes1996@gmail.com).
+- **Frontend:** en vivo en **`https://www.tumanada.cl`** (apex → 308 a `www`, canónico), SSL OK, catálogo real hidratando, CORS OK. Vercel `manada-web` con las 2 env vars de prod.
+- **Tracking (D46) en vivo:** GTM `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW` conectada dentro de GTM (6 eventos mapeados, publicado, verificado en Tiempo real). Se corrigió un `\n` colado en `NEXT_PUBLIC_GTM_ID` (limpiado en Vercel + guard `.trim()` en `lib/analytics/config.ts`).
+- **Pendiente (no bloquea, fast-follow):** **Resend** en vivo (`RESEND_API_KEY` + verificar dominio en Resend + `STOREFRONT_URL`→`www.tumanada.cl`; hoy los emails se loguean, no se envían) · **packshots** por Admin (hoy emoji) · **Search Console** (verificar con GTM + enviar sitemap) · **Mercado Pago** (post-lanzamiento). Detalle y runbook con resultados: `DEPLOYMENT.md`.
 
 ## Qué está construido y es real (fuentes de verdad)
 
@@ -40,15 +36,15 @@
 - **Frontend Next.js** (`apps/web`): 100% sobre el backend real; datos demo solo en el hero de la landing (decisión de marca, D28) y el styleguide `/dev/*` (gateado en prod, D29). Arquitectura: `FRONTEND_ARCHITECTURE.md` · componentes: `COMPONENT_LIBRARY.md`.
 - **Funnel de adquisición** F1–F4 ✅ sobre catálogo real (O5, D33) — doc: `FUNNEL_TARGET.md`. **F4 rediseñado (D44, commit `d274925`): "carta de plan" en 2 columnas (altura→ancho), razones on-demand, anticipación comprimida con lugar reservado a suscripción, y "ya come otra marca" como buscador inteligente que rearma/GUARDA el plan. Solo presentación (sin tocar backend); smoke visual en vivo pendiente.** La recomendación (F4) corre sobre el **motor defendible** (D43): cálculo nutricional RER/MER + densidad calórica, puertas duras (nunca recomienda incompatible) vs. score de preferencia, explicación verificada. Determinístico, sin IA — doc: `RECOMMENDATION_ENGINE.md`.
 - **Pet Experience** B1–B8 ✅ COMPLETA (B4 foto con andamio local honesto + B7 /cuenta manada-first cerrados en el Product Completion Pass, D41; B5/B6 persistidos vía `/store/pets`; **B8 Home logueada = centro de control**, D42: `PetStatusCard` con retrato + línea de tiempo del saco + "Plan de {nombre}" + recompra en dos taps + necesidades) — doc: `PET_EXPERIENCE_TARGET.md`. **Anticipación honesta** (D41): la cápsula invita a "Pedir de nuevo"; el reagendo/suscripción vuelven post-tracción.
-- **Deploy:** frontend en Vercel como verificación de build, sin env vars ni dominio (D27) — doc: `DEPLOYMENT.md`. Backend aún local (ver WIP arriba).
+- **Deploy (D30):** EN VIVO — backend en Railway (`manadabackend-production.up.railway.app`) + frontend en Vercel con dominio **`www.tumanada.cl`** (SSL). Doc: `DEPLOYMENT.md` (§0 estado + §4.1 runbook).
 
 ## Frentes abiertos (en paralelo, cada uno en su chat/bloque)
 
 | Frente | Estado | Siguiente acción | Referencia |
 |---|---|---|---|
-| **Infra de producción** | 🚧 Etapa 1 hecha en disco, sin commitear | Carlos: `railway login` → provisionar (ver WIP arriba) | D30 reservada · `DEPLOYMENT.md` |
-| **Terceros** | 🟡 email ✅ (código), Mercado Pago ⬜ | **Email transaccional HECHO** (D45): 4 emails críticos sobre el Notification Module nativo + Resend; falta setear `RESEND_API_KEY` + verificar dominio en Resend. Sigue: Mercado Pago Checkout Pro (fast-follow post-infra) | D45 · D25 G4 · D28 |
-| **SEO & Tracking** | 🟢 código HECHO (D46), config de terceros ⬜ | Código en disco sin commitear: `robots.ts`/`sitemap.ts`/`opengraph-image` + metadata PDP/PLP; GTM montado + capa `lib/analytics` con los 6 eventos del embudo. **Manual pendiente:** crear contenedor GTM + `NEXT_PUBLIC_GTM_ID` en Vercel, propiedad GA4 dentro de GTM, Search Console (verificar + enviar sitemap), y Meta Pixel/Ads si aplica | D46 |
+| **Infra de producción** | 🟢 **EN VIVO** (D30) | Backend Railway + frontend Vercel + `tumanada.cl` operativos. Fast-follow: Resend, packshots, Search Console | D30 · `DEPLOYMENT.md` |
+| **Terceros** | 🟡 email código ✅ · Resend en vivo ⬜ · Mercado Pago ⬜ | Falta setear `RESEND_API_KEY` + verificar dominio en Resend + `STOREFRONT_URL`→`www.tumanada.cl` (hoy los emails se loguean, no se envían). Después: Mercado Pago Checkout Pro | D45 · D30 |
+| **SEO & Tracking** | 🟢 **EN VIVO** (D46/D30): GTM+GA4 midiendo en Tiempo real | Falta **Search Console** (verificar `tumanada.cl` con GTM + enviar sitemap) y, si hay campañas, Meta Pixel/Ads dentro de GTM. Menor: base canónica del sitemap (`tumanada.cl` vs `www`) | D46 · D30 |
 | **Funnel F5 — momento de registro** | ⬜ empieza por **decisión de producto**, no por código | Decidir con Carlos dónde vive la captura de cuenta | `FUNNEL_TARGET.md §1.6` |
 | **Validación UI del Completion Pass (D41)** | ⬜ implementado, sin smoke manual | Carlos recorre: foto de mascota, /cuenta, /comenzar móvil, landing (el dashboard ya fue rediseñado y validado en D42) | D41 |
 | **Smoke en vivo del rediseño F4 (D44)** | ⬜ commiteado/pusheado, aprobado en revisión; sin smoke en vivo | Recorrer con backend levantado: Sumar → carrito Medusa · "ya come otra marca" → buscador → Guardar (PATCH `current_food_id`) · layout 2 columnas desktop/mobile | D44 · `FUNNEL_TARGET.md` |

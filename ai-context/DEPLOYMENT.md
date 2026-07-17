@@ -14,15 +14,18 @@
 
 ## 0 · Estado actual (foto rápida)
 
+> **EN VIVO desde 2026-07-16 (D30).** El primer deploy de producción salió 100 % funcional (honrando la regla de oro D22/D27), no a medias.
+
 | Servicio | Estado | Dónde |
 |---|---|---|
-| **Frontend** (`apps/web`, Next.js) | 🟢 **Desplegado en Vercel** — build verde, **modo staging (sin backend)** | proyecto `manada-web` |
-| **Backend** (`apps/backend`, Medusa v2) | 🟠 **No desplegado**, pero **listo para desplegar** — config endurecida + módulo `file` anclado + `railway.json` + `.env.template` completo, verificados con `medusa build` verde, sin commitear (D30 reservada; runbook en §4.1) | Railway (servicio único `shared`, build nativo sin Docker) |
-| **Base de datos / Redis** | 🔴 No provisionados en la nube | pendiente (Postgres/Redis gestionados en Railway) |
-| **Almacenamiento de archivos** | 🟠 Config lista (provider local anclado a `MEDUSA_BACKEND_URL`); requiere **Railway Volume** en `.medusa/server/static` | Railway Volume (MVP, sin S3) |
-| **Dominio `tumanada.cl`** | 🔴 **No conectado** — nada "vivo" de cara al público | pendiente (lanzamiento) |
+| **Frontend** (`apps/web`, Next.js) | 🟢 **EN VIVO** en `https://www.tumanada.cl` (catálogo real, SSL) | Vercel `manada-web` |
+| **Backend** (`apps/backend`, Medusa v2) | 🟢 **EN VIVO** — `https://manadabackend-production.up.railway.app` (`/health` 200) | Railway `creative-creation` · servicio `@manada/backend` (`shared`, build nativo) |
+| **Base de datos / Redis** | 🟢 Provisionados (con volúmenes) | Railway (Postgres + Redis gestionados) |
+| **Almacenamiento de archivos** | 🟢 **Railway Volume** `@manada/backend-volume` en `/app/apps/backend/.medusa/server/static` (provider local anclado a `MEDUSA_BACKEND_URL`) | Railway Volume (MVP, sin S3) |
+| **Dominio `tumanada.cl`** | 🟢 **Conectado** — `www` canónico, apex → 308 a `www`, SSL OK | Vercel (frontend) |
+| **Tracking (GTM/GA4)** | 🟢 En vivo — `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW`, verificado en Tiempo real (D46) | GTM + GA4 |
 
-> **Regla de oro (D22 · D27):** durante el desarrollo **no** se sostiene un entorno de producción a medias. El objetivo es que el **primer deploy de *producción* salga 100 % funcional**, no ir parchando. Hoy el deploy de Vercel es solo **verificación de build**; el sitio en vivo muestra el catálogo "apagado" porque no hay backend público, y **no se conecta ningún dominio** hasta el lanzamiento.
+> **Fast-follow (no bloquea, ver §5):** Resend en vivo · packshots por Admin · Search Console · Mercado Pago.
 
 ---
 
@@ -115,7 +118,7 @@ El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerra
 
 ### 4.1 · Runbook de despliegue (orden a seguir)
 
-> Config lista en código (2026-07-13): `medusa-config.ts` endurecido + módulo `file` con `backend_url` anclado, `railway.json` (build nativo pnpm, migraciones en `preDeployCommand`, healthcheck `/health`), `.env.template` completo. Falta **solo** provisionar y setear variables. Ejecutar en este orden:
+> **✅ EJECUTADO (2026-07-16, D30) — dejado como referencia reproducible.** Estos son los pasos que se corrieron para dejar la infra en vivo; sirven para rehacerla o entenderla. Valores reales entre paréntesis.
 
 1. **Railway — proyecto + servicios.** `railway login` → `railway init` (proyecto `manada`) → agregar **PostgreSQL** y **Redis** (`railway add`). Crear el **servicio backend** desde el repo (root = raíz del monorepo; el `railway.json` de la raíz define build/start/migraciones).
 2. **Volumen de archivos.** Crear un **Volume** en el servicio backend, mount path `/app/apps/backend/.medusa/server/static` (persiste los packshots subidos por Admin).
@@ -135,23 +138,23 @@ El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerra
 Se marca cuando la tienda funciona de punta a punta de cara al público:
 
 - [x] MVP cerrado (Etapa A cuentas ✅ D26 + Etapa B tienda coherente ✅ D28 + endurecimiento ✅ D29) — plan D25.
-- [ ] Backend Medusa desplegado (Railway + Postgres + Redis) con secrets de prod reales — 🚧 en curso (ver §0 y `CURRENT_STATE.md §WIP`).
-- [ ] Seed/datos de prod + publishable key de prod.
-- [ ] CORS del backend incluye el dominio del frontend.
-- [ ] `NEXT_PUBLIC_MEDUSA_BACKEND_URL` + `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` seteadas en Vercel → **redeploy**.
-- [ ] Smoke en la URL de Vercel: catálogo hidrata · carrito · checkout → orden real.
-- [ ] (Si aplica) rama `production` definida (§3).
-- [ ] Dominio `tumanada.cl` conectado en Vercel + DNS + SSL.
-- [ ] Email transaccional en vivo: `RESEND_API_KEY`/`RESEND_FROM`/`STOREFRONT_URL` en Railway + dominio verificado en Resend (D45).
-- [ ] **Tracking (D46):** contenedor **GTM** creado + `NEXT_PUBLIC_GTM_ID` en Vercel (→ redeploy) · propiedad **GA4** conectada dentro de GTM con los 6 eventos mapeados y contenedor publicado · smoke con GTM Preview (los eventos llegan al `dataLayer`).
-- [ ] **Search Console:** dominio `tumanada.cl` verificado + `sitemap.xml` enviado.
-- [ ] (Si aplica) **Meta Pixel** / **Google Ads** conectados dentro de GTM para campañas.
-- [ ] Recién entonces: **Mercado Pago** (Checkout Pro) — posterior, no bloquea el primer prod funcional del flujo manual.
+- [x] Backend Medusa desplegado (Railway + Postgres + Redis) con secrets de prod reales — ✅ D30.
+- [x] Seed/datos de prod + publishable key de prod (`pk_0fe6…`, 6 productos, `ENVIO_GRATIS_30K`) — ✅ D30.
+- [x] CORS del backend incluye el dominio del frontend (`tumanada.cl` + `www`) — ✅ D30.
+- [x] `NEXT_PUBLIC_MEDUSA_BACKEND_URL` + `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` seteadas en Vercel → redeploy — ✅ D30.
+- [x] Smoke en vivo: catálogo hidrata (Acana $28.990) · CORS OK · `/health` 200 — ✅ D30. *(Pendiente: una compra de prueba real de punta a punta.)*
+- [x] Dominio `tumanada.cl` conectado en Vercel + DNS + SSL (`www` canónico) — ✅ D30.
+- [ ] Email transaccional en vivo: `RESEND_API_KEY`/`RESEND_FROM`/`STOREFRONT_URL` en Railway + dominio verificado en Resend (D45) — ⬜ fast-follow.
+- [x] **Tracking (D46):** **GTM** `GTM-P5RLWHJW` + `NEXT_PUBLIC_GTM_ID` en Vercel · **GA4** `G-1JQM28SLWW` conectada dentro de GTM con los 6 eventos y contenedor publicado · verificado en Tiempo real — ✅ D30.
+- [ ] **Search Console:** dominio `tumanada.cl` verificado + `sitemap.xml` enviado — ⬜ fast-follow.
+- [ ] (Si aplica) **Meta Pixel** / **Google Ads** conectados dentro de GTM para campañas — ⬜.
+- [ ] **Packshots** subidos por Admin (hoy emoji) — ⬜ fast-follow.
+- [ ] Recién entonces: **Mercado Pago** (Checkout Pro) — posterior, no bloquea el prod funcional del flujo manual.
 
 ---
 
 ## 6 · Referencias
 
-- Decisiones: **D27** (este deploy), D20 (monorepo), D21 (Medusa), D22 (MVP-first), D25 (infra de lanzamiento como deuda).
+- Decisiones: **D30** (infra en vivo — Railway + Vercel + dominio + tracking), D27 (Vercel staging), D20 (monorepo), D21 (Medusa), D22 (MVP-first), D25 (infra de lanzamiento como deuda), D45 (Resend), D46 (SEO/tracking).
 - Reglas arquitectónicas: `ARCHITECTURE.md §2` (backend solo en `apps/backend`; web sin lógica de negocio).
 - Env local: `apps/web/.env.example` · backend local: `apps/backend/DEV.md`.
