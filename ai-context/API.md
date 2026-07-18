@@ -270,7 +270,7 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
 
 ---
 
-## 11. Contrato de emails transaccionales — IMPLEMENTADO (D45)
+## 11. Contrato de emails transaccionales — EN VIVO en producción (D45 · D49)
 
 > Owner técnico: `apps/backend/src/modules/resend/`. **No hay contrato de storefront**: los
 > emails los dispara el backend al reaccionar a **eventos nativos de Medusa** — el frontend no
@@ -287,11 +287,15 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
   el provider resuelve la plantilla, renderiza React Email y envía por Resend.
 - **Modo DEV:** sin `RESEND_API_KEY` el provider **loguea** el email (destinatario, asunto, enlace) en
   vez de enviar → no bloquea dev ni el arranque. Prod se activa con la env var (`DEPLOYMENT.md`).
+- **Producción EN VIVO (D49):** dominio `tumanada.cl` **verificado** en Resend (SPF/DKIM vía DNS de
+  Vercel; Vercel solo aporta DNS, el envío corre en el backend) + en Railway `RESEND_API_KEY`,
+  `RESEND_FROM=Manada <contacto@tumanada.cl>` (el **nombre visible** va delante del buzón) y
+  `STOREFRONT_URL=https://tumanada.cl` → envío real (bienvenida verificada E2E).
 
 ### 11.2 Emails ↔ eventos (los 4 críticos)
 | Email | Evento nativo | Subscriber | Filtro / notas |
 |---|---|---|---|
-| Bienvenida | `customer.created` | `customer-created.ts` | solo si `has_account` (no a invitados de checkout) |
+| Bienvenida | `customer.created` | `customer-created.ts` | solo si `has_account` (no a invitados de checkout); CTA → `/cuenta/mascotas`, que adapta en tiempo de clic (perfil con acciones vs. crear) — D49 |
 | Recuperar contraseña | `auth.password_reset` | `password-reset.ts` | reemplaza el `console.log`; `data.url` = enlace de un solo uso |
 | Compra realizada | `order.placed` | `order-placed-email.ts` | subscriber **separado** de `food-purchased.ts` (anticipación, D35) |
 | Pedido enviado | `shipment.created` | `order-shipped.ts` | orden resuelta desde el fulfillment (link nativo); respeta `no_notification` |

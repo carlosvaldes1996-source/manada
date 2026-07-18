@@ -25,7 +25,7 @@
 | **Dominio `tumanada.cl`** | 🟢 **Conectado** — `www` canónico, apex → 308 a `www`, SSL OK | Vercel (frontend) |
 | **Tracking (GTM/GA4)** | 🟢 En vivo — `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW`, verificado en Tiempo real (D46) | GTM + GA4 |
 
-> **Fast-follow (no bloquea, ver §5):** Resend en vivo · packshots por Admin · Search Console · Mercado Pago.
+> **Fast-follow (no bloquea, ver §5):** packshots por Admin · Search Console · Mercado Pago. *(Resend en vivo ✅ HECHO, D49.)*
 
 ---
 
@@ -94,7 +94,7 @@ Hoy en dev usan valores por defecto (D25 los marcó como deuda de lanzamiento).
 
 **Almacenamiento de archivos (packshots subidos desde el Admin).** El backend usa el **provider local** de Medusa (`@medusajs/medusa/file-local`, configurado en `medusa-config.ts`): guarda en `<cwd>/static` y sirve en `${MEDUSA_BACKEND_URL}/static/...`. **MVP-first: no se agrega S3** (no hay infra externa nueva). Pero el filesystem de Railway es **efímero** → sin persistencia, las imágenes se pierden en cada deploy. Solución: **montar un Railway Volume** en el directorio `static` del server construido (mount path `/app/apps/backend/.medusa/server/static`). Con tracción/crecimiento del catálogo se migra a S3/R2 (cambio solo de config del módulo `file`).
 
-**Email transaccional (D45 · Resend):** `RESEND_API_KEY`, `RESEND_FROM` (ej. `Manada <hola@tumanada.cl>`) y `STOREFRONT_URL` (base de los CTAs y del enlace de recuperación). **Sin `RESEND_API_KEY` el provider entra en modo DEV** (loguea los emails, no envía) → no bloquea el arranque. Para producción: setear las tres en Railway y **verificar el dominio `tumanada.cl` en Resend** (registros SPF/DKIM) para poder enviar desde un remitente propio; hasta entonces sirve el sandbox `onboarding@resend.dev`. Plantilla local: `apps/backend/.env.template`.
+**Email transaccional (D45 · Resend) — EN VIVO (D49):** en Railway `RESEND_API_KEY`, `RESEND_FROM=Manada <contacto@tumanada.cl>` (el **nombre visible** va delante del buzón; sin él el cliente de correo muestra "contacto" como remitente) y `STOREFRONT_URL=https://tumanada.cl` (apex, base de los CTAs y del enlace de recuperación). **Dominio `tumanada.cl` verificado en Resend** (SPF/DKIM agregados vía la integración Resend↔Vercel; Vercel solo aporta DNS, el envío corre en el backend). **Sin `RESEND_API_KEY` el provider cae a modo DEV** (loguea, no envía) → útil en local. Plantilla local: `apps/backend/.env.template`.
 
 **Tracking — GTM (D46 · en Vercel, frontend):** `NEXT_PUBLIC_GTM_ID` (`GTM-XXXXXXX`) = contenedor de Google Tag Manager, **único punto de integración de medición**. GA4, Meta Pixel y Google Ads se conectan **dentro de GTM**, no en el código. Es `NEXT_PUBLIC_` → se hornea en build; cambiarla exige **redeploy**. **Sin este valor no se carga GTM ni se miden eventos** (por diseño: dev/preview quedan limpios). La app ya emite al `dataLayer` los 6 hitos del embudo (`onboarding_start`, `recommendation_shown`, `add_to_cart`, `begin_checkout`, `purchase`, `subscription`) con esquema `ecommerce` de GA4. Plantilla local: `apps/web/.env.example`. **Pasos manuales (fuera del código):** crear contenedor GTM → crear propiedad **GA4** y su tag de configuración dentro de GTM → mapear los 6 eventos a tags GA4 → publicar el contenedor → **Google Search Console** (verificar dominio + enviar `https://tumanada.cl/sitemap.xml`) → **Meta Pixel** y **Google Ads** (conversion linker + import de conversiones desde GA4) si se harán campañas.
 
@@ -128,7 +128,7 @@ El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerra
 6. **Publishable key de prod.** Obtenerla en Admin (`/app` → Settings → Publishable API Keys, key "Manada Web").
 7. **Vercel — env vars.** `NEXT_PUBLIC_MEDUSA_BACKEND_URL` = URL pública del backend · `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` = `pk_...` del paso 6 · (`NEXT_PUBLIC_GTM_ID` si ya hay contenedor). Son `NEXT_PUBLIC_` → **redeploy** del frontend.
 8. **Smoke.** En la URL de Vercel: catálogo hidrata · agregar al carrito · checkout → orden real (aparece en Admin). Verificar que las imágenes de producto cargan desde `${MEDUSA_BACKEND_URL}/static/...`.
-9. **Resend en vivo.** Verificar dominio `tumanada.cl` en Resend (SPF/DKIM) → setear `RESEND_API_KEY`/`RESEND_FROM=Manada <hola@tumanada.cl>` en Railway → probar recuperación de contraseña (llega el email).
+9. **Resend en vivo — ✅ HECHO (D49).** Dominio `tumanada.cl` verificado en Resend (SPF/DKIM vía DNS de Vercel) + `RESEND_API_KEY`/`RESEND_FROM=Manada <contacto@tumanada.cl>`/`STOREFRONT_URL=https://tumanada.cl` en Railway; bienvenida verificada E2E (alta de cuenta → llega el email).
 10. **Dominio.** Conectar `tumanada.cl` (Vercel, frontend) y `api.tumanada.cl` (Railway, backend); ajustar CORS + `MEDUSA_BACKEND_URL` + env vars de Vercel al dominio final y **redeploy**.
 
 ---
@@ -144,7 +144,7 @@ Se marca cuando la tienda funciona de punta a punta de cara al público:
 - [x] `NEXT_PUBLIC_MEDUSA_BACKEND_URL` + `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` seteadas en Vercel → redeploy — ✅ D30.
 - [x] Smoke en vivo: catálogo hidrata (Acana $28.990) · CORS OK · `/health` 200 — ✅ D30. *(Pendiente: una compra de prueba real de punta a punta.)*
 - [x] Dominio `tumanada.cl` conectado en Vercel + DNS + SSL (`www` canónico) — ✅ D30.
-- [ ] Email transaccional en vivo: `RESEND_API_KEY`/`RESEND_FROM`/`STOREFRONT_URL` en Railway + dominio verificado en Resend (D45) — ⬜ fast-follow.
+- [x] Email transaccional en vivo: `RESEND_API_KEY`/`RESEND_FROM`/`STOREFRONT_URL` en Railway + dominio verificado en Resend (D45 · D49) — ✅ HECHO.
 - [x] **Tracking (D46):** **GTM** `GTM-P5RLWHJW` + `NEXT_PUBLIC_GTM_ID` en Vercel · **GA4** `G-1JQM28SLWW` conectada dentro de GTM con los 6 eventos y contenedor publicado · verificado en Tiempo real — ✅ D30.
 - [ ] **Search Console:** dominio `tumanada.cl` verificado + `sitemap.xml` enviado — ⬜ fast-follow.
 - [ ] (Si aplica) **Meta Pixel** / **Google Ads** conectados dentro de GTM para campañas — ⬜.
@@ -155,6 +155,6 @@ Se marca cuando la tienda funciona de punta a punta de cara al público:
 
 ## 6 · Referencias
 
-- Decisiones: **D30** (infra en vivo — Railway + Vercel + dominio + tracking), D27 (Vercel staging), D20 (monorepo), D21 (Medusa), D22 (MVP-first), D25 (infra de lanzamiento como deuda), D45 (Resend), D46 (SEO/tracking).
+- Decisiones: **D30** (infra en vivo — Railway + Vercel + dominio + tracking), D27 (Vercel staging), D20 (monorepo), D21 (Medusa), D22 (MVP-first), D25 (infra de lanzamiento como deuda), D45 (Resend), D46 (SEO/tracking), D49 (Resend en vivo + CTA bienvenida).
 - Reglas arquitectónicas: `ARCHITECTURE.md §2` (backend solo en `apps/backend`; web sin lógica de negocio).
 - Env local: `apps/web/.env.example` · backend local: `apps/backend/DEV.md`.

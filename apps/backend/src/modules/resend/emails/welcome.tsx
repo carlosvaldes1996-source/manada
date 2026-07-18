@@ -25,11 +25,11 @@ export default function WelcomeEmail(data: WelcomeData) {
         le falte nada.
       </Paragraph>
       <Paragraph>
-        El primer paso es contarnos sobre tu regalón. Con su perfil te armamos
-        un plan a su medida y te avisamos justo cuando se le va a acabar la
-        comida.
+        Todo parte del perfil de tu mascota: con él te armamos un plan a su
+        medida y te avisamos justo cuando se le va a acabar la comida. Lo tienes
+        siempre a mano en tu cuenta.
       </Paragraph>
-      <Button href={`${storefrontUrl}/comenzar`}>Armar el perfil de mi mascota</Button>
+      <Button href={`${storefrontUrl}/cuenta/mascotas`}>Ir al perfil de mi mascota</Button>
       <Paragraph muted>
         ¿Prefieres mirar primero? Explora el catálogo en{" "}
         {storefrontUrl.replace(/^https?:\/\//, "")}.
