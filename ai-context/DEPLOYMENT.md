@@ -124,12 +124,42 @@ El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerra
 2. **Volumen de archivos.** Crear un **Volume** en el servicio backend, mount path `/app/apps/backend/.medusa/server/static` (persiste los packshots subidos por Admin).
 3. **Variables del backend** (§2, tabla): `NODE_ENV=production`, `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `REDIS_URL=${{Redis.REDIS_URL}}`, `JWT_SECRET`/`COOKIE_SECRET` (aleatorios), `STORE_CORS`/`ADMIN_CORS`/`AUTH_CORS`, `MEDUSA_BACKEND_URL`, `STOREFRONT_URL`, y (cuando esté) `RESEND_API_KEY`/`RESEND_FROM`. Si aún no hay dominio, usar primero la URL `*.up.railway.app` en `MEDUSA_BACKEND_URL`/CORS y ajustar al conectar `tumanada.cl`.
 4. **Deploy + gate.** `railway up` (o auto-deploy por Git). El `preDeployCommand` corre `medusa db:migrate`. Gate: `curl https://<backend>.up.railway.app/health` → **200**.
-5. **Bootstrap de datos (una vez).** Dentro del contenedor (`railway ssh` / shell del servicio): crear admin (`npx medusa user -e ... -p ...`) y correr el seed (`pnpm --filter @manada/backend exec medusa exec ./src/scripts/seed.ts`). Luego setear envío gratis (`setup-free-shipping.ts`) si aplica.
+5. **Bootstrap de datos (una vez).** Dentro del contenedor (`railway ssh` / shell del servicio): crear admin (`npx medusa user -e ... -p ...` — **solo crea**; falla si el email ya existe. Para **resetear** una clave existente ver **§4.2**) y correr el seed (`pnpm --filter @manada/backend exec medusa exec ./src/scripts/seed.ts`). Luego setear envío gratis (`setup-free-shipping.ts`) si aplica.
 6. **Publishable key de prod.** Obtenerla en Admin (`/app` → Settings → Publishable API Keys, key "Manada Web").
 7. **Vercel — env vars.** `NEXT_PUBLIC_MEDUSA_BACKEND_URL` = URL pública del backend · `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` = `pk_...` del paso 6 · (`NEXT_PUBLIC_GTM_ID` si ya hay contenedor). Son `NEXT_PUBLIC_` → **redeploy** del frontend.
 8. **Smoke.** En la URL de Vercel: catálogo hidrata · agregar al carrito · checkout → orden real (aparece en Admin). Verificar que las imágenes de producto cargan desde `${MEDUSA_BACKEND_URL}/static/...`.
 9. **Resend en vivo — ✅ HECHO (D49).** Dominio `tumanada.cl` verificado en Resend (SPF/DKIM vía DNS de Vercel) + `RESEND_API_KEY`/`RESEND_FROM=Manada <contacto@tumanada.cl>`/`STOREFRONT_URL=https://tumanada.cl` en Railway; bienvenida verificada E2E (alta de cuenta → llega el email).
 10. **Dominio.** Conectar `tumanada.cl` (Vercel, frontend) y `api.tumanada.cl` (Railway, backend); ajustar CORS + `MEDUSA_BACKEND_URL` + env vars de Vercel al dominio final y **redeploy**.
+
+### 4.2 · Runbook — Reset de contraseña del Admin (y acceso SSH al contenedor)
+
+> **✅ EJECUTADO (2026-07-18) — dejado como referencia reproducible.** Cómo resetear la clave de un usuario Admin de producción cuando se olvida.
+
+**Por qué NO sirve `medusa user`:** ese comando **crea** un usuario (`create-users-workflow`) y **falla si el email ya existe** → no resetea. El "¿Olvidaste tu contraseña?" del Admin **tampoco** aplica a admins: el subscriber `apps/backend/src/subscribers/password-reset.ts` solo emite el email para `actor_type === "customer"` (clientes de tienda).
+
+**Método correcto:** el script `apps/backend/src/scripts/reset-admin-password.ts` llama `authModuleService.updateProvider("emailpass", { entity_id: <email>, password })` — reescribe el hash scrypt de la identidad `emailpass`. No hardcodea la clave (la lee de `NEW_ADMIN_PASSWORD`; falla ruidoso si el email no existe).
+
+**Pasos:**
+
+1. **Acceso SSH a Railway (una vez por máquina).** `railway ssh` exige una llave SSH registrada:
+   - `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""` (sin passphrase, para uso no-interactivo).
+   - `railway ssh keys add --key ~/.ssh/id_ed25519.pub --name <nombre>`.
+   - `ssh-keyscan -t ed25519 ssh.railway.com >> ~/.ssh/known_hosts` (evita `Host key verification failed` en modo no-interactivo).
+2. **Ejecutar el script dentro del contenedor.** Desde `apps/backend` (con el servicio `@manada/backend` linkeado, `railway status` para confirmar):
+   ```bash
+   railway ssh "sh -c 'cd /app/apps/backend && \
+     PATH=\$(dirname \$(readlink -f /proc/1/exe)):\$PATH \
+     ADMIN_EMAIL=carlosvaldes1996@gmail.com NEW_ADMIN_PASSWORD=<nueva-clave> \
+     node_modules/.bin/medusa exec ./src/scripts/reset-admin-password.ts'"
+   ```
+   Notas del contenedor: working dir `/app` (repo completo); **node no está en el PATH del login shell** pero sí bajo `/mise/installs/node/<ver>/bin` → se deriva de `/proc/1/exe` (el server es node) para no atarse a la versión; la sesión SSH **sí hereda** `DATABASE_URL`/`REDIS_URL`/secrets del servicio.
+3. **Verificar (E2E).** El login real del Admin debe autenticar:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST \
+     https://manadabackend-production.up.railway.app/auth/user/emailpass \
+     -H "Content-Type: application/json" \
+     -d '{"email":"<email>","password":"<nueva-clave>"}'   # → 200 (+ token en el body)
+   ```
 
 ---
 
