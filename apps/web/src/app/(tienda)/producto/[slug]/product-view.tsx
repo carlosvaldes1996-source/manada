@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -110,6 +110,19 @@ export function ProductView({
   const duration = isFood && bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
   const pricePerKg = bagKg ? Math.round(selected.price.current / bagKg) : undefined;
 
+  // "Rinde más": el formato con menor precio por kilo (el saco grande casi siempre
+  // sale más barato/kg). Habilita un empujón honesto al mejor valor, clickeable.
+  const perKgOf = (fmt: string, price: number) => {
+    const kg = /kg/i.test(fmt) ? parseFloat(fmt) : undefined;
+    return kg ? Math.round(price / kg) : undefined;
+  };
+  const bestValue = variants
+    .map((v) => ({ v, perKg: perKgOf(v.format, v.price.current) }))
+    .filter((x): x is { v: (typeof variants)[number]; perKg: number } => x.perKg !== undefined)
+    .sort((a, b) => a.perKg - b.perKg)[0];
+  const betterFormat =
+    isFood && bestValue && pricePerKg && bestValue.perKg < pricePerKg ? bestValue : undefined;
+
   const unitPrice = sub.isSubscribed ? sub.effectivePrice : selected.price.current;
 
   // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
@@ -160,11 +173,12 @@ export function ProductView({
     }
   }
 
+  // Tiles de valor: SOLO lo personalizado a la mascota (ración/día y duración del
+  // saco). El precio por kilo dejó de ser una tile suelta —ahora va como precio
+  // unitario bajo el precio, que es donde el usuario lo compara (más abajo).
   const specs: { label: string; value: string }[] = [];
   if (ration) specs.push({ label: "Ración diaria", value: `~${ration} g` });
   if (duration) specs.push({ label: `Le dura a ${activePet?.name ?? "tu mascota"}`, value: `~${pluralize(duration, "día")}` });
-  if (pricePerKg) specs.push({ label: "Precio por kilo", value: formatCLP(pricePerKg) });
-  if (specs.length === 0 && selected.format) specs.push({ label: "Formato", value: selected.format });
 
   return (
     // pt reducido (mismo criterio que la PLP): breadcrumb cerca del nav.
@@ -285,9 +299,24 @@ export function ProductView({
                 <Stack gap={1}>
                   <span className="overline text-text-secondary">Compra única</span>
                   <Price now={unitPrice} was={selected.price.compareAt} size="xl" />
+                  {pricePerKg && (
+                    <span className="text-[13px] text-text-secondary">
+                      {formatCLP(pricePerKg)} por kilo
+                    </span>
+                  )}
                 </Stack>
                 <StockBadge stock={selected.stock} />
               </Row>
+              {betterFormat && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedVariantId(betterFormat.v.id)}
+                  className="-mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--subscribe-soft)] px-3 py-1.5 text-left text-[13px] font-medium text-[var(--subscribe-strong)] transition-[filter] hover:brightness-95"
+                >
+                  <TrendingDown className="size-3.5 shrink-0" aria-hidden />
+                  El saco de {betterFormat.v.format} rinde más: {formatCLP(betterFormat.perKg)}/kg
+                </button>
+              )}
               <Row gap={3} align="stretch" className="gap-3">
                 {!soldOut && (
                   <QuantitySelector value={qty} onChange={setQty} min={1} max={Math.min(selected.stock, 10)} />
@@ -309,11 +338,6 @@ export function ProductView({
             </Stack>
 
             <ShippingPolicyNote policy={policy} size="md" />
-
-            <Row gap={2} className="gap-2 text-[13px] text-text-secondary">
-              <Truck className="size-4 text-text-brand" aria-hidden />
-              Devolución sin costo si no le gusta a {activePet?.name ?? "tu mascota"}.
-            </Row>
           </Stack>
         </div>
 

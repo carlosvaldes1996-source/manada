@@ -10,7 +10,7 @@ import { Price } from "@/components/ui/price";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers";
 import { useToast } from "@/components/ui/toast";
-import { DiscountBadge, SubscriptionBadge } from "./badges";
+import { DiscountBadge, StockBadge, SubscriptionBadge } from "./badges";
 import { ProductImage } from "./product-image";
 
 export interface ProductCardProps {
@@ -36,6 +36,15 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
   const href = `/producto/${product.slug}`;
   const discount = discountPercent(product.price.current, product.price.compareAt);
   const soldOut = product.stock <= 0;
+
+  // Formatos: cuando hay más de uno, la tarjeta no fija un formato "por defecto"
+  // (confunde: parece el único) — muestra "Varios formatos" y el precio "desde" el
+  // más barato. `variants` viene ordenado ascendente por precio (map-product.ts).
+  const variantCount = product.variants?.length ?? (product.format ? 1 : 0);
+  const multiFormat = variantCount > 1;
+  const fromPrice = multiFormat
+    ? product.variants?.[0]?.price.current ?? product.price.current
+    : product.price.current;
 
   function add(subscribe = false) {
     addItem(product, subscribe ? { subscriptionWeeks: 4 } : undefined);
@@ -68,6 +77,9 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
           emojiClassName="text-[5.5rem] drop-shadow-[0_12px_16px_rgba(42,39,34,0.12)] transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
         />
         <div className="absolute top-2.5 left-2.5 flex flex-col items-start gap-1.5">
+          {/* Stock en la tarjeta SOLO como urgencia honesta: "¡Quedan X!" (≤5) o
+              "Agotado" (0). Con stock normal no se muestra nada (catálogo limpio). */}
+          {product.stock <= 5 && <StockBadge stock={product.stock} />}
           {product.subscribable && <SubscriptionBadge discount={product.subscriptionDiscount} />}
           {discount > 0 && <DiscountBadge percent={discount} />}
         </div>
@@ -79,9 +91,21 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
           <Link href={href} className="hover:text-text-brand">
             {product.name}
           </Link>
-          {product.format && <span className="font-normal text-text-secondary"> · {product.format}</span>}
+          {!multiFormat && product.format && (
+            <span className="font-normal text-text-secondary"> · {product.format}</span>
+          )}
         </h3>
-        <Price now={product.price.current} was={product.price.compareAt} size="md" className="mt-0.5" />
+        {multiFormat && (
+          <span className="text-[13px] text-text-secondary">Varios formatos</span>
+        )}
+        <span className="mt-0.5 inline-flex items-baseline gap-1.5">
+          {multiFormat && <span className="text-[13px] text-text-secondary">desde</span>}
+          <Price
+            now={fromPrice}
+            was={multiFormat ? undefined : product.price.compareAt}
+            size="md"
+          />
+        </span>
 
         <div className="mt-auto flex gap-2 pt-3">
           <Button

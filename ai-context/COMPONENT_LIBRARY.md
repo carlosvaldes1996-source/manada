@@ -130,7 +130,7 @@
 | Componente | Cuándo usar |
 |---|---|
 | **ProductImage** | Packshot de producto — el ÚNICO punto que conoce la dualidad de `Product.imageUrl` (D36): URL real del Admin → `<img>` (contain, lazy, alt); emoji placeholder (U090) → span decorativo idéntico a antes. Lo usan ProductCard, CartItem, PDP, recomendación y checkout; **ningún sitio debe renderizar `imageUrl` directo**. |
-| **ProductCard** | Unidad central del catálogo. Packshot (`ProductImage`) · badges · marca/nombre · rating · precio · despacho honesto · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. |
+| **ProductCard** | Unidad central del catálogo. Packshot (`ProductImage`) · badges · marca/nombre · precio · CTAs. Conecta al carrito + toast. **Una sola acción primaria** ("Agregar") + suscribir como secundario. **Multi-formato (D51):** con >1 variante muestra "Varios formatos" + precio **"desde"** el más barato (no la primaria); con una sola, el formato inline. **Stock (D51):** el `StockBadge` aparece **solo como urgencia** (≤5 "¡Quedan X!" / 0 "Agotado"); con stock normal, nada. **Nota packshot:** la card va **sobre Arena** → asume PNG **transparente**; foto de fondo blanco se ve como caja (fix = asset, no CSS). |
 | **ProductGrid** | Grilla 2→3→4 con estados `loading` (skeletons) y `empty` integrados. |
 | **ProductRail** | Carrusel horizontal scroll-snap (cross-sell, destacados). |
 | **VariantSelector** | Selector de formato/talla de la PDP (chips sobre `Chip`, D48). Solo se renderiza con **>1 variante** (`Product.variants`); con una sola no hay nada que elegir y el formato se muestra en la ficha. Variante sin stock = chip deshabilitado. La PDP deriva precio/$-kg/duración/`variantId` de la variante elegida; el default es la primaria. |
@@ -138,7 +138,7 @@
 | **CategoryCard / BrandCard** | Accesos por necesidad y por marca. `CategoryCard` acepta `imageUrl` (ícono-foto por slug, con fallback cálido si la foto falta) o `icon` (emoji, respaldo/styleguide); **la variante-foto es la canónica**. |
 | **CategoryTiles** | Grid de accesos a categorías de la Home (`CATEGORIES.slice(0,4)` con íconos-foto). **Fuente única compartida** por la landing anónima (`LandingView`) y el dashboard con sesión (`DashboardView`) → ambos estados muestran las mismas tarjetas (D31; antes el logueado usaba emojis viejos). |
 | **ReviewCard** | Reseña de PDP: autor, estrellas, compra verificada, mención a la mascota. |
-| **StockBadge / DiscountBadge / ShippingBadge / SubscriptionBadge** | Átomos de e-commerce sobre Badge, con semántica correcta. |
+| **StockBadge / DiscountBadge / ShippingBadge / SubscriptionBadge** | Átomos de e-commerce sobre Badge, con semántica correcta. `StockBadge` (umbral 5): "En stock" / "¡Quedan X!" / "Agotado" — en la PDP se muestra siempre; en la card (`ProductCard`, D51) **solo cuando ≤5 o agotado**. |
 | **HonestShippingBlock** | Despacho honesto (fecha + costo reales, **siempre visible**). Compacto (card) o completo (PDP). |
 | **SubscriptionBox** | Caja de suscripción de la PDP (acento Miel): activar, frecuencia, ahorro, "pausa/cancela cuando quieras". |
 | **PersonalizationBanner** | "Filtrado para Toby" en la PLP. |
