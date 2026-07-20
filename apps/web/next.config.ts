@@ -17,6 +17,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // No exponer la versión de Next en las respuestas.
   poweredByHeader: false,
+  // `sharp` (normalizador de packshots, `/api/packshot`) es un módulo nativo:
+  // debe quedar FUERA del bundle de la función para que Vercel trace y adjunte
+  // su binario `.node`. Sin esto la función crashea al importar sharp (500).
+  serverExternalPackages: ["sharp"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -1,6 +1,9 @@
 import type { NextRequest } from "next/server";
-import sharp from "sharp";
 import { PACKSHOT } from "@/lib/media/packshot";
+
+// `sharp` se importa PEREZOSAMENTE dentro del handler (no en el top-level): si
+// su binario nativo no carga en el runtime, la falla queda dentro del try/catch
+// y degradamos a la imagen original en vez de tumbar la función con un 500.
 
 /**
  * `/api/packshot?src=<url>&w=<px>` — normalizador de packshots (D…).
@@ -52,30 +55,32 @@ function clampWidth(raw: string | null): number {
   return Math.min(Math.max(n, PACKSHOT.minWidth), PACKSHOT.maxWidth);
 }
 
-/** Recorta (opcional) y re-encuadra el buffer ya aplanado a un cuadrado `size`. */
-function frame(flat: Buffer, size: number, trim: boolean): Promise<Buffer> {
+async function normalize(input: Buffer, size: number): Promise<Buffer> {
+  const { default: sharp } = await import("sharp");
   const pad = Math.round(size * PACKSHOT.marginRatio);
   const content = Math.max(1, size - pad * 2);
-  let pipeline = sharp(flat, { failOn: "none" });
-  if (trim) pipeline = pipeline.trim({ background: WHITE, threshold: PACKSHOT.trimThreshold });
-  return pipeline
-    .resize(content, content, { fit: "contain", background: WHITE })
-    .extend({ top: pad, bottom: pad, left: pad, right: pad, background: WHITE })
-    .flatten({ background: WHITE })
-    .webp({ quality: PACKSHOT.quality })
-    .toBuffer();
-}
 
-async function normalize(input: Buffer, size: number): Promise<Buffer> {
+  /** Recorta (opcional) y re-encuadra el buffer ya aplanado a un cuadrado `size`. */
+  const frame = (flat: Buffer, trim: boolean): Promise<Buffer> => {
+    let pipeline = sharp(flat, { failOn: "none" });
+    if (trim) pipeline = pipeline.trim({ background: WHITE, threshold: PACKSHOT.trimThreshold });
+    return pipeline
+      .resize(content, content, { fit: "contain", background: WHITE })
+      .extend({ top: pad, bottom: pad, left: pad, right: pad, background: WHITE })
+      .flatten({ background: WHITE })
+      .webp({ quality: PACKSHOT.quality })
+      .toBuffer();
+  };
+
   // 1) Aplanar sobre blanco: transparentes → blanco; con fondo blanco es no-op.
   //    Deja UN solo color de fondo, así el recorte funciona para ambos tipos.
   const flat = await sharp(input, { failOn: "none" }).flatten({ background: WHITE }).toBuffer();
   // 2) Recortar el borde blanco y re-encuadrar. `trim()` lanza si la imagen es
   //    de un solo color → en ese caso re-encuadramos sin recortar.
   try {
-    return await frame(flat, size, true);
+    return await frame(flat, true);
   } catch {
-    return await frame(flat, size, false);
+    return await frame(flat, false);
   }
 }
 
