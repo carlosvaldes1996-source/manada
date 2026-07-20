@@ -1,26 +1,25 @@
 import type { NextRequest } from "next/server";
 import { PACKSHOT } from "@/lib/media/packshot";
 
-// `sharp` se importa PEREZOSAMENTE dentro del handler (no en el top-level): si
-// su binario nativo no carga en el runtime, la falla queda dentro del try/catch
-// y degradamos a la imagen original en vez de tumbar la función con un 500.
-
 /**
- * `/api/packshot?src=<url>&w=<px>` — normalizador de packshots (D…).
+ * `/api/packshot?src=<url>&w=<px>` — normalizador de packshots (D52).
  *
  * Descarga la imagen del backend Medusa (server-side, sin problema de CORS),
  * la aplana sobre blanco, recorta el borde sobrante y la re-encuadra en un
- * cuadrado con margen uniforme. Sirve un WebP cacheable por el CDN. Con esto
+ * cuadrado con margen uniforme. Sirve un JPEG cacheable por el CDN. Con esto
  * todo producto —fondo blanco o transparente— se ve al mismo tamaño y encuadre
  * sin editar el asset. Ver `@/lib/media/packshot` para el porqué y el loader.
  *
- * Degradación: ante cualquier fallo (red, decodificación, imagen de un solo
- * color) redirige a la imagen original — nunca rompe una imagen que hoy carga.
+ * Procesa con `jimp` (JS puro, sin binario nativo). Antes usaba `sharp`, pero su
+ * binario no cargaba en la función serverless de Vercel (500) → se cambió a jimp,
+ * que corre en cualquier runtime. El import es perezoso y todo va dentro de un
+ * try/catch: ante cualquier fallo (red, decodificación, imagen de un solo color)
+ * redirige a la imagen original — nunca rompe una imagen que hoy carga.
  */
 
 export const runtime = "nodejs";
 
-const WHITE = { r: 255, g: 255, b: 255, alpha: 1 } as const;
+const WHITE_INT = 0xffffffff; // RGBA blanco opaco (formato de color de jimp)
 const BACKEND = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000";
 
 function backendOrigin(): string | null {
@@ -56,32 +55,24 @@ function clampWidth(raw: string | null): number {
 }
 
 async function normalize(input: Buffer, size: number): Promise<Buffer> {
-  const { default: sharp } = await import("sharp");
+  const { Jimp, JimpMime } = await import("jimp");
+  const src = await Jimp.read(input);
+
+  // 1) Aplanar sobre blanco: transparente → blanco; con fondo blanco, no-op.
+  //    Deja UN solo color de fondo, así el recorte funciona para ambos tipos.
+  const flat = new Jimp({ width: src.width, height: src.height, color: WHITE_INT });
+  flat.composite(src, 0, 0);
+  // 2) Recortar el borde blanco (autocrop). La tolerancia absorbe el near-white
+  //    de compresión JPEG. En imagen de un solo color no recorta (queda blanca).
+  flat.autocrop({ tolerance: PACKSHOT.trimTolerance });
+  // 3) Escalar el lado mayor al recuadro de contenido (preserva aspecto → no deforma).
   const pad = Math.round(size * PACKSHOT.marginRatio);
   const content = Math.max(1, size - pad * 2);
-
-  /** Recorta (opcional) y re-encuadra el buffer ya aplanado a un cuadrado `size`. */
-  const frame = (flat: Buffer, trim: boolean): Promise<Buffer> => {
-    let pipeline = sharp(flat, { failOn: "none" });
-    if (trim) pipeline = pipeline.trim({ background: WHITE, threshold: PACKSHOT.trimThreshold });
-    return pipeline
-      .resize(content, content, { fit: "contain", background: WHITE })
-      .extend({ top: pad, bottom: pad, left: pad, right: pad, background: WHITE })
-      .flatten({ background: WHITE })
-      .webp({ quality: PACKSHOT.quality })
-      .toBuffer();
-  };
-
-  // 1) Aplanar sobre blanco: transparentes → blanco; con fondo blanco es no-op.
-  //    Deja UN solo color de fondo, así el recorte funciona para ambos tipos.
-  const flat = await sharp(input, { failOn: "none" }).flatten({ background: WHITE }).toBuffer();
-  // 2) Recortar el borde blanco y re-encuadrar. `trim()` lanza si la imagen es
-  //    de un solo color → en ese caso re-encuadramos sin recortar.
-  try {
-    return await frame(flat, true);
-  } catch {
-    return await frame(flat, false);
-  }
+  flat.scaleToFit({ w: content, h: content });
+  // 4) Centrar en un lienzo blanco size×size → margen uniforme para todo producto.
+  const canvas = new Jimp({ width: size, height: size, color: WHITE_INT });
+  canvas.composite(flat, Math.round((size - flat.width) / 2), Math.round((size - flat.height) / 2));
+  return canvas.getBuffer(JimpMime.jpeg, { quality: PACKSHOT.quality });
 }
 
 export async function GET(req: NextRequest) {
@@ -110,7 +101,7 @@ export async function GET(req: NextRequest) {
     const output = await normalize(input, width);
     return new Response(new Uint8Array(output), {
       headers: {
-        "Content-Type": "image/webp",
+        "Content-Type": "image/jpeg",
         // Nombres de archivo de Medusa son inmutables (hash/ID) → cache larga.
         "Cache-Control": "public, max-age=31536000, immutable",
       },

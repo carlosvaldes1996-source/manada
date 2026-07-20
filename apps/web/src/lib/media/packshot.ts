@@ -6,7 +6,8 @@
  * mano. Renderizados tal cual, el producto se ve pequeño y el catálogo, disparejo.
  *
  * En vez de editar cada asset (no escala a productos futuros), los pasamos por el
- * endpoint `/api/packshot` (server-side, `sharp`): aplana sobre blanco, recorta el
+ * endpoint `/api/packshot` (server-side, `jimp` —JS puro, sin binario nativo, para
+ * que corra en la función serverless de Vercel): aplana sobre blanco, recorta el
  * borde y re-encuadra a un cuadrado con margen uniforme. Resultado: TODO producto
  * —blanco o transparente— sale con el mismo encuadre y escala (DESIGN_SYSTEM §6),
  * ocupando ~88 % del marco, sin deformar y sin trabajo manual por producto nuevo.
@@ -19,9 +20,9 @@
 export const PACKSHOT = {
   /** Margen a cada lado del cuadro → el producto ocupa ~(1 − 2·margen) del lado. */
   marginRatio: 0.06,
-  /** Sensibilidad del recorte del borde blanco (0–255). Bajo = conservador. */
-  trimThreshold: 12,
-  /** Calidad WebP de salida. */
+  /** Tolerancia del recorte de borde blanco (0–1). Absorbe el ruido near-white de JPEG. */
+  trimTolerance: 0.025,
+  /** Calidad JPEG de salida (el producto va sobre blanco → no requiere alfa). */
   quality: 82,
   /** Ancho por defecto si el loader no propone uno. */
   defaultWidth: 640,
