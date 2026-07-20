@@ -17,6 +17,7 @@ export * from "./brand-card";
 export * from "./review-card";
 export * from "./personalization-banner";
 export * from "./subscription-box";
+export * from "./variant-selector";
 export * from "./filters-panel";
 
 // Carrito y checkout

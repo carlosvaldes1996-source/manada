@@ -7,19 +7,25 @@ export default function DevolucionesPage() {
   return (
     <ContentPage
       title="Cambios y devoluciones"
-      lead="Si a tu mascota no le gusta, lo resolvemos. Sin letra chica."
-      updated="29 de junio de 2026"
+      lead="Cambiamos productos sellados y resolvemos cualquier problema de calidad. Sin letra chica."
+      updated="19 de julio de 2026"
     >
-      <ProseBlock heading="Garantía de sabor">
+      <ProseBlock heading="Productos sellados y en buen estado">
         <p>
-          Si tu compañero no acepta un alimento nuevo, te devolvemos el dinero o lo cambiamos por
-          otro, <strong>sin costo</strong>, dentro de los 30 días de la compra.
+          Aceptamos cambios y devoluciones de productos <strong>sellados y en buen estado</strong>{" "}
+          dentro de 30 días de la compra. Los productos de farmacia con receta tienen condiciones
+          especiales por normativa.
+        </p>
+        <p>
+          Por higiene y seguridad, los <strong>alimentos abiertos no pueden devolverse</strong>. Si
+          tienes dudas sobre cuál es el mejor formato para tu mascota, escríbenos antes de comprar y
+          te ayudamos a elegir.
         </p>
       </ProseBlock>
-      <ProseBlock heading="Productos en buen estado">
+      <ProseBlock heading="Si algo llegó mal">
         <p>
-          Aceptamos cambios de productos sellados y en buen estado dentro de 30 días. Los productos
-          de farmacia con receta tienen condiciones especiales por normativa.
+          Si tu pedido llegó dañado, vencido o equivocado, lo resolvemos <strong>sin costo</strong>:
+          te enviamos el reemplazo o te devolvemos el dinero. Avísanos apenas lo recibas.
         </p>
       </ProseBlock>
       <ProseBlock heading="Cómo iniciar una devolución">

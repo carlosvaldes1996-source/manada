@@ -3,30 +3,55 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, CalendarClock, ShieldCheck, Truck } from "lucide-react";
+import { RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
 import { Separator } from "@/components/ui/separator";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import {
+  SubscriptionBox,
   ShippingPolicyNote,
   ProductImage,
   ProductRail,
   StockBadge,
+  VariantSelector,
 } from "@/components/commerce";
+import { PlanManadaPreview } from "./plan-manada-preview";
 import { usePet, useCart } from "@/components/providers";
 import { useSubscription } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
 import { categoryLabel } from "@/lib/catalog";
 import type { ShippingPolicy } from "@/lib/medusa";
-import type { Product, ProductVariant } from "@/types";
-import { cn } from "@/lib/utils";
+import type { Product } from "@/types";
+
+/**
+ * PDP — ficha de producto.
+ *
+ * Decisiones de IA (AUDIT_UI_UX):
+ * - U044/U096: las specs de valor (ración/día, duración del saco, $/kg) van en
+ *   un módulo destacado ARRIBA, no enterradas en una pestaña.
+ * - U045: la página jerarquiza hacia la suscripción (recurrente = margen): la
+ *   caja de suscripción precede al CTA y el precio del botón refleja su estado.
+ * - U046: el reaseguro "pausa/cancela cuando quieras" es visible en el punto de
+ *   decisión, no solo en el checkout.
+ * - U052: un ÚNICO riel de cross-sell ("Suele combinarse con").
+ * - U064: el criterio de "para tu mascota" es transparente en el copy.
+ */
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Preview de diseño de la card "Plan Manada" (D48). OCULTA por defecto: la
+ * suscripción sigue apagada (D29), así que la card no se vende ni ejecuta nada
+ * (CTA inerte). Se mantiene completa y toggeable como material para el bloque de
+ * suscripción futuro; poner en `true` solo para revisarla en local.
+ */
+const SHOW_PLAN_MANADA_PREVIEW = false;
 
 export function ProductView({
   product,
@@ -41,33 +66,34 @@ export function ProductView({
   const { addItem } = useCart();
   const { toast } = useToast();
   const router = useRouter();
-
-  // Variant selection: initialise to first variant (primary) if multi-variant product.
-  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(
-    product.variants?.[0]?.variantId ?? product.variantId,
-  );
   const [qty, setQty] = useState(1);
 
-  // Derive current price/stock/format from the selected variant or fall back to base product.
-  const selectedVariant: ProductVariant | undefined = product.variants?.find(
-    (v) => v.variantId === selectedVariantId,
-  );
-  const currentPrice = selectedVariant?.price ?? product.price;
-  const currentStock = selectedVariant?.stock ?? product.stock;
-  const currentVariantId = selectedVariantId ?? product.variantId;
-  const currentFormat = selectedVariant?.title ?? product.format;
+  // Variante (formato/talla) elegida. Por defecto, la primaria: la misma que
+  // muestra la tarjeta de catálogo, para que no haya salto de precio al abrir.
+  const variants = product.variants ?? [];
+  const [selectedVariantId, setSelectedVariantId] = useState(product.variantId);
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? variants[0];
 
-  const soldOut = currentStock <= 0;
+  // Producto según la variante elegida: precio, formato, stock y variantId reflejan
+  // la talla seleccionada. Todo lo que cotiza o agrega al carrito usa `selected`.
+  const selected: Product = selectedVariant
+    ? {
+        ...product,
+        variantId: selectedVariant.id,
+        price: selectedVariant.price,
+        format: selectedVariant.format,
+        stock: selectedVariant.stock,
+      }
+    : product;
 
-  // Suscripción: se alimenta del precio de la variante seleccionada.
-  const productForSub = { ...product, price: currentPrice };
-  const sub = useSubscription(productForSub);
+  const sub = useSubscription(selected);
+
+  const soldOut = selected.stock <= 0;
 
   // Specs de valor (U044): ración diaria, duración del saco y precio por kilo.
-  const bagKg =
-    currentFormat && /kg/i.test(currentFormat)
-      ? parseFloat(currentFormat)
-      : undefined;
+  // Se recalculan para la VARIANTE elegida (bagKg y precio cambian con el formato)
+  // y la MASCOTA ACTIVA del header — informativas, no transaccionales (D39).
+  const bagKg = selected.format && /kg/i.test(selected.format) ? parseFloat(selected.format) : undefined;
   const isFood = product.category === "alimento";
   const ration =
     isFood && activePet?.weightKg
@@ -78,14 +104,29 @@ export function ProductView({
             weightKg: activePet.weightKg,
             neutered: activePet.neutered,
           },
-          product.kcalPerKg,
+          selected.kcalPerKg,
         )
       : undefined;
-  const duration =
-    isFood && bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
-  const pricePerKg = bagKg ? Math.round(currentPrice.current / bagKg) : undefined;
+  const duration = isFood && bagKg && ration ? Math.round((bagKg * 1000) / ration) : undefined;
+  const pricePerKg = bagKg ? Math.round(selected.price.current / bagKg) : undefined;
 
-  // Cross-sell: misma especie, categoría diferente.
+  // "Rinde más": el formato con menor precio por kilo (el saco grande casi siempre
+  // sale más barato/kg). Habilita un empujón honesto al mejor valor, clickeable.
+  const perKgOf = (fmt: string, price: number) => {
+    const kg = /kg/i.test(fmt) ? parseFloat(fmt) : undefined;
+    return kg ? Math.round(price / kg) : undefined;
+  };
+  const bestValue = variants
+    .map((v) => ({ v, perKg: perKgOf(v.format, v.price.current) }))
+    .filter((x): x is { v: (typeof variants)[number]; perKg: number } => x.perKg !== undefined)
+    .sort((a, b) => a.perKg - b.perKg)[0];
+  const betterFormat =
+    isFood && bestValue && pricePerKg && bestValue.perKg < pricePerKg ? bestValue : undefined;
+
+  const unitPrice = sub.isSubscribed ? sub.effectivePrice : selected.price.current;
+
+  // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
+  // categoría (complemento, no otro saco igual) → "completar su rutina".
   const related = products
     .filter(
       (p) =>
@@ -95,19 +136,16 @@ export function ProductView({
     )
     .slice(0, 6);
 
-  // Beneficios de suscripción dinámicos.
-  const subscriptionBenefits = [
-    "Envío automático antes que se acabe",
-    sub.savings > 0
-      ? `Ahorras ${formatCLP(sub.savings)} por saco`
-      : "Precio preferente en cada entrega",
-    "Modifica o cancela con un click",
-  ];
-
-  function showAddedToast(subscribed: boolean) {
-    const canOfferAssign =
-      isFood && activePet && activePet.currentFoodId !== product.id;
-    if (canOfferAssign && !subscribed) {
+  function add() {
+    addItem(selected, {
+      quantity: qty,
+      subscriptionWeeks: sub.isSubscribed ? sub.frequency : undefined,
+    });
+    // El puente comprar→perfil (D39): comprar NO asigna; si es alimento y no es
+    // el suyo, el toast ofrece definirlo con UN tap. Comprar y definir qué come
+    // se sienten relacionados, pero no son el mismo flujo.
+    const canOfferAssign = isFood && activePet && activePet.currentFoodId !== product.id;
+    if (canOfferAssign) {
       const pet = activePet;
       toast({
         title: "Agregado al carrito",
@@ -127,7 +165,7 @@ export function ProductView({
       });
     } else {
       toast({
-        title: subscribed ? "Suscripción iniciada" : "Agregado al carrito",
+        title: sub.isSubscribed ? "Suscripción iniciada" : "Agregado al carrito",
         description: `${product.brand.name} · ${product.name}`,
         variant: "success",
         action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
@@ -135,31 +173,15 @@ export function ProductView({
     }
   }
 
-  function addSubscribed() {
-    addItem(
-      { ...product, variantId: currentVariantId, price: currentPrice, stock: currentStock },
-      { quantity: qty, subscriptionWeeks: sub.frequency },
-    );
-    showAddedToast(true);
-  }
-
-  function addSingle() {
-    addItem(
-      { ...product, variantId: currentVariantId, price: currentPrice, stock: currentStock },
-      { quantity: qty },
-    );
-    showAddedToast(false);
-  }
-
+  // Tiles de valor: SOLO lo personalizado a la mascota (ración/día y duración del
+  // saco). El precio por kilo dejó de ser una tile suelta —ahora va como precio
+  // unitario bajo el precio, que es donde el usuario lo compara (más abajo).
   const specs: { label: string; value: string }[] = [];
   if (ration) specs.push({ label: "Ración diaria", value: `~${ration} g` });
-  if (duration)
-    specs.push({
-      label: `Le dura a ${activePet?.name ?? "tu mascota"}`,
-      value: `~${pluralize(duration, "día")}`,
-    });
+  if (duration) specs.push({ label: `Le dura a ${activePet?.name ?? "tu mascota"}`, value: `~${pluralize(duration, "día")}` });
 
   return (
+    // pt reducido (mismo criterio que la PLP): breadcrumb cerca del nav.
     <Section spacing="md" className="pt-6 lg:pt-10">
       <Stack gap={6}>
         <Breadcrumb
@@ -172,56 +194,58 @@ export function ProductView({
         />
 
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Galería */}
-          <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-gradient-to-b from-canvas to-subtle lg:aspect-square">
+          {/* Galería: foto real del Admin si existe; si no, packshot placeholder
+              cálido (dirección de arte real = Polish 3.4 / U090).
+              4:3 en móvil: la galería cuadrada a todo el ancho empujaba precio y
+              CTA bajo el fold; cuadrada en desktop. */}
+          <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-white lg:aspect-square">
             <ProductImage
               image={product.imageUrl}
               alt={`${product.brand.name} ${product.name}`}
-              imgClassName="p-10"
+              sizes="(min-width: 1024px) 42vw, (min-width: 640px) 90vw, 100vw"
+              priority
               emojiClassName="text-[9rem] drop-shadow-[0_20px_28px_rgba(42,39,34,0.14)]"
             />
           </div>
 
-          {/* Caja de compra */}
-          <Stack gap={4}>
-            {/* Encabezado */}
+          {/* Caja de compra — orden del boceto: nombre → descripción → formato →
+              specs de valor → [Plan Manada] → Compra única */}
+          <Stack gap={5}>
             <Stack gap={2}>
               <span className="overline text-text-secondary">{product.brand.name}</span>
               <h1 className="heading-1 text-text-primary">{product.name}</h1>
+              {(product.species.length > 0 || (product.stage?.length ?? 0) > 0) && (
+                <Row gap={2} wrap className="pt-0.5">
+                  {product.stage?.map((s) => (
+                    <Badge key={s} variant="neutral">
+                      {capitalize(s)}
+                    </Badge>
+                  ))}
+                  {product.species.map((s) => (
+                    <Badge key={s} variant="neutral">
+                      {capitalize(s)}
+                    </Badge>
+                  ))}
+                </Row>
+              )}
             </Stack>
 
-            {/* Tags: etapa de vida */}
-            {(product.stage?.length || product.species?.length) && (
-              <Row gap={2} wrap>
-                {product.stage?.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full border border-border-default bg-subtle px-3 py-0.5 text-xs text-text-secondary"
-                  >
-                    {s}
-                  </span>
-                ))}
-                {product.species?.length === 1 && (
-                  <span className="rounded-full border border-border-default bg-subtle px-3 py-0.5 text-xs text-text-secondary capitalize">
-                    {product.species[0]}
-                  </span>
-                )}
-              </Row>
-            )}
-
-            {/* Descripción */}
-            {product.description ? (
+            {/* Descripción real del catálogo, arriba (como el boceto). */}
+            {product.description && (
               <p className="body-m text-text-secondary">{product.description}</p>
-            ) : (
-              isFood && (
-                <p className="body-m text-text-secondary">
-                  {product.name} de {product.brand.name}. Una fórmula pensada para acompañar a{" "}
-                  {activePet?.name ?? "tu mascota"} en su día a día.
-                </p>
-              )
             )}
 
-            {/* Specs de valor (cuando hay perfil de mascota) */}
+            {/* Selector de formato/talla: solo aparece si el producto tiene más de
+                una variante; si tiene una sola, se muestra en las specs. */}
+            <VariantSelector
+              variants={variants}
+              selectedId={selected.variantId}
+              onSelect={setSelectedVariantId}
+              label="Selecciona el tamaño"
+            />
+
+            {/* Módulo de specs de valor (U044/U096) — recalculado por variante.
+                Grid responsive: apila en móvil para no truncar las etiquetas. */}
             {specs.length > 0 && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {specs.map((s) => (
@@ -236,7 +260,8 @@ export function ProductView({
               </div>
             )}
 
-            {/* Invitación contextual */}
+            {/* Invitación contextual (anónimo): el perfil desbloquea la ración
+                y la duración de ESTE saco — valor evidente, no un registro seco. */}
             {isFood && !activePet && (
               <p className="text-[13px] text-text-secondary">
                 <Link
@@ -249,174 +274,98 @@ export function ProductView({
               </p>
             )}
 
-            {/* ── Selector de tamaño ───────────────────────────── */}
-            {product.variants && product.variants.length > 1 && (
+            {/* Suscripción primero (U045) + reaseguro visible (U046). Gated por
+                SUBSCRIPTIONS_ENABLED (D29): con suscripciones apagadas hoy, este
+                bloque no se renderiza y la PDP muestra solo la compra única; el
+                layout ya deja su lugar reservado (boceto "Plan Manada"). */}
+            {product.subscribable && (
               <Stack gap={2}>
-                <p className="text-sm font-semibold text-text-primary">Selecciona el tamaño:</p>
-                <Row gap={2} wrap>
-                  {product.variants.map((v) => (
-                    <button
-                      key={v.variantId}
-                      onClick={() => setSelectedVariantId(v.variantId)}
-                      className={cn(
-                        "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
-                        selectedVariantId === v.variantId
-                          ? "border-[1.5px] border-miel-500 text-miel-700 bg-transparent"
-                          : "border border-border-default text-text-secondary hover:border-miel-300 hover:text-miel-600 bg-transparent",
-                      )}
-                    >
-                      {v.title}
-                    </button>
-                  ))}
-                </Row>
+                <SubscriptionBox product={selected} controller={sub} />
+                <p className="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
+                  <ShieldCheck className="size-4 text-[var(--success)]" aria-hidden />
+                  Sin permanencia: pausa o cancela cuando quieras, sin costo.
+                </p>
               </Stack>
             )}
 
-            {/* ── Sección de compra ────────────────────────────── */}
-            {product.subscribable ? (
-              <Stack gap={3}>
-                {/* Tarjeta de suscripción */}
-                <div className="relative rounded-[var(--radius-lg)] border-[1.5px] border-miel-500 bg-surface p-5 pt-7">
-                  {/* Badge flotante */}
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                    <span className="rounded-full bg-miel-500 px-3 py-1 text-[11px] font-semibold text-white">
-                      Recomendado: Suscripción
+            {/* Preview de diseño de la card Plan Manada — oculta (D29 apagado);
+                CTA inerte. Ver SHOW_PLAN_MANADA_PREVIEW arriba. */}
+            {SHOW_PLAN_MANADA_PREVIEW && isFood && <PlanManadaPreview product={selected} />}
+
+            <Separator />
+
+            {/* Compra única (U045): precio de la variante elegida + cantidad + CTA */}
+            <Stack gap={3}>
+              <Row justify="between" align="end" wrap gap={3}>
+                <Stack gap={1}>
+                  <span className="overline text-text-secondary">Compra única</span>
+                  <Price now={unitPrice} was={selected.price.compareAt} size="xl" />
+                  {pricePerKg && (
+                    <span className="text-[13px] text-text-secondary">
+                      {formatCLP(pricePerKg)} por kilo
                     </span>
-                  </div>
-
-                  {/* Encabezado del plan */}
-                  <div className="flex items-center justify-between gap-2">
-                    <Row gap={2} align="center">
-                      <CalendarClock className="size-5 shrink-0 text-miel-600" aria-hidden />
-                      <span className="font-semibold text-text-primary">Plan Manada</span>
-                    </Row>
-                    <span className="price text-xl text-miel-600">
-                      {formatCLP(sub.subscribedPrice)}
-                    </span>
-                  </div>
-
-                  {/* Beneficios */}
-                  <ul className="mt-3 space-y-1.5">
-                    {subscriptionBenefits.map((b) => (
-                      <li
-                        key={b}
-                        className="flex items-start gap-2 text-sm text-text-secondary"
-                      >
-                        <Check
-                          className="mt-0.5 size-4 shrink-0 text-miel-600"
-                          aria-hidden
-                        />
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA principal */}
-                  <Button
-                    size="lg"
-                    block
-                    onClick={addSubscribed}
-                    disabled={soldOut}
-                    className="mt-4"
-                  >
-                    {soldOut
-                      ? "Sin stock por ahora"
-                      : `Suscribirme (Ahorra ${sub.discountPct}%)`}
-                  </Button>
-                </div>
-
-                {/* Compra única (secundaria) */}
-                <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-3">
-                  <div>
-                    <p className="text-xs text-text-secondary">Compra única</p>
-                    <p className="price text-lg text-text-primary">
-                      {formatCLP(currentPrice.current)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={addSingle}
-                    disabled={soldOut}
-                  >
-                    Agregar al carrito
-                  </Button>
-                </div>
-              </Stack>
-            ) : (
-              /* Para productos sin suscripción: UI estándar */
-              <Stack gap={3}>
-                <Separator />
-                <div className="flex items-center gap-2">
-                  <Price now={currentPrice.current} was={currentPrice.compareAt} size="xl" />
-                  <StockBadge stock={currentStock} />
-                </div>
-                <Row gap={3} align="stretch">
-                  {!soldOut && (
-                    <QuantitySelector
-                      value={qty}
-                      onChange={setQty}
-                      min={1}
-                      max={Math.min(currentStock, 10)}
-                    />
                   )}
-                  <Button size="lg" block onClick={addSingle} disabled={soldOut}>
-                    {soldOut ? "Sin stock por ahora" : "Agregar al carrito"}
-                  </Button>
-                </Row>
-              </Stack>
-            )}
+                </Stack>
+                <StockBadge stock={selected.stock} />
+              </Row>
+              {betterFormat && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedVariantId(betterFormat.v.id)}
+                  className="-mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--subscribe-soft)] px-3 py-1.5 text-left text-[13px] font-medium text-[var(--subscribe-strong)] transition-[filter] hover:brightness-95"
+                >
+                  <TrendingDown className="size-3.5 shrink-0" aria-hidden />
+                  El saco de {betterFormat.v.format} rinde más: {formatCLP(betterFormat.perKg)}/kg
+                </button>
+              )}
+              <Row gap={3} align="stretch" className="gap-3">
+                {!soldOut && (
+                  <QuantitySelector value={qty} onChange={setQty} min={1} max={Math.min(selected.stock, 10)} />
+                )}
+                <Button
+                  size="lg"
+                  block
+                  onClick={add}
+                  disabled={soldOut}
+                  leadingIcon={sub.isSubscribed ? <RefreshCw className="size-4" aria-hidden /> : undefined}
+                >
+                  {soldOut
+                    ? "Sin stock por ahora"
+                    : sub.isSubscribed
+                      ? "Suscribir y agregar"
+                      : "Agregar al carrito"}
+                </Button>
+              </Row>
+            </Stack>
 
             <ShippingPolicyNote policy={policy} size="md" />
-
-            <Row gap={2} className="gap-2 text-[13px] text-text-secondary">
-              <Truck className="size-4 text-text-brand" aria-hidden />
-              Devolución sin costo si no le gusta a {activePet?.name ?? "tu mascota"}.
-            </Row>
-
-            {/* Reaseguro (sin permanencia) — solo si hay suscripción */}
-            {product.subscribable && (
-              <p className="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
-                <ShieldCheck className="size-4 text-[var(--success)]" aria-hidden />
-                Sin permanencia: pausa o cancela cuando quieras, sin costo.
-              </p>
-            )}
           </Stack>
         </div>
 
-        {/* Detalle en pestañas */}
-        <Tabs defaultValue="descripcion" className="mt-2">
-          <TabsList>
-            <TabsTrigger value="descripcion">Descripción</TabsTrigger>
-            <TabsTrigger value="detalle">Ficha técnica</TabsTrigger>
-          </TabsList>
+        {/* Ficha técnica (la descripción ya vive arriba, junto al nombre). */}
+        <div className="mt-2 max-w-md">
+          <h2 className="heading-3 mb-3 text-text-primary">Ficha técnica</h2>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <dt className="text-text-secondary">Marca</dt>
+            <dd className="text-text-primary">{product.brand.name}</dd>
+            <dt className="text-text-secondary">{variants.length > 1 ? "Formatos" : "Formato"}</dt>
+            <dd className="text-text-primary">
+              {variants.length > 1
+                ? variants.map((v) => v.format).join(" · ")
+                : (product.format ?? "—")}
+            </dd>
+            <dt className="text-text-secondary">Para</dt>
+            <dd className="text-text-primary">{product.species.join(", ")}</dd>
+            {product.stage && (
+              <>
+                <dt className="text-text-secondary">Etapa</dt>
+                <dd className="text-text-primary">{product.stage.join(", ")}</dd>
+              </>
+            )}
+          </dl>
+        </div>
 
-          <TabsContent value="descripcion">
-            <p className="body-m max-w-2xl text-text-secondary">
-              {product.description ??
-                `${product.name} de ${product.brand.name}. Una fórmula pensada para acompañar a ${activePet?.name ?? "tu mascota"} en su día a día. Te avisamos antes de que se acabe para que nunca le falte.`}
-            </p>
-          </TabsContent>
-
-          <TabsContent value="detalle">
-            <dl className="grid max-w-md grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <dt className="text-text-secondary">Marca</dt>
-              <dd className="text-text-primary">{product.brand.name}</dd>
-              <dt className="text-text-secondary">Formato</dt>
-              <dd className="text-text-primary">{currentFormat ?? "—"}</dd>
-              <dt className="text-text-secondary">Para</dt>
-              <dd className="text-text-primary">{product.species.join(", ")}</dd>
-              {product.stage && (
-                <>
-                  <dt className="text-text-secondary">Etapa</dt>
-                  <dd className="text-text-primary">{product.stage.join(", ")}</dd>
-                </>
-              )}
-            </dl>
-          </TabsContent>
-        </Tabs>
-
-        {/* Cross-sell único (U052) */}
+        {/* Cross-sell ÚNICO (U052) */}
         {related.length > 0 && (
           <ProductRail
             overline="Suele combinarse con"

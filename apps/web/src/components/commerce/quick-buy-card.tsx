@@ -47,12 +47,12 @@ export function QuickBuyCard({ product, className }: QuickBuyCardProps) {
         href={href}
         aria-hidden
         tabIndex={-1}
-        className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-b from-canvas to-subtle"
+        className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-white"
       >
         <ProductImage
           image={product.imageUrl}
           alt={`${product.brand.name} ${product.name}`}
-          imgClassName="p-1"
+          sizes="64px"
           emojiClassName="text-3xl"
         />
       </Link>

@@ -110,10 +110,10 @@ export function FoodSelectorDialog({ pet, products, open, onOpenChange }: FoodSe
                     className="flex items-center gap-3 rounded-[var(--radius-md)] border border-border-default bg-surface p-3"
                   >
                     <span
-                      className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-subtle text-2xl"
+                      className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-white text-2xl"
                       aria-hidden
                     >
-                      <ProductImage image={p.imageUrl} alt={p.name} imgClassName="p-0.5" />
+                      <ProductImage image={p.imageUrl} alt={p.name} sizes="48px" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="overline text-text-secondary">{p.brand.name}</p>

@@ -7,7 +7,10 @@
  * destinos sin tocar el front. Sin el ID, no se carga GTM ni se envían eventos
  * (dev queda limpio; los pushes al dataLayer son inofensivos).
  */
-export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
+// `.trim()` defiende contra un salto de línea o espacio colado al pegar el valor
+// en Vercel: sin él, el ID viajaría como `GTM-XXXX\n` y Google no cargaría el
+// contenedor (id inválido) → no se mediría nada.
+export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID?.trim() || undefined;
 
 /** ¿Está el tracking habilitado? (hay contenedor GTM configurado). */
 export const ANALYTICS_ENABLED = Boolean(GTM_ID);

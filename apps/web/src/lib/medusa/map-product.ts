@@ -158,6 +158,23 @@ function toStock(variant: StoreVariant | undefined): number {
   return variant.inventory_quantity ?? 0;
 }
 
+/**
+ * Todas las variantes de compra (formatos/tallas), ordenadas por precio
+ * ascendente — con formatos de peso ("1 kg" < "3 kg" < "7.5 kg") esto equivale
+ * a menor→mayor tamaño. La PDP muestra un selector solo cuando hay más de una;
+ * si el producto tiene una sola, se expone esa única disponible.
+ */
+function toVariants(product: StoreProduct): ProductVariant[] {
+  return (product.variants ?? [])
+    .map((v) => ({
+      id: v.id,
+      format: v.title || "Único",
+      price: toPrice(v),
+      stock: toStock(v),
+    }))
+    .sort((a, b) => a.price.current - b.price.current);
+}
+
 /** Imagen: thumbnail → primera imagen → emoji placeholder (por especie/categoría). */
 function toImageUrl(product: StoreProduct, category: ProductCategory, species: Species[]): string {
   const image = product.thumbnail ?? product.images?.[0]?.url;
@@ -208,29 +225,19 @@ export function mapProduct(product: StoreProduct): Product {
   const suitableConditions = metaEnumList(meta, "suitable_conditions", VALID_CONDITIONS);
   const notFor = metaEnumList(meta, "not_for", VALID_CONDITIONS);
 
-  // Todas las variantes ordenadas por rank, para el selector de tamaño en la PDP.
-  const allVariants: ProductVariant[] = [...(product.variants ?? [])]
-    .sort((a, b) => (a.variant_rank ?? 0) - (b.variant_rank ?? 0))
-    .map((v) => ({
-      variantId: v.id!,
-      title: v.title || "—",
-      price: toPrice(v),
-      stock: toStock(v),
-    }));
-
   return {
     id: product.id,
     variantId: variant?.id,
     slug: product.handle,
     name: displayName(product.title, brandName),
+    description: product.description ?? undefined,
     brand,
     category,
     species,
     stage: stage.length ? stage : undefined,
     price: toPrice(variant),
     format: variant?.title || undefined,
-    description: product.description ?? undefined,
-    variants: allVariants.length > 1 ? allVariants : undefined,
+    variants: toVariants(product),
     kcalPerKg,
     suitableConditions: suitableConditions.length ? suitableConditions : undefined,
     notFor: notFor.length ? notFor : undefined,

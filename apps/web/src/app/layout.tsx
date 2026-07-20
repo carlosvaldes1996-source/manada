@@ -5,7 +5,9 @@ import {
   GoogleTagManager,
   GoogleTagManagerNoScript,
 } from "@/components/analytics/google-tag-manager";
+import { JsonLd } from "@/components/seo/json-ld";
 import { SITE } from "@/config/site";
+import { organizationSchema } from "@/lib/seo";
 import "./globals.css";
 
 /**
@@ -77,6 +79,7 @@ export default function RootLayout({
       className={`${fraunces.variable} ${hanken.variable} h-full`}
     >
       <body className="min-h-full flex flex-col antialiased">
+        <JsonLd schema={organizationSchema()} />
         <GoogleTagManagerNoScript />
         <AppProviders>{children}</AppProviders>
         <GoogleTagManager />

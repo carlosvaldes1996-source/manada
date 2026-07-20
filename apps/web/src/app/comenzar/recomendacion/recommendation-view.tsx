@@ -414,7 +414,7 @@ function FeaturedFoodCard({
           <ProductImage
             image={food.imageUrl}
             alt={`${food.brand.name} ${food.name}`}
-            imgClassName="p-2"
+            className="p-2"
             emojiClassName="text-5xl"
           />
         </div>
@@ -579,7 +579,7 @@ function AltCard({
     <div className="flex gap-4 rounded-[var(--radius-xl)] border border-border-default bg-surface p-4">
       {/* Imagen */}
       <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
-        <ProductImage image={product.imageUrl} alt={product.name} imgClassName="p-1.5" emojiClassName="text-3xl" />
+        <ProductImage image={product.imageUrl} alt={product.name} className="p-1.5" emojiClassName="text-3xl" />
       </div>
 
       {/* Info */}
@@ -637,6 +637,8 @@ function WhyDisclosure({ petName, reasons }: { petName: string; reasons: string[
     </div>
   );
 }
+
+
 
 /** Búsqueda tolerante a acentos (mismo criterio que el buscador de razas/alimento). */
 function normalize(s: string): string {
@@ -733,10 +735,10 @@ function BrandFoodSheet({
                       className="flex items-center gap-3 rounded-[var(--radius-md)] border border-border-default bg-surface p-3"
                     >
                       <span
-                        className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-subtle text-2xl"
+                        className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-white text-2xl"
                         aria-hidden
                       >
-                        <ProductImage image={p.imageUrl} alt={p.name} imgClassName="p-0.5" />
+                        <ProductImage image={p.imageUrl} alt={p.name} sizes="48px" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <span className="overline text-text-secondary">{p.brand.name}</span>

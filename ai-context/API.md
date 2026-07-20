@@ -270,7 +270,7 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
 
 ---
 
-## 11. Contrato de emails transaccionales — IMPLEMENTADO (D45)
+## 11. Contrato de emails transaccionales — EN VIVO en producción (D45 · D49)
 
 > Owner técnico: `apps/backend/src/modules/resend/`. **No hay contrato de storefront**: los
 > emails los dispara el backend al reaccionar a **eventos nativos de Medusa** — el frontend no
@@ -287,11 +287,15 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
   el provider resuelve la plantilla, renderiza React Email y envía por Resend.
 - **Modo DEV:** sin `RESEND_API_KEY` el provider **loguea** el email (destinatario, asunto, enlace) en
   vez de enviar → no bloquea dev ni el arranque. Prod se activa con la env var (`DEPLOYMENT.md`).
+- **Producción EN VIVO (D49):** dominio `tumanada.cl` **verificado** en Resend (SPF/DKIM vía DNS de
+  Vercel; Vercel solo aporta DNS, el envío corre en el backend) + en Railway `RESEND_API_KEY`,
+  `RESEND_FROM=Manada <contacto@tumanada.cl>` (el **nombre visible** va delante del buzón) y
+  `STOREFRONT_URL=https://tumanada.cl` → envío real (bienvenida verificada E2E).
 
 ### 11.2 Emails ↔ eventos (los 4 críticos)
 | Email | Evento nativo | Subscriber | Filtro / notas |
 |---|---|---|---|
-| Bienvenida | `customer.created` | `customer-created.ts` | solo si `has_account` (no a invitados de checkout) |
+| Bienvenida | `customer.created` | `customer-created.ts` | solo si `has_account` (no a invitados de checkout); CTA → `/cuenta/mascotas`, que adapta en tiempo de clic (perfil con acciones vs. crear) — D49 |
 | Recuperar contraseña | `auth.password_reset` | `password-reset.ts` | reemplaza el `console.log`; `data.url` = enlace de un solo uso |
 | Compra realizada | `order.placed` | `order-placed-email.ts` | subscriber **separado** de `food-purchased.ts` (anticipación, D35) |
 | Pedido enviado | `shipment.created` | `order-shipped.ts` | orden resuelta desde el fulfillment (link nativo); respeta `no_notification` |
@@ -300,3 +304,28 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
 No se implementan emails de suscripción: **no existen eventos de suscripción recurrente** en el
 backend (moat post-tracción, D22/D29). Con esta estructura, agregarlos es trivial cuando existan
 (nueva `.tsx` + entrada en el registro + subscriber). Sin trabajo muerto.
+
+## 12. Contrato de Backoffice (`/admin/*`) — extensiones del Admin (D47 · D50)
+
+> Owner técnico: `apps/backend/src/api/admin/` + `src/admin/`. Rutas `/admin/*` **autenticadas
+> automáticamente** por Medusa (sesión del operador). No hay contrato de storefront: las consume
+> el propio Admin (UI routes / widgets) vía `src/admin/lib/sdk.ts`.
+
+### 12.1 `GET /admin/pets` — explorador de mascotas (D47)
+Read-only; alimenta la sección "Mascotas" del Admin (`src/admin/routes/pets`). Resuelve cliente y
+alimento por traversal del Module Link Customer↔Pet. Query: `limit`, `offset`, `q`, `species`, `stage`.
+
+### 12.2 `POST /admin/products/:id/formats` — alta de formato en un paso (D50)
+Encapsula el flujo de Medusa v2 (opción→valor→variante) para que crear un formato sea un solo
+request. Owner: `src/api/admin/products/[id]/formats/` (lógica en `add-format.ts`, validación zod en
+`validators.ts` registrada en `middlewares.ts`). Lo consume el widget `product-add-format` inyectado
+en `product.details.after`.
+
+- **Body:** `{ format: string, price_clp: number (>0), sku?: string, manage_inventory?: boolean }`.
+- **Comportamiento:** asegura la opción **"Formato"** (la crea si falta), suma el valor si no existe,
+  y crea la variante con `options: { Formato: format }` + precio CLP. Si el producto está con la
+  **"Default variant"** sin opciones, la **reemplaza** por el formato real (borra la placeholder,
+  crea la opción y la variante). Rechaza (`NOT_ALLOWED`) productos ya estructurados con múltiples
+  variantes/opciones de otra forma → esos van al editor nativo. Duplicado de formato = `INVALID_DATA`.
+- **Respuesta:** `201 { product_id, formats: [{ id, title }] }` (lista actualizada para refrescar el widget).
+- **Convención:** opción **"Formato"** y variante `title` = el formato (ej. "14 kg"), espejo del `seed`.

@@ -122,7 +122,6 @@ extiende Medusa sin tocar el core. Tabla `pet`:
 | Columna | Tipo | Notas |
 |---|---|---|
 | `id` | pk (`pet_…`) | DML `model.id({ prefix: "pet" })` |
-| `customer_id` | text, **index** | dueño (Customer nativo de Medusa) |
 | `name` | text | |
 | `species` | enum `perro\|gato\|otro` | |
 | `stage` | enum `cachorro\|adulto\|senior` | etapa, no fecha de nacimiento (FUNNEL §1.2) |
@@ -135,10 +134,13 @@ extiende Medusa sin tocar el core. Tabla `pet`:
 | `current_food_id` | text, null | id de producto Medusa ("su alimento", B6) |
 | `food_assigned_at` | timestamptz, null | **estampado por el backend** al cambiar `current_food_id`; ancla del cálculo de anticipación |
 
-- **Relación con Customer: campo `customer_id` plano e indexado, NO module link.**
-  Rationale (MVP-first): el único patrón de consulta es "mascotas de este cliente";
-  un module link de Medusa agrega tabla de enlace + `query.graph` sin beneficio hoy.
-  Graduar a `defineLink` después no rompe el contrato de API.
+- **Relación con Customer: Module Link nativo 1→N (`src/links/customer-pet.ts`, D47),**
+  que **gradúa** el atajo `customer_id` plano original de D34. La asociación vive en la
+  tabla de enlace gestionada por el Link Module (`customer_customer_pet_pet`), respetando
+  el aislamiento entre módulos y habilitando joins nativos con `query.graph`
+  (`customer.pets` / `pet.customer`). La columna `customer_id` **fue eliminada** del modelo
+  (fuente única, sin duplicar la referencia). **El contrato HTTP de `/store/pets` no cambió**
+  (el mapper del front nunca leyó `customer_id`): las rutas resuelven la propiedad por el link.
 - **`completeness` NO se almacena** (derivada; la calcula el front). La ración/anticipación
   tampoco: se derivan de `weight_kg` + `stage` + formato del producto (`lib/anticipation.ts`).
 - Servicio: `MedusaService({ Pet })` (CRUD autogenerado). Contrato de API en `API.md §9`.

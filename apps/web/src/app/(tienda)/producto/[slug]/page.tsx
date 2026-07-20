@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProductByHandle, listProducts, getShippingPolicy } from "@/lib/medusa";
+import { categoryLabel } from "@/lib/catalog";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbSchema, productSchema, resolveProductImage } from "@/lib/seo";
 import { ProductView } from "./product-view";
 
 // La ficha se hidrata desde el backend en cada request (no en el build).
@@ -18,6 +21,9 @@ export async function generateMetadata({
   const title = `${product.brand.name} · ${product.name}`;
   const description = `${product.name}${product.format ? ` (${product.format})` : ""} de ${product.brand.name}. Cómpralo en Manada con despacho a domicilio en Chile.`;
   const canonical = `/producto/${slug}`;
+  // Solo se usa la foto del producto si es una URL válida; si es un emoji placeholder
+  // se omite `images` y Next aplica el `opengraph-image` de marca (file-convention).
+  const ogImage = resolveProductImage(product.imageUrl);
 
   return {
     title,
@@ -28,7 +34,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      ...(product.imageUrl ? { images: [{ url: product.imageUrl }] } : {}),
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
   };
 }
@@ -45,5 +51,17 @@ export default async function ProductoPage({
     getShippingPolicy(),
   ]);
   if (!product) notFound();
-  return <ProductView product={product} products={products} policy={policy} />;
+
+  const breadcrumb = breadcrumbSchema([
+    { name: "Inicio", path: "/" },
+    { name: categoryLabel(product.category), path: `/categoria/${product.category}` },
+    { name: product.name, path: `/producto/${product.slug}` },
+  ]);
+
+  return (
+    <>
+      <JsonLd schema={[productSchema(product), breadcrumb]} />
+      <ProductView product={product} products={products} policy={policy} />
+    </>
+  );
 }

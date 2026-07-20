@@ -83,11 +83,16 @@ export interface Price {
   compareAt?: number;
 }
 
-/** Variante de producto (distinto tamaño/peso). */
+/**
+ * Variante de compra de un producto: un formato/talla concreto con su propio
+ * precio y stock (ej. "1 kg", "3 kg", "7.5 kg"). La PDP muestra un selector
+ * cuando el producto tiene más de una; con una sola, no hay nada que elegir.
+ */
 export interface ProductVariant {
-  variantId: string;
-  /** Etiqueta visible, ej. "3 kg" o "15 kg". */
-  title: string;
+  /** ID de la variante en Medusa — el que se agrega al carrito. */
+  id: string;
+  /** Formato/peso visible (título de la variante, ej. "3 kg"). */
+  format: string;
   price: Price;
   stock: number;
 }
@@ -98,16 +103,19 @@ export interface Product {
   variantId?: string;
   slug: string;
   name: string;
+  /** Descripción real del catálogo (Medusa `description`). */
+  description?: string;
   brand: Brand;
   category: ProductCategory;
   species: Species[];
   stage?: LifeStage[];
   price: Price;
-  /** Formato/peso visible (ej. "3 kg"). */
+  /** Formato/peso visible de la variante primaria (ej. "3 kg"). */
   format?: string;
-  /** Descripción larga del producto (Medusa `description`). */
-  description?: string;
-  /** Todas las variantes disponibles, ordenadas por rank (para el selector de tamaño). */
+  /**
+   * Todas las variantes de compra (formatos/tallas) del producto, ordenadas de
+   * menor a mayor. Siempre incluye la primaria; con >1 la PDP muestra el selector.
+   */
   variants?: ProductVariant[];
   /**
    * Energía metabolizable del alimento en kcal/kg — base del cálculo de ración
