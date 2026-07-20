@@ -246,11 +246,11 @@ export function RecommendationView({ products }: { products: Product[] }) {
               {/* Columna A — decidir */}
               <Stack gap={4} className="min-w-0 flex-1">
                 <Row gap={4} align="start">
-                  <div className="grid size-[84px] shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+                  <div className="relative grid size-[84px] shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-white">
                     <ProductImage
                       image={food.imageUrl}
                       alt={`${food.brand.name} ${food.name}`}
-                      imgClassName="p-2"
+                      sizes="84px"
                       emojiClassName="text-4xl"
                     />
                   </div>
@@ -626,10 +626,10 @@ function AltRow({
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border-default bg-surface p-4 sm:flex-row sm:items-center">
       <span
-        className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-subtle text-3xl"
+        className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-white text-3xl"
         aria-hidden
       >
-        <ProductImage image={product.imageUrl} alt={product.name} imgClassName="p-1" />
+        <ProductImage image={product.imageUrl} alt={product.name} sizes="56px" />
       </span>
       <div className="min-w-0 flex-1">
         <span className="overline text-text-secondary">{product.brand.name}</span>
@@ -747,10 +747,10 @@ function BrandFoodSheet({
                       className="flex items-center gap-3 rounded-[var(--radius-md)] border border-border-default bg-surface p-3"
                     >
                       <span
-                        className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-subtle text-2xl"
+                        className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-white text-2xl"
                         aria-hidden
                       >
-                        <ProductImage image={p.imageUrl} alt={p.name} imgClassName="p-0.5" />
+                        <ProductImage image={p.imageUrl} alt={p.name} sizes="48px" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <span className="overline text-text-secondary">{p.brand.name}</span>

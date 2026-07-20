@@ -1,46 +1,58 @@
+"use client";
+
+import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { isImageUrl, packshotLoader } from "@/lib/media/packshot";
 
 /**
  * Packshot de producto — decide entre FOTO REAL y emoji placeholder.
  *
  * `Product.imageUrl` transporta dos clases de valor (mapper `toImageUrl`, D23):
- * la URL real del thumbnail/imagen subida en el Admin de Medusa, o un emoji
- * placeholder mientras no exista fotografía (U090). Los render-sites asumían
- * siempre emoji e imprimían el string como texto — al subir una foto real desde
- * el Admin, las cards mostraban la URL como texto gigante. Este componente es
- * el ÚNICO punto que conoce esa dualidad: URL → `<img>` (contain, lazy);
- * cualquier otro valor → emoji decorativo, idéntico a hoy.
+ * la URL real del thumbnail/imagen del Admin de Medusa, o un emoji placeholder
+ * mientras no exista fotografía (U090). Este componente es el ÚNICO punto que
+ * conoce esa dualidad.
  *
- * `<img>` nativo (precedente: BrandCard, OrdersView); la graduación a
- * `next/image` (remotePatterns por entorno) se evalúa con la fotografía real
- * de U090, no antes.
+ * Foto real → `next/image` con `fill` + `object-contain`, servida por el loader
+ * de packshots (`/api/packshot`): fondo aplanado a blanco, recorte del borde y
+ * encuadre uniforme, para que TODO producto se vea al mismo tamaño y escala sin
+ * editar el asset (ver `@/lib/media/packshot`). El contenedor padre debe ser
+ * `relative` (lo exige `fill`) y define el aspect-ratio (evita CLS).
+ * Cualquier otro valor → emoji decorativo, centrado por el padre.
  */
-
-/** ¿URL de imagen (absoluta o raíz-relativa) vs emoji placeholder? */
-function isImageUrl(value: string): boolean {
-  return /^(https?:\/\/|\/)/.test(value);
-}
 
 export interface ProductImageProps {
   /** `Product.imageUrl` del dominio (URL real o emoji placeholder). */
   image?: string;
   /** Nombre del producto (alt de la foto; el emoji es decorativo). */
   alt: string;
-  /** Clases de la foto real (por defecto llena el contenedor sin recortar). */
-  imgClassName?: string;
+  /** `sizes` del `srcset` responsive (obligatorio con `fill` para no sobre-pedir). */
+  sizes?: string;
+  /** Clases extra de la foto (además de `object-contain`). */
+  className?: string;
   /** Clases del emoji placeholder (tamaño tipográfico del packshot). */
   emojiClassName?: string;
+  /** Carga prioritaria (imagen LCP, p. ej. la galería de la PDP). */
+  priority?: boolean;
 }
 
-export function ProductImage({ image, alt, imgClassName, emojiClassName }: ProductImageProps) {
+export function ProductImage({
+  image,
+  alt,
+  sizes = "100vw",
+  className,
+  emojiClassName,
+  priority,
+}: ProductImageProps) {
   if (image && isImageUrl(image)) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- next/image requiere remotePatterns del backend; se gradúa con U090
-      <img
+      <Image
         src={image}
         alt={alt}
-        loading="lazy"
-        className={cn("size-full object-contain", imgClassName)}
+        fill
+        sizes={sizes}
+        loader={packshotLoader}
+        priority={priority}
+        className={cn("object-contain", className)}
       />
     );
   }

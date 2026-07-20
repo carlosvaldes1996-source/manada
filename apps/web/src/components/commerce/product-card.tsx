@@ -69,11 +69,14 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
         aria-hidden
       >
         {/* Foto real del Admin si existe; si no, emoji placeholder cálido (U090)
-            con sombra de contacto para que no se vea como una caja vacía. */}
+            con sombra de contacto para que no se vea como una caja vacía. La foto
+            va normalizada (fill, sin padding): el encuadre uniforme lo da el
+            packshot (`/api/packshot`), no un padding por card. */}
         <ProductImage
           image={product.imageUrl}
           alt={`${product.brand.name} ${product.name}`}
-          imgClassName="p-4 transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
+          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+          className="transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
           emojiClassName="text-[5.5rem] drop-shadow-[0_12px_16px_rgba(42,39,34,0.12)] transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
         />
         <div className="absolute top-2.5 left-2.5 flex flex-col items-start gap-1.5">

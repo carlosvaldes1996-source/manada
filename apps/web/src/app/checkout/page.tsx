@@ -320,8 +320,8 @@ export default function CheckoutPage() {
                     {items.map((i) => (
                       <Row key={i.product.id} justify="between" className="gap-3">
                         <Row gap={3} className="min-w-0">
-                          <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-subtle text-xl" aria-hidden>
-                            <ProductImage image={i.product.imageUrl} alt={i.product.name} imgClassName="p-0.5" />
+                          <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-sm)] bg-white text-xl" aria-hidden>
+                            <ProductImage image={i.product.imageUrl} alt={i.product.name} sizes="40px" />
                           </span>
                           <span className="flex min-w-0 flex-col">
                             <span className="truncate text-sm font-medium text-text-primary">{i.product.name}</span>

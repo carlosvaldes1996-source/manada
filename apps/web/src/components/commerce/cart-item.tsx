@@ -42,8 +42,8 @@ export function CartItem({ line, onQuantityChange, onRemove, compact = false, cl
 
   return (
     <div className={cn("flex gap-3 border-b border-border-default py-4 last:border-0", className)}>
-      <div className={cn("grid shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-canvas", compact ? "size-14 text-2xl" : "size-16 text-3xl")} aria-hidden>
-        <ProductImage image={product.imageUrl} alt={product.name} imgClassName="p-1" />
+      <div className={cn("relative grid shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-white", compact ? "size-14 text-2xl" : "size-16 text-3xl")} aria-hidden>
+        <ProductImage image={product.imageUrl} alt={product.name} sizes="64px" />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">

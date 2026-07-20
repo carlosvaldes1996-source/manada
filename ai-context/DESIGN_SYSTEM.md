@@ -181,7 +181,8 @@ Sistema con escalas 50–900. Token = `color.{familia}.{paso}`. La marca es **c�
 - **Composición:** aire alrededor del sujeto, regla de tercios, espacio negativo para texto en heroes.
 - **Diversidad:** distintas especies, razas, tamaños, edades y hogares chilenos (depto/casa, distintos NSE).
 - ❌ Stock genérico frío · fondos blancos de catálogo · imágenes tristes de refugio · HDR saturado · mascotas con ropa ridícula.
-- **Producto (packshots):** sobre Arena o superficie cálida, sombra suave, mismo encuadre y escala consistente en todo el catálogo.
+- **Producto (packshots):** sobre Arena o superficie cálida, sombra suave, mismo encuadre y escala consistente en todo el catálogo. *(Aplica a la fotografía **producida** por Manada.)*
+- **Packshots de proveedor (render, D52):** los assets que llegan del Admin son heterogéneos (fondo blanco **o** transparente). Se **normalizan server-side** (`/api/packshot`, `sharp`): aplanado sobre **blanco**, recorte del borde y re-encuadre a un cuadrado con margen uniforme (producto ~88 %). Por eso el **pozo de media** de las cards/PDP es **blanco** (no Arena): con catálogo mixto es el único fondo que se ve consistente para ambos tipos. El encuadre uniforme lo da el normalizador, **no** un padding por card ni la edición manual del asset.
 
 ---
 

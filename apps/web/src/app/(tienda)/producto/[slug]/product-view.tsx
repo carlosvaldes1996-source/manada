@@ -198,11 +198,12 @@ export function ProductView({
               cálido (dirección de arte real = Polish 3.4 / U090).
               4:3 en móvil: la galería cuadrada a todo el ancho empujaba precio y
               CTA bajo el fold; cuadrada en desktop. */}
-          <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-gradient-to-b from-canvas to-subtle lg:aspect-square">
+          <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-white lg:aspect-square">
             <ProductImage
               image={product.imageUrl}
               alt={`${product.brand.name} ${product.name}`}
-              imgClassName="p-10"
+              sizes="(min-width: 1024px) 42vw, (min-width: 640px) 90vw, 100vw"
+              priority
               emojiClassName="text-[9rem] drop-shadow-[0_20px_28px_rgba(42,39,34,0.14)]"
             />
           </div>
