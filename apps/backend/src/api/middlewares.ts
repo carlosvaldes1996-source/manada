@@ -7,6 +7,7 @@ import {
   validateAndTransformBody,
 } from "@medusajs/framework/http";
 import { StoreCreatePet, StoreUpdatePet } from "./store/pets/validators";
+import { AdminCreateFormat } from "./admin/products/[id]/formats/validators";
 
 /**
  * Campo calculado `subscription_price` en la Store API (Fase 5 · Etapa 2).
@@ -138,6 +139,13 @@ export default defineMiddlewares({
       matcher: "/store/pets/:id",
       method: ["PATCH"],
       middlewares: [petsAuth, validateAndTransformBody(StoreUpdatePet)],
+    },
+    {
+      // Extensión Manada: alta de formatos/variantes en un paso (ver
+      // src/api/admin/products/[id]/formats/route.ts y el widget product-add-format).
+      matcher: "/admin/products/:id/formats",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(AdminCreateFormat)],
     },
     {
       matcher: "/store/payment-methods",

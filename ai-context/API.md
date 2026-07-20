@@ -304,3 +304,28 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
 No se implementan emails de suscripción: **no existen eventos de suscripción recurrente** en el
 backend (moat post-tracción, D22/D29). Con esta estructura, agregarlos es trivial cuando existan
 (nueva `.tsx` + entrada en el registro + subscriber). Sin trabajo muerto.
+
+## 12. Contrato de Backoffice (`/admin/*`) — extensiones del Admin (D47 · D50)
+
+> Owner técnico: `apps/backend/src/api/admin/` + `src/admin/`. Rutas `/admin/*` **autenticadas
+> automáticamente** por Medusa (sesión del operador). No hay contrato de storefront: las consume
+> el propio Admin (UI routes / widgets) vía `src/admin/lib/sdk.ts`.
+
+### 12.1 `GET /admin/pets` — explorador de mascotas (D47)
+Read-only; alimenta la sección "Mascotas" del Admin (`src/admin/routes/pets`). Resuelve cliente y
+alimento por traversal del Module Link Customer↔Pet. Query: `limit`, `offset`, `q`, `species`, `stage`.
+
+### 12.2 `POST /admin/products/:id/formats` — alta de formato en un paso (D50)
+Encapsula el flujo de Medusa v2 (opción→valor→variante) para que crear un formato sea un solo
+request. Owner: `src/api/admin/products/[id]/formats/` (lógica en `add-format.ts`, validación zod en
+`validators.ts` registrada en `middlewares.ts`). Lo consume el widget `product-add-format` inyectado
+en `product.details.after`.
+
+- **Body:** `{ format: string, price_clp: number (>0), sku?: string, manage_inventory?: boolean }`.
+- **Comportamiento:** asegura la opción **"Formato"** (la crea si falta), suma el valor si no existe,
+  y crea la variante con `options: { Formato: format }` + precio CLP. Si el producto está con la
+  **"Default variant"** sin opciones, la **reemplaza** por el formato real (borra la placeholder,
+  crea la opción y la variante). Rechaza (`NOT_ALLOWED`) productos ya estructurados con múltiples
+  variantes/opciones de otra forma → esos van al editor nativo. Duplicado de formato = `INVALID_DATA`.
+- **Respuesta:** `201 { product_id, formats: [{ id, title }] }` (lista actualizada para refrescar el widget).
+- **Convención:** opción **"Formato"** y variante `title` = el formato (ej. "14 kg"), espejo del `seed`.
