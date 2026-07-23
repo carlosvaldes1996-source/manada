@@ -5,8 +5,8 @@
 > |---|---|
 > | **Purpose** | Contratos de API entre frontend y backend, e integraciones externas CL. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9). |
-> | **Last Updated** | 2026-07-11 |
+> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9), medios de pago (§10), emails (§11), backoffice (§12). 🟡 EN CONSTRUCCIÓN: suscripción (§13, D55). |
+> | **Last Updated** | 2026-07-23 |
 > | **Depends On** | ARCHITECTURE.md, DATABASE.md |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *contratos de API*. Regla `ARCHITECTURE.md §2`: todo contrato nuevo se escribe AQUÍ antes de implementarse. |
@@ -329,3 +329,44 @@ en `product.details.after`.
   variantes/opciones de otra forma → esos van al editor nativo. Duplicado de formato = `INVALID_DATA`.
 - **Respuesta:** `201 { product_id, formats: [{ id, title }] }` (lista actualizada para refrescar el widget).
 - **Convención:** opción **"Formato"** y variante `title` = el formato (ej. "14 kg"), espejo del `seed`.
+
+---
+
+## 13. Contrato de suscripción (`/store/subscriptions`) — módulo custom `subscription` (D55)
+
+> Owner técnico: `apps/backend/src/modules/subscription/` + `src/api/store/subscriptions/` + los
+> Module Links `customer↔subscription` y `pet↔subscription`. Modelo en `DATABASE.md §9`.
+> **EN CONSTRUCCIÓN** — moat reabierto por D55, **por capas** (D55 §Decisión-2). Este contrato es el
+> **Punto 1** (creación al checkout con pago **simulado/manual** + lectura). Gestión (pausar/cancelar/
+> cambiar) y pago recurrente real son **bloques posteriores** y se anexarán aquí.
+
+### 13.1 Decisión de arquitectura (idéntica a §10.1)
+- **La suscripción nace SERVER-SIDE al checkout, no desde un formulario:** no hay `POST` de
+  storefront en el Punto 1. Un **subscriber de `order.placed`** (`src/subscribers/subscription-created.ts`)
+  lee las líneas de la orden con `metadata.is_subscription` y crea la fila con el **snapshot**
+  (variante/producto/cantidad/precio pactado/dirección/`source_order_id`) y `next_delivery_date`.
+  Convive con `food-purchased.ts` y `order-placed-email.ts` **sin tocarlos** (Medusa admite varios
+  handlers por evento).
+- **La intención viaja en la línea del carrito.** El storefront añade la línea con
+  `metadata: { is_subscription: true, frequency_weeks: 2|4|6|8 }` (`cart.createLineItem`), que
+  Medusa propaga a `order.items[].metadata` al completar. **Cero endpoints nuevos para crear.**
+- **Pago = manual (D24) en el Punto 1.** No se tokeniza ni se cobra: `payment_method_id` queda
+  `null`. El cobro recurrente real es el **Bloque 4** (go estratégico aparte, D55).
+
+### 13.2 Endpoints
+- Autenticación y alcance **idénticos a §9.1 / §10.2**: `authenticate("customer", ["bearer","session"])`
+  (en `src/api/middlewares.ts`) + publishable key; propiedad por `customer_id` del `auth_context`;
+  suscripción ajena → **404** (no se revela existencia).
+- **`GET /store/subscriptions`** → `{ subscriptions: StoreSubscription[] }` (orden `created_at` desc).
+  Alimenta la vista read-only de `/cuenta` (Punto 1 · Bloque 1.4). La propiedad se resuelve
+  traversando el Module Link (`customer.subscriptions`), como `/store/pets`.
+- **Diferido (Bloque 3 — gestión):** `PATCH /store/subscriptions/:id` (frecuencia/cantidad/dirección/
+  próxima fecha), `POST /store/subscriptions/:id/pause` · `/resume` · `/cancel` · `/skip`. Se anexan
+  a este contrato cuando se construya la gestión; **no existen aún** (no fingir).
+
+### 13.3 `StoreSubscription` (shape del backend)
+`{ id, product_id, variant_id, quantity, frequency_weeks, next_delivery_date, status:
+"active"|"paused"|"cancelled", agreed_unit_price, currency_code, payment_method_id: string|null,
+source_order_id: string|null, created_at, updated_at }`.
+Mapper del front (futuro, Bloque 1.4): `StoreSubscription → SubscriptionView` (frecuencia legible
+"Cada N semanas", `next_delivery_date` formateada, precio con `formatCLP`).

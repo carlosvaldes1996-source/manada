@@ -5,8 +5,8 @@
 > |---|---|
 > | **Purpose** | Modelo de datos: entidades, relaciones, y el diseño del moat (Perfil de Mascota). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟢 Implementado y vivo: catálogo (§5), cuentas/sesión (§6), envío (§7), perfil de mascota (§8) — Medusa-native + módulo custom `pet`. |
-> | **Last Updated** | 2026-07-11 |
+> | **Status** | 🟢 Implementado y vivo: catálogo (§5), cuentas/sesión (§6), envío (§7), perfil de mascota (§8) — Medusa-native + módulo custom `pet`. 🟡 EN CONSTRUCCIÓN: suscripción (§9, módulo custom `subscription`, D55). |
+> | **Last Updated** | 2026-07-23 |
 > | **Depends On** | ARCHITECTURE.md, UX.md (§3 personalización) |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ del *modelo de datos*. |
@@ -146,3 +146,61 @@ extiende Medusa sin tocar el core. Tabla `pet`:
 - Servicio: `MedusaService({ Pet })` (CRUD autogenerado). Contrato de API en `API.md §9`.
 - §5.5 queda **superado en lo relativo al perfil**: la mascota ya es real; suscripción
   como entidad y boleta SII siguen post-tracción.
+
+---
+
+## 9. Suscripción — EN CONSTRUCCIÓN (Fase 6 · Punto 1, D55) · módulo custom `subscription`
+
+Materializa el moat de recurrencia diferido en §5.5 (D22/D29), **reabierto por D55**. Tercer
+módulo custom (`apps/backend/src/modules/subscription`), **mismo patrón que `pet` (§8) y
+`payment-method` (API.md §10)**: extiende Medusa sin tocar el core. Se construye **por capas de
+riesgo creciente** (D55); esta tabla es el **Punto 1** (modelo + creación al checkout con pago
+simulado/manual — cero dinero). Contrato de API en `API.md §13`.
+
+### 9.1 Tabla `subscription`
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | pk (`sub_…`) | `model.id({ prefix: "sub" })` |
+| `variant_id` | text | variante suscrita (formato elegido); id de Medusa |
+| `product_id` | text | snapshot del producto (agrupar/mostrar) |
+| `quantity` | integer (def. 1) | cantidad por entrega |
+| `frequency_weeks` | integer | cadencia (2·4·6·8); las ofrecidas viven en el front (`SUBSCRIPTION_FREQUENCIES`) |
+| `next_delivery_date` | timestamptz | próxima entrega; default natural derivado de la duración del saco (`lib/anticipation.ts`) |
+| `status` | enum `active\|paused\|cancelled` | ciclo de vida; **las transiciones (pausar/cancelar) son Bloque 3**, no Punto 1 |
+| `agreed_unit_price` | integer | **precio pactado** (CLP entero), **snapshot al crear** |
+| `currency_code` | text (def. `clp`) | |
+| `shipping_address` | json | **snapshot** de la dirección de entrega (no puntero) |
+| `payment_method_id` | text, null | ref a `saved_card.id` (API.md §10); **null en Punto 1** (pago manual) |
+| `source_order_id` | text, null | la orden de checkout que originó la suscripción (trazabilidad) |
+| `created_at`/`updated_at`/`deleted_at` | timestamptz | nativos del modelo (soft-delete) |
+
+### 9.2 Relaciones — Module Links nativos (como `pet`, §8)
+- **`customer ↔ subscription` (1→N)** — `src/links/customer-subscription.ts`. La propiedad se
+  resuelve traversando el link (`customer.subscriptions`), **sin columna plana `customer_id`**
+  (mismo criterio que graduó a `pet` en D47). Un cliente tiene muchas suscripciones.
+- **`pet ↔ subscription` (1→N, OPCIONAL)** — `src/links/pet-subscription.ts`. Se crea **solo si**
+  la compra está ligada a una mascota del cliente → alimenta "el plan de {nombre}" (D42). Una
+  mascota puede tener varias suscripciones; una suscripción alimenta a lo sumo una mascota.
+
+### 9.3 Diseño (por qué así — escalable, sin romper nada)
+- **Precio pactado como snapshot** (`agreed_unit_price`): la política de qué pasa si el precio de
+  catálogo sube es un **borde del scheduler/pago real** (Bloque 2/4); el modelo guarda el pactado y
+  no fuerza la decisión ahora.
+- **Dirección como snapshot** (no FK a `customer_address`): cambiar la dirección de la cuenta **no**
+  reescribe entregas ya pactadas; cada suscripción es autónoma.
+- **`payment_method_id` nullable** desde ya: el **Bloque 4** (pago recurrente real) llena esta
+  referencia contra `saved_card`/Mercado Pago **sin migración** (el esqueleto de `payment-method`
+  ya está diseñado para MP recurrente, API.md §10.1). Escalabilidad sin trabajo muerto.
+- **`status` acotado a 3 estados** en Punto 1; estados de fallo (`past_due`, `paused_no_stock`, …)
+  se **anexan** al enum cuando exista el cobro (Bloque 5), no antes.
+- **Aditivo puro:** tabla nueva + 2 links + registro del módulo. **No toca** ninguna tabla, módulo
+  ni contrato existente (catálogo, cuentas, envío, `pet`, `payment-method`, órdenes).
+- Servicio: `MedusaService({ Subscription })` (CRUD autogenerado).
+
+### 9.4 Creación — server-side al checkout (no hay POST de storefront)
+La fila **nace en un subscriber de `order.placed`** (Punto 1 · Bloque 1.3), no desde un formulario
+(mismo criterio que `saved_card`, API.md §10.1). La intención de suscripción viaja en la
+**metadata de la línea del carrito** (`is_subscription` + `frequency_weeks`) → sobrevive a
+`order.items[].metadata` → el subscriber crea la suscripción con el snapshot. Convive con los dos
+subscribers de `order.placed` ya existentes (`food-purchased.ts`, `order-placed-email.ts`) **sin
+tocarlos**: Medusa admite múltiples handlers por evento.

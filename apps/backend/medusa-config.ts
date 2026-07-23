@@ -45,6 +45,9 @@ module.exports = defineConfig({
     // Módulo custom `payment-method` (API.md §10): referencias a tarjetas
     // guardadas (solo brand/last4/vencimiento + punteros a la pasarela).
     { resolve: './src/modules/payment-method' },
+    // Módulo custom `subscription` (D55, API.md §13): el moat de recurrencia,
+    // construido por capas. Punto 1 = creación al checkout con pago manual.
+    { resolve: './src/modules/subscription' },
     // Almacenamiento de archivos (packshots subidos desde el Admin). Provider
     // local: guarda en `<cwd>/static` (= el dir que Medusa expone en `/static`,
     // hardcodeado) y devuelve URLs bajo `backend_url`. Por defecto ese URL sería
