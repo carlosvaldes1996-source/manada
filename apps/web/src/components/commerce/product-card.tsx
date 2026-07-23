@@ -111,23 +111,38 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
         </span>
 
         <div className="mt-auto flex gap-2 pt-3">
-          <Button
-            size="sm"
-            block
-            onClick={() => add(false)}
-            disabled={soldOut}
-            leadingIcon={<ShoppingBag className="size-4" aria-hidden />}
-          >
-            {soldOut ? "Agotado" : "Agregar"}
-          </Button>
-          {showSubscribe && product.subscribable && !soldOut && (
+          {showSubscribe && product.subscribable && !soldOut ? (
+            <>
+              {/* Prioridad invertida en suscribibles: Suscribirme es la acción
+                  principal; comprar una vez queda secundaria (presente, no compite).
+                  Misma fila que el resto del catálogo — sin ruido visual extra. */}
+              <Button
+                size="sm"
+                block
+                onClick={() => add(true)}
+                leadingIcon={<RefreshCw className="size-4" aria-hidden />}
+              >
+                Suscribirme
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                aria-label="Comprar una vez"
+                title="Comprar una vez"
+                onClick={() => add(false)}
+              >
+                <ShoppingBag className="size-4" aria-hidden />
+              </Button>
+            </>
+          ) : (
             <Button
               size="sm"
-              variant="subscribe"
-              aria-label="Suscribir"
-              onClick={() => add(true)}
+              block
+              onClick={() => add(false)}
+              disabled={soldOut}
+              leadingIcon={<ShoppingBag className="size-4" aria-hidden />}
             >
-              <RefreshCw className="size-4" aria-hidden />
+              {soldOut ? "Agotado" : "Agregar"}
             </Button>
           )}
         </div>

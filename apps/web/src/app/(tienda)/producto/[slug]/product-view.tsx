@@ -88,6 +88,12 @@ export function ProductView({
         price: selectedVariant.price,
         format: selectedVariant.format,
         stock: selectedVariant.stock,
+        // El backend calcula `subscriptionPrice` SOLO desde la variante primaria
+        // (un valor a nivel de producto). Para la variante elegida lo dejamos en
+        // `undefined` → `effectiveSubscriptionPrice` lo recomputa desde su precio y
+        // el % de descuento, con la MISMA fórmula (roundCLP) que cobra el backend.
+        // Así el precio de la card reacciona al formato y muestra = lo cobrado.
+        subscriptionPrice: undefined,
       }
     : product;
 
@@ -130,6 +136,17 @@ export function ProductView({
   // en su propia card (Plan Manada), con su precio y CTA separados (D55).
   const unitPrice = selected.price.current;
   const naturalFreq = naturalFrequencyWeeks(duration);
+
+  // Fuente ÚNICA de la frecuencia de suscripción (misma lógica que la compra
+  // única): vive en la PDP, no dentro de la card. Al cambiar de formato se
+  // re-deriva la frecuencia natural —el saco nuevo dura distinto— con el patrón
+  // de "reset de estado al cambiar una prop" (sin efecto, en render).
+  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(naturalFreq);
+  const [freqAnchor, setFreqAnchor] = useState(selectedVariantId);
+  if (freqAnchor !== selectedVariantId) {
+    setFreqAnchor(selectedVariantId);
+    setFrequency(naturalFreq);
+  }
 
   // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
   // categoría (complemento, no otro saco igual) → "completar su rutina".
@@ -282,7 +299,11 @@ export function ProductView({
                 el flag apagado no se renderiza y la PDP queda como compra única. La
                 frecuencia por defecto es la natural (cuánto dura el saco). */}
             {product.subscribable && (
-              <PlanManadaCard product={selected} defaultFrequencyWeeks={naturalFreq} />
+              <PlanManadaCard
+                product={selected}
+                frequency={frequency}
+                onFrequencyChange={setFrequency}
+              />
             )}
 
             <Separator />

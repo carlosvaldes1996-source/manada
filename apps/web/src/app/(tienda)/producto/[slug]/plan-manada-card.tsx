@@ -1,19 +1,19 @@
 "use client";
 
 /**
- * Card "Plan Manada" (D48 diseño · D55 cableada) — el patrón ÚNICO de suscripción
- * en la PDP (D55 retira el `SubscriptionBox` toggle). Es la vía de compra
- * RECURRENTE: el usuario elige frecuencia y el CTA agrega la línea al carrito con
- * la metadata de suscripción (`is_subscription` + `frequency_weeks`), que viaja
- * hasta la orden, donde un subscriber crea la suscripción real (pago manual en el
- * Punto 1; el cobro recurrente es un bloque posterior).
+ * Card "Plan Manada" (D48 diseño · D55 cableada) — el patrón de suscripción en la
+ * PDP. Es la vía de compra RECURRENTE: elegir frecuencia + suscribir.
  *
- * Los números (precio suscrito, ahorro, %) son REALES: `subscriptionPrice` lo
- * calcula el backend (middlewares.ts) y llega en el producto; el front no recalcula
- * el descuento. La "Compra única" vive aparte, bajo esta card.
+ * COMPONENTE CONTROLADO (Bloque A del rediseño de suscripción): NO tiene estado
+ * propio. El formato (vía `product`) y la `frequency` viven en la PDP —una sola
+ * fuente de verdad, igual que la compra única— así que al cambiar de formato TODO
+ * se recalcula solo (precio suscrito, ahorro, %, y la frecuencia natural que
+ * re-deriva la página). Esta card es puro render.
+ *
+ * Los números son REALES: `subscriptionPrice` lo calcula el backend
+ * (middlewares.ts) y llega en el producto; el front no recalcula el descuento.
  */
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarCheck, Check, RefreshCw } from "lucide-react";
 import { Stack, Row } from "@/components/ui/stack";
@@ -28,17 +28,19 @@ import type { Product, SubscriptionFrequencyWeeks } from "@/types";
 
 export function PlanManadaCard({
   product,
-  defaultFrequencyWeeks = 4,
+  frequency,
+  onFrequencyChange,
 }: {
   product: Product;
-  /** Frecuencia natural sugerida (derivada de cuánto dura el saco). */
-  defaultFrequencyWeeks?: SubscriptionFrequencyWeeks;
+  /** Frecuencia elegida — la posee la PDP (fuente única, reactiva al formato). */
+  frequency: SubscriptionFrequencyWeeks;
+  onFrequencyChange: (weeks: SubscriptionFrequencyWeeks) => void;
 }) {
   const { addItem } = useCart();
   const { toast } = useToast();
   const router = useRouter();
-  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(defaultFrequencyWeeks);
 
+  // Todo derivado del `product` (= variante seleccionada): reactivo por definición.
   const base = product.price.current;
   const subPrice = effectiveSubscriptionPrice(product);
   const savings = base - subPrice;
@@ -92,7 +94,7 @@ export function PlanManadaCard({
           label="Frecuencia de entrega"
           options={SUBSCRIPTION_FREQUENCIES.map((f) => ({ value: String(f.weeks), label: f.label }))}
           value={String(frequency)}
-          onValueChange={(v) => setFrequency(Number(v) as SubscriptionFrequencyWeeks)}
+          onValueChange={(v) => onFrequencyChange(Number(v) as SubscriptionFrequencyWeeks)}
         />
 
         <Button
