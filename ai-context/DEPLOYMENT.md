@@ -23,7 +23,7 @@
 | **Base de datos / Redis** | 🟢 Provisionados (con volúmenes) | Railway (Postgres + Redis gestionados) |
 | **Almacenamiento de archivos** | 🟢 **Railway Volume** `@manada/backend-volume` en `/app/apps/backend/.medusa/server/static` (provider local anclado a `MEDUSA_BACKEND_URL`) | Railway Volume (MVP, sin S3) |
 | **Dominio `tumanada.cl`** | 🟢 **Conectado** — `www` canónico, apex → 308 a `www`, SSL OK | Vercel (frontend) |
-| **Tracking (GTM/GA4)** | 🟢 En vivo — `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW`, verificado en Tiempo real (D46) | GTM + GA4 |
+| **Tracking (GTM/GA4/Meta)** | 🟢 En vivo — `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW` (D46) + **Meta Pixel** `1437594504862107` dentro de GTM (D53) | GTM + GA4 + Meta |
 
 > **Fast-follow (no bloquea, ver §5):** packshots por Admin · Search Console · Mercado Pago. *(Resend en vivo ✅ HECHO, D49.)*
 
@@ -96,7 +96,9 @@ Hoy en dev usan valores por defecto (D25 los marcó como deuda de lanzamiento).
 
 **Email transaccional (D45 · Resend) — EN VIVO (D49):** en Railway `RESEND_API_KEY`, `RESEND_FROM=Manada <contacto@tumanada.cl>` (el **nombre visible** va delante del buzón; sin él el cliente de correo muestra "contacto" como remitente) y `STOREFRONT_URL=https://tumanada.cl` (apex, base de los CTAs y del enlace de recuperación). **Dominio `tumanada.cl` verificado en Resend** (SPF/DKIM agregados vía la integración Resend↔Vercel; Vercel solo aporta DNS, el envío corre en el backend). **Sin `RESEND_API_KEY` el provider cae a modo DEV** (loguea, no envía) → útil en local. Plantilla local: `apps/backend/.env.template`.
 
-**Tracking — GTM (D46 · en Vercel, frontend):** `NEXT_PUBLIC_GTM_ID` (`GTM-XXXXXXX`) = contenedor de Google Tag Manager, **único punto de integración de medición**. GA4, Meta Pixel y Google Ads se conectan **dentro de GTM**, no en el código. Es `NEXT_PUBLIC_` → se hornea en build; cambiarla exige **redeploy**. **Sin este valor no se carga GTM ni se miden eventos** (por diseño: dev/preview quedan limpios). La app ya emite al `dataLayer` los 6 hitos del embudo (`onboarding_start`, `recommendation_shown`, `add_to_cart`, `begin_checkout`, `purchase`, `subscription`) con esquema `ecommerce` de GA4. Plantilla local: `apps/web/.env.example`. **Pasos manuales (fuera del código):** crear contenedor GTM → crear propiedad **GA4** y su tag de configuración dentro de GTM → mapear los 6 eventos a tags GA4 → publicar el contenedor → **Google Search Console** (verificar dominio + enviar `https://tumanada.cl/sitemap.xml`) → **Meta Pixel** y **Google Ads** (conversion linker + import de conversiones desde GA4) si se harán campañas.
+**Tracking — GTM (D46 · en Vercel, frontend):** `NEXT_PUBLIC_GTM_ID` (`GTM-XXXXXXX`) = contenedor de Google Tag Manager, **único punto de integración de medición**. GA4, Meta Pixel y Google Ads se conectan **dentro de GTM**, no en el código. Es `NEXT_PUBLIC_` → se hornea en build; cambiarla exige **redeploy**. **Sin este valor no se carga GTM ni se miden eventos** (por diseño: dev/preview quedan limpios). La app ya emite al `dataLayer` los 6 hitos del embudo (`onboarding_start`, `recommendation_shown`, `add_to_cart`, `begin_checkout`, `purchase`, `subscription`) con esquema `ecommerce` de GA4. Plantilla local: `apps/web/.env.example`. **Pasos manuales (fuera del código):** crear contenedor GTM → crear propiedad **GA4** y su tag de configuración dentro de GTM → mapear los 6 eventos a tags GA4 → publicar el contenedor → **Google Search Console** (verificar dominio + enviar `https://tumanada.cl/sitemap.xml`) → **Meta Pixel** ✅ hecho (D53, ver bloque abajo) → **Google Ads** (conversion linker + import de conversiones desde GA4) si se harán campañas de Google.
+
+**Meta Pixel — conectado dentro de GTM (D53 · sin env var, sin código):** el Pixel (**ID `1437594504862107`**) vive **en GTM**, no en Vercel — la var `NEXT_PUBLIC_META_PIXEL_ID` **no se usa** (se puede borrar). **Reproducible en 1 paso:** GTM → Admin → **Importar contenedor** → subir `ai-context/assets/gtm-meta-pixel-container.json` → **Combinar** → *cambiar nombre de conflictos* (NO sobrescribir, así GA4 queda intacto) → **Publicar**. Contenido: variable `Meta - Pixel ID` + `DLV - ecommerce` · tag base `Meta - Base Pixel + PageView` en All Pages · 4 tags de conversión (Custom HTML) que traducen el `dataLayer` ecommerce a eventos estándar de Meta — mapeo: `add_to_cart→AddToCart`, `begin_checkout→InitiateCheckout`, `purchase→Purchase`, `recommendation_shown→ViewContent`. Verificar con **Meta Pixel Helper** + **Events Manager → Test Events**.
 
 ---
 
@@ -177,7 +179,8 @@ Se marca cuando la tienda funciona de punta a punta de cara al público:
 - [x] Email transaccional en vivo: `RESEND_API_KEY`/`RESEND_FROM`/`STOREFRONT_URL` en Railway + dominio verificado en Resend (D45 · D49) — ✅ HECHO.
 - [x] **Tracking (D46):** **GTM** `GTM-P5RLWHJW` + `NEXT_PUBLIC_GTM_ID` en Vercel · **GA4** `G-1JQM28SLWW` conectada dentro de GTM con los 6 eventos y contenedor publicado · verificado en Tiempo real — ✅ D30.
 - [ ] **Search Console:** dominio `tumanada.cl` verificado + `sitemap.xml` enviado — ⬜ fast-follow.
-- [ ] (Si aplica) **Meta Pixel** / **Google Ads** conectados dentro de GTM para campañas — ⬜.
+- [x] **Meta Pixel** `1437594504862107` conectado dentro de GTM (base + `PageView` + AddToCart/InitiateCheckout/Purchase/ViewContent) y publicado — ✅ D53 *(verificado en Test Events 2026-07-23: PageView/AddToCart/InitiateCheckout "Procesado"; `Purchase` pendiente de spot-check con compra de prueba)*.
+- [ ] (Si aplica) **Google Ads** conectado dentro de GTM para campañas — ⬜.
 - [ ] **Packshots** subidos por Admin (hoy emoji) — ⬜ fast-follow.
 - [ ] Recién entonces: **Mercado Pago** (Checkout Pro) — posterior, no bloquea el prod funcional del flujo manual.
 
@@ -185,6 +188,6 @@ Se marca cuando la tienda funciona de punta a punta de cara al público:
 
 ## 6 · Referencias
 
-- Decisiones: **D30** (infra en vivo — Railway + Vercel + dominio + tracking), D27 (Vercel staging), D20 (monorepo), D21 (Medusa), D22 (MVP-first), D25 (infra de lanzamiento como deuda), D45 (Resend), D46 (SEO/tracking), D49 (Resend en vivo + CTA bienvenida).
+- Decisiones: **D30** (infra en vivo — Railway + Vercel + dominio + tracking), D27 (Vercel staging), D20 (monorepo), D21 (Medusa), D22 (MVP-first), D25 (infra de lanzamiento como deuda), D45 (Resend), D46 (SEO/tracking), D49 (Resend en vivo + CTA bienvenida), D53 (Meta Pixel dentro de GTM).
 - Reglas arquitectónicas: `ARCHITECTURE.md §2` (backend solo en `apps/backend`; web sin lógica de negocio).
 - Env local: `apps/web/.env.example` · backend local: `apps/backend/DEV.md`.

@@ -6,7 +6,7 @@
 > | **Purpose** | Foto del estado actual: qué es real, qué frentes están abiertos y cuál es el siguiente paso. Se **reescribe** al cerrar cada hito (no se apila; la narración histórica vive en `DECISIONS.md`). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-20 |
+> | **Last Updated** | 2026-07-23 |
 > | **Depends On** | DECISIONS.md, ROADMAP.md |
 > | **Supersedes** | `history/05-bitacora-avances-2026-07.md` (versión-bitácora archivada) |
 > | **Source of Truth** | ✅ del *estado actual y el siguiente paso*. Único dueño del estado: ningún otro doc lo repite. |
@@ -27,7 +27,7 @@
 - **Backend:** `https://manadabackend-production.up.railway.app` — Railway (proyecto `creative-creation`, servicio `@manada/backend`). `/health` 200 · **Postgres + Redis** gestionados · **volumen** `@manada/backend-volume` en `/app/apps/backend/.medusa/server/static` (packshots persisten, sin S3). Build por `railway.json` (nativo, migraciones en `preDeployCommand`). Vars reales: `NODE_ENV=production`, `PORT=9000` (fix de un 502: Medusa quedaba en 8080), secrets aleatorios, CORS con `tumanada.cl`+`www`+vercel, `MEDUSA_BACKEND_URL`, `MEDUSA_WORKER_MODE=shared`.
 - **Datos de prod (seed corrido una vez):** región Chile/CLP, sales channel, **publishable key** `pk_0fe6…`, 6 productos con precio, 2 opciones de envío, promo `ENVIO_GRATIS_30K` (gratis ≥ $30.000). **Admin:** `.../app` (carlosvaldes1996@gmail.com).
 - **Frontend:** en vivo en **`https://www.tumanada.cl`** (apex → 308 a `www`, canónico), SSL OK, catálogo real hidratando, CORS OK. Vercel `manada-web` con las 2 env vars de prod.
-- **Tracking (D46) en vivo:** GTM `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW` conectada dentro de GTM (6 eventos mapeados, publicado, verificado en Tiempo real). Se corrigió un `\n` colado en `NEXT_PUBLIC_GTM_ID` (limpiado en Vercel + guard `.trim()` en `lib/analytics/config.ts`).
+- **Tracking (D46) en vivo:** GTM `GTM-P5RLWHJW` + GA4 `G-1JQM28SLWW` conectada dentro de GTM (6 eventos mapeados, publicado, verificado en Tiempo real). Se corrigió un `\n` colado en `NEXT_PUBLIC_GTM_ID` (limpiado en Vercel + guard `.trim()` en `lib/analytics/config.ts`). **Meta Pixel `1437594504862107` conectado también dentro de GTM (D53):** pixel base + `PageView` + 4 conversiones (AddToCart/InitiateCheckout/Purchase/ViewContent) mapeadas desde el mismo `dataLayer`; GA4 intacto; sin tocar código ni env var. **Verificado en Meta Test Events (2026-07-23):** PageView + AddToCart + InitiateCheckout llegando ("Procesado"); `Purchase`/`ViewContent` a confirmar con compra de prueba (mismo mecanismo → dispararán en la primera venta real).
 - **Emails transaccionales (D45/D49) EN VIVO:** Resend con dominio `tumanada.cl` verificado + `RESEND_FROM=Manada <contacto@tumanada.cl>` + `STOREFRONT_URL=https://tumanada.cl` en Railway → envío real (bienvenida verificada punta a punta). El CTA de bienvenida lleva a `/cuenta/mascotas` (adapta en tiempo de clic). Vercel solo aporta DNS; el envío corre en el backend.
 - **Pendiente (no bloquea, fast-follow):** **packshots** por Admin (hoy emoji) · **Search Console** (verificar con GTM + enviar sitemap) · **Mercado Pago** (post-lanzamiento). Detalle y runbook con resultados: `DEPLOYMENT.md`.
 
@@ -48,13 +48,14 @@
 |---|---|---|---|
 | **Infra de producción** | 🟢 **EN VIVO** (D30) | Backend Railway + frontend Vercel + `tumanada.cl` operativos. Fast-follow: Resend, packshots, Search Console | D30 · `DEPLOYMENT.md` |
 | **Terceros** | 🟢 email + Resend **EN VIVO** (D49) · Mercado Pago ⬜ | Emails reales: dominio verificado + `RESEND_FROM` con nombre + `STOREFRONT_URL` apex en Railway (bienvenida verificada E2E). Siguiente: Mercado Pago Checkout Pro (post-lanzamiento) | D45 · D49 · D30 |
-| **SEO & Tracking** | 🟢 **EN VIVO** (D46/D30): GTM+GA4 midiendo en Tiempo real | Falta **Search Console** (verificar `tumanada.cl` con GTM + enviar sitemap) y, si hay campañas, Meta Pixel/Ads dentro de GTM. Menor: base canónica del sitemap (`tumanada.cl` vs `www`) | D46 · D30 |
+| **SEO & Tracking** | 🟢 **EN VIVO** (D46/D30/D53): GTM + GA4 + **Meta Pixel** midiendo (Pixel verificado en Test Events 2026-07-23: PageView/AddToCart/InitiateCheckout) | Falta **Search Console** (verificar `tumanada.cl` con GTM + enviar sitemap) y, si hay campañas, **Google Ads** dentro de GTM. Del Pixel: spot-check de `Purchase` en una compra de prueba. Menor: base canónica del sitemap (`tumanada.cl` vs `www`) | D46 · D30 · D53 |
 | **Funnel F5 — momento de registro** | ⬜ empieza por **decisión de producto**, no por código | Decidir con Carlos dónde vive la captura de cuenta | `FUNNEL_TARGET.md §1.6` |
 | **Validación UI del Completion Pass (D41)** | ⬜ implementado, sin smoke manual | Carlos recorre: foto de mascota, /cuenta, /comenzar móvil, landing (el dashboard ya fue rediseñado y validado en D42) | D41 |
 | **Smoke en vivo del rediseño F4 (D44)** | ⬜ commiteado/pusheado, aprobado en revisión; sin smoke en vivo | Recorrer con backend levantado: Sumar → carrito Medusa · "ya come otra marca" → buscador → Guardar (PATCH `current_food_id`) · layout 2 columnas desktop/mobile | D44 · `FUNNEL_TARGET.md` |
 | **Backoffice — carga de catálogo (D50)** | 🟢 widget "Formatos" implementado y **probado en local** | **Deploy a Railway** (el widget va en el build del Admin) + smoke en el Admin de prod; ya se cargó el **primer producto real** (Amity, 2 formatos) | D50 · `API.md §12` |
 | **Packshots de producto** | 🟢 **render resuelto (D52)** · ⬜ falta subir fotos reales (hoy emoji) | El front **normaliza cualquier packshot** (fondo blanco o transparente) vía `/api/packshot` → encuadre grande y consistente **sin editar assets**. Ya **no** hace falta recortar a mano: basta subir la foto por el Admin. Productos sin foto siguen en emoji hasta que se suban | D52 · `public/fotos/README.md` |
 | **Foto de mascota → blob definitivo** | ⬜ hoy andamio local (localStorage) | Con la estrategia de storage app-wide: swap interno de `setPetPhoto` + PATCH `avatar_url` | D41 · `API.md §9` |
+| **Rama `cristobal-cambios` — cambios de Cristóbal por revisar** | ⬜ **preservada, sin integrar** | 26 commits **relevantes** (onboarding wizard, vistas de cuenta/recomendación, gestión de mascotas) que Cristóbal pusheó directo a `main` por error; **rescatados en `origin/cristobal-cambios` (HEAD `3f468f3`)** antes de restaurar `main` a la versión oficial (force-push). **Parten de una base más antigua que el `main` actual** (`3a22175`, previa al commit del meta-tag `b39fcd4`). **No mergear ni cherry-pick** hasta revisarlos con Carlos | — |
 | **Post-tracción** | ⬜ diferido | Suscripción recurrente (moat), SII, courier, WhatsApp, Webpay | D21/D22 |
 
 ## Claves del código (para no re-derivar)
