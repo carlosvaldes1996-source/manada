@@ -61,6 +61,14 @@ export const metadata: Metadata = {
   // Deja indexar el sitio; las páginas privadas/transaccionales se excluyen en
   // `robots.ts` (crawl) y con `robots: { index: false }` puntual donde importa.
   robots: { index: true, follow: true },
+  // Verificación de dominio de Meta (Business Manager). Next lo renderiza como
+  // `<meta name="facebook-domain-verification" ...>` server-side en el <head>,
+  // requisito de Meta (debe estar en <head> y no inyectado por JS de cliente).
+  verification: {
+    other: {
+      "facebook-domain-verification": "m1uz8mo8i85jflljrfs323f661950v",
+    },
+  },
 };
 
 export const viewport: Viewport = {
