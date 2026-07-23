@@ -11,18 +11,17 @@ import {
   User as UserIcon,
   MapPin,
   CreditCard,
-  RefreshCw,
 } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Grid } from "@/components/ui/grid";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PetAvatar } from "@/components/pet";
 import { GuestAccountPrompt } from "./guest-account-prompt";
 import { OrdersList } from "./pedidos/orders-view";
+import { SubscriptionsList } from "./subscriptions-list";
 import { useSession, useAuthActions, usePet } from "@/hooks";
 import { cn } from "@/lib/utils";
 
@@ -138,26 +137,12 @@ export function AccountView() {
                 </Row>
               </Stack>
 
-              {/* Suscripción: honesta (D29). El moat recurrente aún no existe en el
-                  backend; se anuncia como card inerte "Próximamente", no navegable. */}
+              {/* Suscripciones reales (D55 · Punto 1): la entrega recurrente ya se
+                  crea al checkout; aquí se listan (read-only). La gestión llega en
+                  un bloque posterior. */}
               <Stack gap={3}>
                 <span className="overline text-text-secondary">Su plan</span>
-                <div
-                  className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-border-default bg-surface p-5 opacity-70"
-                  aria-disabled
-                >
-                  <span className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-md)] bg-brand-soft text-text-brand">
-                    <RefreshCw className="size-5" aria-hidden />
-                  </span>
-                  <Stack gap={1}>
-                    <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-primary">
-                      Suscripciones <Badge variant="neutral">Próximamente</Badge>
-                    </span>
-                    <span className="text-[13px] text-text-secondary">
-                      La entrega recurrente de su comida llega pronto. Por ahora te avisamos para reponer, sin cobros automáticos.
-                    </span>
-                  </Stack>
-                </div>
+                <SubscriptionsList />
               </Stack>
             </Stack>
           </TabsContent>

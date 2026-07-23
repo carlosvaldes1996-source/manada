@@ -1,4 +1,4 @@
-import type { CartItem } from "@/types";
+import type { CartItem, SubscriptionFrequencyWeeks } from "@/types";
 import { medusa } from "./client";
 import { getRegionId } from "./region";
 import { mapLineItemProduct, type StoreCartLineLike } from "./map-product";
@@ -13,8 +13,12 @@ import { mapLineItemProduct, type StoreCartLineLike } from "./map-product";
  * recurrente es el moat, posterior al MVP).
  */
 
-/** Campos a pedir para que cada línea traiga marca (metadata) y categoría. */
-export const CART_FIELDS = "+items.product.metadata,*items.product.categories";
+/**
+ * Campos a pedir para que cada línea traiga marca (metadata del producto),
+ * categoría y su **metadata propia** (`is_subscription`/`frequency_weeks`, D55):
+ * así la intención de suscripción sobrevive el ida y vuelta por Medusa.
+ */
+export const CART_FIELDS = "+items.metadata,+items.product.metadata,*items.product.categories";
 
 /** Tipo laxo del carrito (evita acoplar a la forma exacta de HttpTypes). */
 export interface MedusaCart {
@@ -55,6 +59,28 @@ export async function addLineItem(
   );
 }
 
+/**
+ * Agrega una línea de SUSCRIPCIÓN (D55) vía la ruta propia del backend
+ * (`/store/carts/:id/subscription-items`, API.md §13): el backend fija el **precio
+ * suscrito** (descuento del producto) como precio de la línea desde la primera
+ * compra y le deja la metadata `{ is_subscription, frequency_weeks }`. Luego se
+ * re-lee el carrito con la MISMA forma que consume la UI (mapCartItems).
+ */
+export async function addSubscriptionLineItem(
+  cartId: string,
+  variantId: string,
+  quantity: number,
+  frequencyWeeks: SubscriptionFrequencyWeeks,
+): Promise<MedusaCart> {
+  await medusa.client.fetch(`/store/carts/${cartId}/subscription-items`, {
+    method: "POST",
+    body: { variant_id: variantId, quantity, frequency_weeks: frequencyWeeks },
+  });
+  const cart = await retrieveCart(cartId);
+  if (!cart) throw new Error("No se pudo releer el carrito tras suscribir.");
+  return cart;
+}
+
 export async function setLineItemQuantity(
   cartId: string,
   lineId: string,
@@ -84,7 +110,16 @@ export async function transferCartToCustomer(cartId: string): Promise<MedusaCart
 export function mapCartItems(cart: MedusaCart | null): CartItem[] {
   const items = [...(cart?.items ?? [])];
   items.sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
-  return items.map((line) => ({ product: mapLineItemProduct(line), quantity: line.quantity }));
+  return items.map((line) => {
+    const item: CartItem = { product: mapLineItemProduct(line), quantity: line.quantity };
+    // La intención de suscripción viaja en la metadata de la línea (D55): si está,
+    // la exponemos como frecuencia para que el carrito/checkout la distingan.
+    const meta = line.metadata as { is_subscription?: unknown; frequency_weeks?: unknown } | null;
+    if (meta?.is_subscription && meta.frequency_weeks) {
+      item.subscriptionWeeks = Number(meta.frequency_weeks) as SubscriptionFrequencyWeeks;
+    }
+    return item;
+  });
 }
 
 /** Busca la línea que corresponde a un `productId` (product_id de Medusa). */

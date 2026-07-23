@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { CartItem, Product, SubscriptionFrequencyWeeks } from "@/types";
 import {
   addLineItem,
+  addSubscriptionLineItem,
   createCart,
   findLineIdByProduct,
   mapCartItems,
@@ -106,7 +107,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       const current = await ensureCart();
       const quantity = opts?.quantity ?? 1;
-      const updated = await addLineItem(current.id, product.variantId, quantity);
+      // Suscripción: ruta propia que fija el precio suscrito + deja la metadata de
+      // suscripción en la línea (D55). Compra única: ruta core sin cambios.
+      const updated = opts?.subscriptionWeeks
+        ? await addSubscriptionLineItem(current.id, product.variantId, quantity, opts.subscriptionWeeks)
+        : await addLineItem(current.id, product.variantId, quantity);
       setCart(updated);
       // Punto único del funnel para "add_to_cart": PLP, PDP, recomendación y
       // recompra del dashboard pasan todas por aquí (una sola instrumentación).

@@ -8,6 +8,7 @@ import {
 } from "@medusajs/framework/http";
 import { StoreCreatePet, StoreUpdatePet } from "./store/pets/validators";
 import { AdminCreateFormat } from "./admin/products/[id]/formats/validators";
+import { StoreAddSubscriptionItem } from "./store/carts/[id]/subscription-items/validators";
 
 /**
  * Campo calculado `subscription_price` en la Store API (Fase 5 · Etapa 2).
@@ -113,6 +114,12 @@ const petsAuth = authenticate("customer", ["bearer", "session"]);
  */
 const paymentMethodsAuth = authenticate("customer", ["bearer", "session"]);
 
+/**
+ * Autenticación de cliente para `/store/subscriptions` (API.md §13, D55): mismo
+ * esquema que `/store/pets` — la propiedad se impone en la ruta por `customer_id`.
+ */
+const subscriptionsAuth = authenticate("customer", ["bearer", "session"]);
+
 export default defineMiddlewares({
   routes: [
     {
@@ -156,6 +163,19 @@ export default defineMiddlewares({
       matcher: "/store/payment-methods/:id",
       method: ["DELETE"],
       middlewares: [paymentMethodsAuth],
+    },
+    {
+      matcher: "/store/subscriptions",
+      method: ["GET"],
+      middlewares: [subscriptionsAuth],
+    },
+    {
+      // Alta de línea de SUSCRIPCIÓN al carrito con precio suscrito (D55). Sin auth
+      // de cliente (carritos de invitado permitidos, como la ruta core de line-items);
+      // la publishable key la impone el middleware global de /store.
+      matcher: "/store/carts/:id/subscription-items",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreAddSubscriptionItem)],
     },
   ],
 });

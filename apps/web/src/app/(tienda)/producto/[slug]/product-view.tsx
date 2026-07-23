@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ShieldCheck, TrendingDown } from "lucide-react";
+import { TrendingDown } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -14,21 +14,19 @@ import { Separator } from "@/components/ui/separator";
 import { QuantitySelector } from "@/components/ui/quantity-selector";
 import { useToast } from "@/components/ui/toast";
 import {
-  SubscriptionBox,
   ShippingPolicyNote,
   ProductImage,
   ProductRail,
   StockBadge,
   VariantSelector,
 } from "@/components/commerce";
-import { PlanManadaPreview } from "./plan-manada-preview";
+import { PlanManadaCard } from "./plan-manada-card";
 import { usePet, useCart } from "@/components/providers";
-import { useSubscription } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
 import { categoryLabel } from "@/lib/catalog";
 import type { ShippingPolicy } from "@/lib/medusa";
-import type { Product } from "@/types";
+import type { Product, SubscriptionFrequencyWeeks } from "@/types";
 
 /**
  * PDP — ficha de producto.
@@ -45,13 +43,20 @@ import type { Product } from "@/types";
  */
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** Frecuencias de suscripción ofrecidas, en semanas (espejo del hook). */
+const OFFERED_WEEKS: SubscriptionFrequencyWeeks[] = [2, 4, 6, 8];
+
 /**
- * Preview de diseño de la card "Plan Manada" (D48). OCULTA por defecto: la
- * suscripción sigue apagada (D29), así que la card no se vende ni ejecuta nada
- * (CTA inerte). Se mantiene completa y toggeable como material para el bloque de
- * suscripción futuro; poner en `true` solo para revisarla en local.
+ * Frecuencia "natural" sugerida por defecto en la card: la más cercana a cuánto
+ * dura el saco (D55). Si no hay duración (sin mascota/peso), cae a 4 semanas.
  */
-const SHOW_PLAN_MANADA_PREVIEW = false;
+function naturalFrequencyWeeks(durationDays?: number): SubscriptionFrequencyWeeks {
+  if (!durationDays) return 4;
+  const weeks = durationDays / 7;
+  return OFFERED_WEEKS.reduce((best, w) =>
+    Math.abs(w - weeks) < Math.abs(best - weeks) ? w : best,
+  );
+}
 
 export function ProductView({
   product,
@@ -85,8 +90,6 @@ export function ProductView({
         stock: selectedVariant.stock,
       }
     : product;
-
-  const sub = useSubscription(selected);
 
   const soldOut = selected.stock <= 0;
 
@@ -123,7 +126,10 @@ export function ProductView({
   const betterFormat =
     isFood && bestValue && pricePerKg && bestValue.perKg < pricePerKg ? bestValue : undefined;
 
-  const unitPrice = sub.isSubscribed ? sub.effectivePrice : selected.price.current;
+  // La compra única cotiza siempre al precio de la variante. La suscripción vive
+  // en su propia card (Plan Manada), con su precio y CTA separados (D55).
+  const unitPrice = selected.price.current;
+  const naturalFreq = naturalFrequencyWeeks(duration);
 
   // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
   // categoría (complemento, no otro saco igual) → "completar su rutina".
@@ -137,10 +143,7 @@ export function ProductView({
     .slice(0, 6);
 
   function add() {
-    addItem(selected, {
-      quantity: qty,
-      subscriptionWeeks: sub.isSubscribed ? sub.frequency : undefined,
-    });
+    addItem(selected, { quantity: qty });
     // El puente comprar→perfil (D39): comprar NO asigna; si es alimento y no es
     // el suyo, el toast ofrece definirlo con UN tap. Comprar y definir qué come
     // se sienten relacionados, pero no son el mismo flujo.
@@ -165,7 +168,7 @@ export function ProductView({
       });
     } else {
       toast({
-        title: sub.isSubscribed ? "Suscripción iniciada" : "Agregado al carrito",
+        title: "Agregado al carrito",
         description: `${product.brand.name} · ${product.name}`,
         variant: "success",
         action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
@@ -274,23 +277,13 @@ export function ProductView({
               </p>
             )}
 
-            {/* Suscripción primero (U045) + reaseguro visible (U046). Gated por
-                SUBSCRIPTIONS_ENABLED (D29): con suscripciones apagadas hoy, este
-                bloque no se renderiza y la PDP muestra solo la compra única; el
-                layout ya deja su lugar reservado (boceto "Plan Manada"). */}
+            {/* Suscripción primero (U045): la card "Plan Manada" es el patrón único
+                (D55). Gated por `subscribable` (SUBSCRIPTIONS_ENABLED, backend): con
+                el flag apagado no se renderiza y la PDP queda como compra única. La
+                frecuencia por defecto es la natural (cuánto dura el saco). */}
             {product.subscribable && (
-              <Stack gap={2}>
-                <SubscriptionBox product={selected} controller={sub} />
-                <p className="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
-                  <ShieldCheck className="size-4 text-[var(--success)]" aria-hidden />
-                  Sin permanencia: pausa o cancela cuando quieras, sin costo.
-                </p>
-              </Stack>
+              <PlanManadaCard product={selected} defaultFrequencyWeeks={naturalFreq} />
             )}
-
-            {/* Preview de diseño de la card Plan Manada — oculta (D29 apagado);
-                CTA inerte. Ver SHOW_PLAN_MANADA_PREVIEW arriba. */}
-            {SHOW_PLAN_MANADA_PREVIEW && isFood && <PlanManadaPreview product={selected} />}
 
             <Separator />
 
@@ -322,18 +315,8 @@ export function ProductView({
                 {!soldOut && (
                   <QuantitySelector value={qty} onChange={setQty} min={1} max={Math.min(selected.stock, 10)} />
                 )}
-                <Button
-                  size="lg"
-                  block
-                  onClick={add}
-                  disabled={soldOut}
-                  leadingIcon={sub.isSubscribed ? <RefreshCw className="size-4" aria-hidden /> : undefined}
-                >
-                  {soldOut
-                    ? "Sin stock por ahora"
-                    : sub.isSubscribed
-                      ? "Suscribir y agregar"
-                      : "Agregar al carrito"}
+                <Button size="lg" block onClick={add} disabled={soldOut}>
+                  {soldOut ? "Sin stock por ahora" : "Agregar al carrito"}
                 </Button>
               </Row>
             </Stack>

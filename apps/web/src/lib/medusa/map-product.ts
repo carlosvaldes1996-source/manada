@@ -46,13 +46,16 @@ type StoreProduct = HttpTypes.StoreProduct & { subscription_price?: number | nul
 type StoreVariant = HttpTypes.StoreProductVariant;
 
 /**
- * MVP: el storefront NO ofrece suscripción todavía (el motor de entregas
- * recurrentes es el moat, posterior al MVP). Hasta cablearlo de verdad, el
- * catálogo se expone como **compra única**: así la UI nunca muestra un precio,
- * badge ni CTA de suscripción que hoy no se cobra ni se cumple. Interruptor
- * único y reversible: al implementar la suscripción real, poner en `true`.
+ * Interruptor único de la suscripción en el storefront (D29 → D55).
+ *
+ * D29 lo apagó (`false`) mientras el moat no existía. **D55 reabre el moat** y lo
+ * construye por capas: encendido (`true`), el mapper expone `subscribable`,
+ * `subscriptionDiscount` y `subscriptionPrice` (calculado por el backend,
+ * middlewares.ts) → la PDP muestra la card "Plan Manada" real. El **Punto 1** crea
+ * la suscripción al checkout con pago manual (D55); el cobro recurrente real es un
+ * bloque posterior. Reversible con un `false`.
  */
-const SUBSCRIPTIONS_ENABLED = false;
+const SUBSCRIPTIONS_ENABLED = true;
 
 /** Emoji placeholder por categoría hasta tener packshots reales (U090). */
 const CATEGORY_EMOJI: Record<ProductCategory, string> = {
@@ -268,6 +271,8 @@ export interface StoreCartLineLike {
   thumbnail?: string;
   unit_price: number;
   quantity: number;
+  /** Metadata propia de la línea (D55): `is_subscription` + `frequency_weeks`. */
+  metadata?: Record<string, unknown> | null;
   product?: { metadata?: Meta; categories?: { name?: string }[] } | null;
 }
 

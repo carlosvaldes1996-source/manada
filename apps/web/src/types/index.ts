@@ -159,6 +159,26 @@ export interface CartItem {
   subscriptionWeeks?: SubscriptionFrequencyWeeks;
 }
 
+/** Estado de una suscripción recurrente (D55). */
+export type SubscriptionStatus = "active" | "paused" | "cancelled";
+
+/** Suscripción del cliente, para la vista de gestión en /cuenta (D55, API.md §13). */
+export interface SubscriptionView {
+  id: string;
+  productId: string;
+  productTitle: string;
+  variantId?: string;
+  thumbnail?: string;
+  quantity: number;
+  frequencyWeeks: SubscriptionFrequencyWeeks;
+  frequencyLabel: string;
+  nextDeliveryDate?: Date;
+  status: SubscriptionStatus;
+  /** Precio pactado por entrega (CLP). */
+  agreedUnitPrice: number;
+  currencyCode: string;
+}
+
 /** Despacho honesto: fecha y costo reales, siempre visibles (UX.md §1). */
 export interface ShippingEstimate {
   comuna: string;

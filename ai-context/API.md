@@ -340,26 +340,34 @@ en `product.details.after`.
 > **Punto 1** (creación al checkout con pago **simulado/manual** + lectura). Gestión (pausar/cancelar/
 > cambiar) y pago recurrente real son **bloques posteriores** y se anexarán aquí.
 
-### 13.1 Decisión de arquitectura (idéntica a §10.1)
-- **La suscripción nace SERVER-SIDE al checkout, no desde un formulario:** no hay `POST` de
-  storefront en el Punto 1. Un **subscriber de `order.placed`** (`src/subscribers/subscription-created.ts`)
-  lee las líneas de la orden con `metadata.is_subscription` y crea la fila con el **snapshot**
-  (variante/producto/cantidad/precio pactado/dirección/`source_order_id`) y `next_delivery_date`.
-  Convive con `food-purchased.ts` y `order-placed-email.ts` **sin tocarlos** (Medusa admite varios
-  handlers por evento).
-- **La intención viaja en la línea del carrito.** El storefront añade la línea con
-  `metadata: { is_subscription: true, frequency_weeks: 2|4|6|8 }` (`cart.createLineItem`), que
-  Medusa propaga a `order.items[].metadata` al completar. **Cero endpoints nuevos para crear.**
+### 13.1 Decisión de arquitectura
+- **La suscripción (la fila) nace SERVER-SIDE al checkout, no desde un formulario:** un
+  **subscriber de `order.placed`** (`src/subscribers/subscription-created.ts`) lee las líneas de la
+  orden con `metadata.is_subscription` y crea la fila con el **snapshot** (variante/producto/cantidad/
+  precio pactado/dirección/`source_order_id`) y `next_delivery_date`. Convive con `food-purchased.ts`
+  y `order-placed-email.ts` **sin tocarlos** (Medusa admite varios handlers por evento).
+- **La intención + el precio suscrito viajan en la línea del carrito.** El storefront agrega la línea
+  de suscripción por una **ruta propia** (§13.2), NO por `cart.createLineItem`: la Store API no deja
+  fijar `unit_price` y una promoción estándar no puede leer la metadata de la línea ni variar el % por
+  producto. La ruta computa el descuento server-side (fuente única: `product.metadata.
+  subscription_discount_percentage`, igual que el middleware) y lo fija como **precio custom**
+  (`is_custom_price` → el recálculo del carrito no lo pisa). Así el **precio suscrito se cobra desde la
+  primera compra** y la línea lleva `metadata: { is_subscription, frequency_weeks }`, que Medusa propaga
+  a `order.items[].metadata`. El `agreed_unit_price` de la suscripción = el `unit_price` de la línea.
+- **Cero blast-radius:** la **compra única** sigue usando la ruta core `cart.createLineItem` intacta.
 - **Pago = manual (D24) en el Punto 1.** No se tokeniza ni se cobra: `payment_method_id` queda
   `null`. El cobro recurrente real es el **Bloque 4** (go estratégico aparte, D55).
 
 ### 13.2 Endpoints
-- Autenticación y alcance **idénticos a §9.1 / §10.2**: `authenticate("customer", ["bearer","session"])`
-  (en `src/api/middlewares.ts`) + publishable key; propiedad por `customer_id` del `auth_context`;
-  suscripción ajena → **404** (no se revela existencia).
-- **`GET /store/subscriptions`** → `{ subscriptions: StoreSubscription[] }` (orden `created_at` desc).
-  Alimenta la vista read-only de `/cuenta` (Punto 1 · Bloque 1.4). La propiedad se resuelve
-  traversando el Module Link (`customer.subscriptions`), como `/store/pets`.
+- **`POST /store/carts/:id/subscription-items`** → agrega una línea de suscripción con el precio
+  suscrito. Body: `{ variant_id, quantity, frequency_weeks: 2|4|6|8 }`. Sin auth de cliente (carritos
+  de invitado permitidos, como la ruta core de line-items); publishable key global. Owner:
+  `src/api/store/carts/[id]/subscription-items/` (validación zod en `middlewares.ts`).
+- **`GET /store/subscriptions`** → `{ subscriptions: StoreSubscription[] }` (orden `created_at` desc,
+  enriquecido con `product_title` + `thumbnail`). Auth y alcance **idénticos a §9.1 / §10.2**
+  (`authenticate("customer", …)` + publishable key; propiedad por `customer_id`; ajena → **404**).
+  Alimenta la vista read-only de `/cuenta` (Punto 1 · Bloque 1.4); la propiedad se resuelve traversando
+  el Module Link (`customer.subscriptions`), como `/store/pets`.
 - **Diferido (Bloque 3 — gestión):** `PATCH /store/subscriptions/:id` (frecuencia/cantidad/dirección/
   próxima fecha), `POST /store/subscriptions/:id/pause` · `/resume` · `/cancel` · `/skip`. Se anexan
   a este contrato cuando se construya la gestión; **no existen aún** (no fingir).

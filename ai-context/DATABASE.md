@@ -197,10 +197,12 @@ simulado/manual — cero dinero). Contrato de API en `API.md §13`.
   ni contrato existente (catálogo, cuentas, envío, `pet`, `payment-method`, órdenes).
 - Servicio: `MedusaService({ Subscription })` (CRUD autogenerado).
 
-### 9.4 Creación — server-side al checkout (no hay POST de storefront)
-La fila **nace en un subscriber de `order.placed`** (Punto 1 · Bloque 1.3), no desde un formulario
-(mismo criterio que `saved_card`, API.md §10.1). La intención de suscripción viaja en la
-**metadata de la línea del carrito** (`is_subscription` + `frequency_weeks`) → sobrevive a
-`order.items[].metadata` → el subscriber crea la suscripción con el snapshot. Convive con los dos
-subscribers de `order.placed` ya existentes (`food-purchased.ts`, `order-placed-email.ts`) **sin
-tocarlos**: Medusa admite múltiples handlers por evento.
+### 9.4 Creación — server-side al checkout
+La **fila** `subscription` **nace en un subscriber de `order.placed`** (Punto 1 · Bloque 1.3), no desde
+un formulario (mismo criterio que `saved_card`, API.md §10.1). La intención + el **precio suscrito**
+viajan en la **metadata de la línea del carrito** (`is_subscription` + `frequency_weeks`), que el
+storefront agrega por una **ruta propia** (`POST /store/carts/:id/subscription-items`, API.md §13.2)
+que además fija el precio con descuento como precio custom de la línea → sobrevive a
+`order.items[].metadata` → el subscriber crea la suscripción con el snapshot (`agreed_unit_price` = el
+precio de la línea). Convive con los dos subscribers de `order.placed` ya existentes
+(`food-purchased.ts`, `order-placed-email.ts`) **sin tocarlos**: Medusa admite múltiples handlers por evento.
