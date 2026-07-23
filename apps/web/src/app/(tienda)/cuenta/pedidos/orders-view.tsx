@@ -16,16 +16,29 @@ import { listOrders, type OrderView } from "@/lib/medusa";
 import { formatCLP, formatDateLong, pluralize } from "@/lib/format";
 import { AccountGate } from "../account-gate";
 
-/** Historial de pedidos reales del cliente (Fase 5 · Etapa A). */
+/** Página de pedidos reales del cliente (Fase 5 · Etapa A). */
 export function OrdersView() {
   return (
     <AccountGate>
-      <OrdersList />
+      <Section spacing="md">
+        <Stack gap={6}>
+          <Stack gap={1}>
+            <span className="overline text-text-brand">Mi cuenta</span>
+            <h1 className="heading-1 text-text-primary">Mis pedidos</h1>
+          </Stack>
+          <OrdersList />
+        </Stack>
+      </Section>
     </AccountGate>
   );
 }
 
-function OrdersList() {
+/**
+ * Lista de pedidos SIN cabecera propia — reutilizable: la página `/cuenta/pedidos`
+ * la envuelve en su `Section` + título, y la tab "Pedidos" de `/cuenta` la monta
+ * directa bajo su propio encabezado. Trae sus datos al montarse.
+ */
+export function OrdersList() {
   const [orders, setOrders] = useState<OrderView[] | null>(null);
   const [error, setError] = useState(false);
 
@@ -39,45 +52,40 @@ function OrdersList() {
     };
   }, []);
 
-  return (
-    <Section spacing="md">
-      <Stack gap={6}>
-        <Stack gap={1}>
-          <span className="overline text-text-brand">Mi cuenta</span>
-          <h1 className="heading-1 text-text-primary">Mis pedidos</h1>
-        </Stack>
+  if (error) {
+    return <Alert variant="error">No pudimos cargar tus pedidos. Intenta de nuevo más tarde.</Alert>;
+  }
 
-        {error && <Alert variant="error">No pudimos cargar tus pedidos. Intenta de nuevo más tarde.</Alert>}
-
-        {!error && orders === null && (
-          <Stack gap={4}>
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </Stack>
-        )}
-
-        {!error && orders?.length === 0 && (
-          <EmptyState
-            icon={<Package className="size-10 text-text-muted" aria-hidden />}
-            title="Aún no tienes pedidos"
-            description="Cuando compres, tus pedidos aparecerán aquí para que les hagas seguimiento."
-            action={
-              <Button asChild>
-                <Link href="/categoria/todo">Ir a la tienda</Link>
-              </Button>
-            }
-          />
-        )}
-
-        {!error && orders && orders.length > 0 && (
-          <Stack gap={4}>
-            {orders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))}
-          </Stack>
-        )}
+  if (orders === null) {
+    return (
+      <Stack gap={4}>
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
       </Stack>
-    </Section>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <EmptyState
+        icon={<Package className="size-10 text-text-muted" aria-hidden />}
+        title="Aún no tienes pedidos"
+        description="Cuando compres, tus pedidos aparecerán aquí para que les hagas seguimiento."
+        action={
+          <Button asChild>
+            <Link href="/categoria/todo">Ir a la tienda</Link>
+          </Button>
+        }
+      />
+    );
+  }
+
+  return (
+    <Stack gap={4}>
+      {orders.map((order) => (
+        <OrderCard key={order.id} order={order} />
+      ))}
+    </Stack>
   );
 }
 
