@@ -125,6 +125,12 @@ Sistema con escalas 50–900. Token = `color.{familia}.{paso}`. La marca es **c�
 - **Contraste:** todo texto cumple WCAG AA (ver §13). Texto sobre Miel siempre Carbón, nunca blanco.
 - Fondo por defecto siempre **Arena**, no blanco puro (calidez).
 
+### 3.7 Superficie premium — "Tarjeta miembro" (plan activo, D57·R4)
+El estado **plan activo** de la `PetStatusCard` usa una superficie de mayor valor: **Pino profundo** (`pino-700→800`, gradiente + `shadow-lg`) con acentos **Oro** (Miel). Verde+oro es el par premium clásico y en Manada tiene significado propio (Pino = confianza · Miel = anticipación): señala "este cliente tiene un beneficio especial" sin salir de la identidad ("LinkedIn Premium con lenguaje Manada").
+- **No contradice §3.6:** Pino sigue sin ser **botón** (aquí es *superficie*); la acción principal es un **CTA Miel** con texto Carbón (regla de contraste intacta), y el nombre de la mascota pasa a Oro.
+- **Implementación sin reescribir componentes:** un scope `[data-premium="true"]` en `globals.css` **remapea solo los tokens de texto/acento** — `--text-primary`→Arena (`neutral-50`), `--text-secondary`→Pino claro (`pino-100`), `--text-brand`→Oro (`miel-300`), `--border-default`→`pino-600`, `--bg-subtle`→translúcido — para que todo el contenido interno se lea sobre Pino. Se activa **únicamente** con `status === "active"`; pausado y sin-plan siguen sobre superficie clara.
+- **Uso:** reservado a estados de "membresía/valor" (hoy: plan de suscripción activo). No usar como fondo genérico.
+
 ---
 
 ## 4. Sistema tipográfico — ✅ (D11)
