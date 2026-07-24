@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Camera, Check, Circle, Clock, HelpCircle, RefreshCw, Settings2, ShoppingBag, Truck } from "lucide-react";
+import { Camera, Check, Circle, Clock, HelpCircle, Pause, Play, RefreshCw, Settings2, ShoppingBag, Truck } from "lucide-react";
 import { fadeInUp } from "@/lib/motion";
 import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -195,12 +195,15 @@ function PetPlan({
   hasFood,
   subscription,
   foodSlug,
+  savings,
 }: {
   pet: Pet;
   anticipation?: RunOutEstimate | null;
   hasFood: boolean;
   subscription?: SubscriptionView | null;
   foodSlug?: string;
+  /** Ahorro por entrega vs. compra única (R4). Se muestra solo si > 0. */
+  savings?: number;
 }) {
   const foodStatus = anticipation ? (
     <>
@@ -226,7 +229,7 @@ function PetPlan({
       <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <li className="flex items-center gap-2">{foodStatus}</li>
         <li className="flex items-center gap-2">
-          {subscription ? (
+          {subscription?.status === "active" ? (
             <>
               <Truck className="size-4 text-success-strong" aria-hidden />
               <span className="text-[14px] font-semibold text-text-primary">Entregas automáticas</span>
@@ -236,6 +239,15 @@ function PetPlan({
                   próximo {formatDeliveryDate(subscription.nextDeliveryDate)}
                 </span>
               )}
+              {savings != null && savings > 0 && (
+                <Badge variant="subscribe">Ahorras {formatCLP(savings)}</Badge>
+              )}
+            </>
+          ) : subscription?.status === "paused" ? (
+            <>
+              <Pause className="size-4 text-text-secondary" aria-hidden />
+              <span className="text-[14px] font-semibold text-text-primary">Entregas automáticas</span>
+              <Badge variant="neutral">Pausado</Badge>
             </>
           ) : hasFood && foodSlug ? (
             <>
@@ -280,7 +292,11 @@ export function PetStatusCard({
   onManage,
   className,
 }: PetStatusCardProps) {
-  const isSubscribed = !!subscription;
+  // Estado del plan: activo (centro del plan) · pausado (invita a reanudar, no a la
+  // PDP — R1) · sin plan. `hasPlan` = vigente (activo o pausado, no cancelado).
+  const isActive = subscription?.status === "active";
+  const isPaused = subscription?.status === "paused";
+  const hasPlan = Boolean(subscription);
   // Estado general: ok (>7 días) · queda poco (≤7) · falta un dato (peso/alimento).
   const state = anticipation
     ? anticipation.daysLeft > 7
@@ -300,9 +316,13 @@ export function PetStatusCard({
     .filter(Boolean)
     .join(" · ");
 
-  const badge = isSubscribed ? (
+  const badge = isActive ? (
     <Badge variant="success" icon={<Check className="size-3.5" />}>
       Plan activo
+    </Badge>
+  ) : isPaused ? (
+    <Badge variant="neutral" icon={<Pause className="size-3.5" />}>
+      Plan pausado
     </Badge>
   ) : state === "ok" ? (
     <Badge variant="success" icon={<Check className="size-3.5" />}>
@@ -324,11 +344,14 @@ export function PetStatusCard({
       ? `Come ${food.brand.name} ${food.name}.`
       : "Aún no sabemos qué come.";
 
-  // Con plan activo, la promesa cumplida manda; si no, detalle observacional.
+  // Con plan activo, la promesa cumplida manda; pausado = honesto (sin prometer
+  // envío); si no, detalle observacional.
   const subline =
-    isSubscribed && subscription?.nextDeliveryDate
+    isActive && subscription?.nextDeliveryDate
       ? `Su próximo envío llega el ${formatDeliveryDate(subscription.nextDeliveryDate)}.`
-      : anticipation
+      : isPaused
+        ? "Tu plan de envíos está en pausa. Reanúdalo cuando quieras."
+        : anticipation
         ? [
             anticipation.daysSincePurchase > 0
               ? `Va ~${pluralize(anticipation.daysSincePurchase, "día")} con este saco.`
@@ -346,14 +369,26 @@ export function PetStatusCard({
       ? `Lo calculamos con el peso de ${pet.name} (${pet.weightKg} kg) y el tamaño del saco (${food.format}). Es una estimación; ajústala cuando quieras.`
       : undefined;
 
+  // Valor del plan hecho explícito (R4): cuánto ahorra por entrega frente a la
+  // compra única. Solo con plan activo y alimento conocido (precio pactado real).
+  const planSavings =
+    isActive && food && subscription ? food.price.current - subscription.agreedUnitPrice : 0;
+
   return (
     <motion.section
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
       aria-labelledby="pet-status-title"
+      data-premium={isActive ? "true" : undefined}
       className={cn(
-        "overflow-hidden rounded-[var(--radius-xl)] border border-terracota-100 bg-brand-soft",
+        "overflow-hidden rounded-[var(--radius-xl)] border",
+        // Plan activo = "Tarjeta miembro" (D56·R4): superficie Pino profunda + acentos
+        // Oro + elevación, para que el cliente con plan se sienta claramente de mayor
+        // valor. El texto se aclara vía el scope `[data-premium]` de globals.css.
+        isActive
+          ? "border-pino-600 bg-[linear-gradient(158deg,var(--pino-700),var(--pino-800))] shadow-lg"
+          : "border-terracota-100 bg-brand-soft",
         className,
       )}
     >
@@ -391,7 +426,7 @@ export function PetStatusCard({
             {anticipation && (
               <FoodTimeline
                 estimate={anticipation}
-                nextDeliveryDate={subscription?.nextDeliveryDate}
+                nextDeliveryDate={isActive ? subscription?.nextDeliveryDate : undefined}
                 className="lg:pb-1"
               />
             )}
@@ -399,13 +434,26 @@ export function PetStatusCard({
 
           {/* Una acción dominante; lo demás la apoya. */}
           <div className="mt-auto flex flex-wrap items-center gap-3 pt-4">
-            {isSubscribed ? (
+            {hasPlan ? (
               <>
-                {/* Suscrito: la acción es administrar el plan — abre la misma
-                    PlanManageSheet que /cuenta (D56·D). */}
+                {/* Con plan (activo o pausado): la acción abre la misma
+                    PlanManageSheet que /cuenta (D56·D). Pausado → invita a
+                    reanudar; activo → gestionar (R1). */}
                 {onManage ? (
-                  <Button onClick={onManage} leadingIcon={<Settings2 className="size-4" aria-hidden />}>
-                    Gestionar plan
+                  <Button
+                    onClick={onManage}
+                    // CTA dorado (Miel) sobre la Tarjeta miembro; en pausado el card es
+                    // claro, así que el botón vuelve al primario Terracota.
+                    variant={isActive ? "subscribe" : "primary"}
+                    leadingIcon={
+                      isPaused ? (
+                        <Play className="size-4" aria-hidden />
+                      ) : (
+                        <Settings2 className="size-4" aria-hidden />
+                      )
+                    }
+                  >
+                    {isPaused ? "Reanudar plan" : "Gestionar plan"}
                   </Button>
                 ) : (
                   <Button asChild>
@@ -464,13 +512,20 @@ export function PetStatusCard({
       </div>
 
       {/* ── El espacio del futuro: el plan, no la transacción ── */}
-      <div className="border-t border-terracota-100 bg-surface/60 px-4 py-3 sm:px-5">
+      <div
+        className={cn(
+          "border-t px-4 py-3 sm:px-5",
+          // En la Tarjeta miembro el strip se hunde (inset oscuro) con filo dorado.
+          isActive ? "border-miel-500/25 bg-black/15" : "border-terracota-100 bg-surface/60",
+        )}
+      >
         <PetPlan
           pet={pet}
           anticipation={anticipation}
           hasFood={Boolean(food)}
           subscription={subscription}
           foodSlug={food?.slug}
+          savings={planSavings}
         />
       </div>
     </motion.section>

@@ -373,6 +373,21 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Plan premium (D56·R4) — "Tarjeta miembro": superficie oscura        */
+/* Pino + Oro. Remapea SOLO los tokens de texto/acento a variantes     */
+/* claras para que el PetStatusCard suscrito-activo se lea sobre fondo  */
+/* Pino, SIN tocar los componentes internos. Se activa únicamente con   */
+/* `[data-premium="true"]` en la card (status === "active").           */
+/* ------------------------------------------------------------------ */
+[data-premium="true"] {
+  --text-primary: var(--neutral-50); /* cuerpo cálido claro sobre Pino */
+  --text-secondary: var(--pino-100); /* atenuado claro (tinte pino) */
+  --text-brand: var(--miel-300); /* acentos y nombre de la mascota → Oro */
+  --border-default: var(--pino-600);
+  --bg-subtle: rgba(255, 255, 255, 0.08); /* hover del botón ghost sobre oscuro */
+}
+
+/* ------------------------------------------------------------------ */
 /* 5. KEYFRAMES (consumidos por componentes — Skeleton, cápsulas)     */
 /* ------------------------------------------------------------------ */
 @keyframes shimmer {

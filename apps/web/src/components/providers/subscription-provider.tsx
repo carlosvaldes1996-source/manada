@@ -23,6 +23,10 @@ interface SubscriptionContextValue {
   refresh: () => Promise<void>;
   /** Suscripción ACTIVA cuyo producto coincide con `productId` (o `undefined`). */
   activeForProduct: (productId?: string) => SubscriptionView | undefined;
+  /** Suscripción VIGENTE (activa o pausada, no cancelada) para `productId`. La Home
+   *  la usa para tratar un plan pausado como plan —invitar a reanudar— y no como
+   *  "no suscrito" (D56·R1). */
+  subscriptionForProduct: (productId?: string) => SubscriptionView | undefined;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -86,6 +90,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       activeForProduct: (productId?: string) =>
         productId
           ? effective.find((s) => s.status === "active" && s.productId === productId)
+          : undefined,
+      subscriptionForProduct: (productId?: string) =>
+        productId
+          ? effective.find((s) => s.status !== "cancelled" && s.productId === productId)
           : undefined,
     };
   }, [status, subscriptions, hasLoaded, refresh]);

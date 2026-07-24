@@ -36,7 +36,7 @@ import type { Product } from "@/types";
 export function DashboardView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
   const { user } = useSession();
-  const { activeForProduct, refresh: refreshSubscriptions } = useSubscriptions();
+  const { subscriptionForProduct, refresh: refreshSubscriptions } = useSubscriptions();
   const { open: openPlanManage } = usePlanManage();
   const { addItem } = useCart();
 
@@ -65,9 +65,11 @@ export function DashboardView({ products }: { products: Product[] }) {
       ? petFoodAnticipation(activePet, currentFood, foodAssignedAt[activePet.id])
       : null;
 
-  // Plan de suscripción ACTIVO para su alimento (D56·C): si existe, la card pasa a
-  // "centro del plan". Match por producto (product_id === currentFoodId).
-  const subscription = activeForProduct(activePet?.currentFoodId);
+  // Plan de suscripción VIGENTE (activo o pausado) para su alimento (D56·C/R1): si
+  // existe, la card pasa a "centro del plan". Un plan pausado NO es "no suscrito":
+  // la card invita a reanudarlo (abre la misma PlanManageSheet), no a la PDP.
+  // Match por producto (product_id === currentFoodId).
+  const subscription = subscriptionForProduct(activePet?.currentFoodId);
 
   // Pocos y muy relevantes (sin carrusel): cuidado de su especie, no alimento.
   const complements = activePet ? recommendComplements(activePet, products, 4) : [];
