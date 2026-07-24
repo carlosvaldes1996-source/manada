@@ -2,6 +2,14 @@ import type { SubscriptionFrequencyWeeks, SubscriptionStatus, SubscriptionView }
 import { medusa } from "./client";
 import { SUBSCRIPTION_FREQUENCIES } from "@/hooks/use-subscription";
 
+/** Campos editables de la gestión del plan (D56·D). Espejo de `PATCH /store/subscriptions/:id`. */
+export interface UpdateSubscriptionInput {
+  frequency_weeks?: SubscriptionFrequencyWeeks;
+  status?: SubscriptionStatus;
+  /** ISO. Para "saltar"/reprogramar; el front la computa. */
+  next_delivery_date?: string;
+}
+
 /**
  * Suscripciones del cliente — contrato `/store/subscriptions` (API.md §13, D55).
  *
@@ -54,4 +62,16 @@ export async function listMySubscriptions(): Promise<SubscriptionView[]> {
     "/store/subscriptions",
   );
   return subscriptions.map(mapSubscription);
+}
+
+/**
+ * Actualiza el plan (gestión, D56·D): cambiar frecuencia, pausar/reanudar/cancelar
+ * (status) o reprogramar/saltar (`next_delivery_date`). El llamador re-hidrata el
+ * `SubscriptionProvider` tras la mutación.
+ */
+export async function updateMySubscription(
+  id: string,
+  changes: UpdateSubscriptionInput,
+): Promise<void> {
+  await medusa.client.fetch(`/store/subscriptions/${id}`, { method: "PATCH", body: changes });
 }

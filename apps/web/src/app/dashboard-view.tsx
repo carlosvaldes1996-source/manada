@@ -19,7 +19,7 @@ import {
 } from "@/components/pet";
 import { ProductCard, QuickBuyCard, CategoryTiles } from "@/components/commerce";
 import { AppShell } from "@/components/layout";
-import { useCart, usePet, useSession, useSubscriptions } from "@/components/providers";
+import { useCart, usePet, usePlanManage, useSession, useSubscriptions } from "@/components/providers";
 import { petFoodAnticipation } from "@/lib/anticipation";
 import { recommendComplements } from "@/lib/recommend";
 import type { Product } from "@/types";
@@ -37,6 +37,7 @@ export function DashboardView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
   const { user } = useSession();
   const { activeForProduct, refresh: refreshSubscriptions } = useSubscriptions();
+  const { open: openPlanManage } = usePlanManage();
   const { addItem } = useCart();
 
   // La Home es el centro del plan: re-hidrata las suscripciones al entrar, para
@@ -161,6 +162,7 @@ export function DashboardView({ products }: { products: Product[] }) {
                 onReorder={currentFood ? reorder : undefined}
                 reorderPending={reordering}
                 onDefineFood={() => setFoodOpen(true)}
+                onManage={subscription ? () => openPlanManage(subscription) : undefined}
               />
               <Stack gap={2}>
                 <h2 className="heading-4 text-text-primary">

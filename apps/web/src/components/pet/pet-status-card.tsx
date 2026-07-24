@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Camera, Check, Circle, Clock, HelpCircle, RefreshCw, ShoppingBag, Truck } from "lucide-react";
+import { Camera, Check, Circle, Clock, HelpCircle, RefreshCw, Settings2, ShoppingBag, Truck } from "lucide-react";
 import { fadeInUp } from "@/lib/motion";
 import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,8 @@ export interface PetStatusCardProps {
   reorderPending?: boolean;
   /** Abre el selector "¿qué come?" (definir ≠ comprar, D39). */
   onDefineFood?: () => void;
+  /** Abre la gestión del plan (D56·D) — la misma `PlanManageSheet` que /cuenta. */
+  onManage?: () => void;
   className?: string;
 }
 
@@ -275,6 +277,7 @@ export function PetStatusCard({
   onReorder,
   reorderPending,
   onDefineFood,
+  onManage,
   className,
 }: PetStatusCardProps) {
   const isSubscribed = !!subscription;
@@ -398,14 +401,20 @@ export function PetStatusCard({
           <div className="mt-auto flex flex-wrap items-center gap-3 pt-4">
             {isSubscribed ? (
               <>
-                {/* Suscrito: la acción deja de ser "comprar" y pasa a administrar
-                    (read-only en C; la gestión completa llega en el Bloque D). */}
-                <Button asChild>
-                  <Link href="/cuenta">
-                    <Truck className="size-4" aria-hidden />
-                    Ver mi plan
-                  </Link>
-                </Button>
+                {/* Suscrito: la acción es administrar el plan — abre la misma
+                    PlanManageSheet que /cuenta (D56·D). */}
+                {onManage ? (
+                  <Button onClick={onManage} leadingIcon={<Settings2 className="size-4" aria-hidden />}>
+                    Gestionar plan
+                  </Button>
+                ) : (
+                  <Button asChild>
+                    <Link href="/cuenta">
+                      <Truck className="size-4" aria-hidden />
+                      Ver mi plan
+                    </Link>
+                  </Button>
+                )}
                 {food && (
                   <Button variant="ghost" size="sm" asChild>
                     <Link href={`/producto/${food.slug}`}>Ver producto</Link>

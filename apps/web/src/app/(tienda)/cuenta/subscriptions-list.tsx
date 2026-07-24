@@ -3,8 +3,9 @@
 import { RefreshCw } from "lucide-react";
 import { Stack, Row } from "@/components/ui/stack";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSubscriptions } from "@/components/providers";
+import { useSubscriptions, usePlanManage } from "@/components/providers";
 import { formatCLP } from "@/lib/format";
 import type { SubscriptionView } from "@/types";
 
@@ -23,6 +24,7 @@ const STATUS_LABEL: Record<SubscriptionView["status"], string> = {
 
 export function SubscriptionsList() {
   const { subscriptions: subs, isLoading } = useSubscriptions();
+  const { open: openPlanManage } = usePlanManage();
 
   if (isLoading && subs.length === 0) return <Skeleton className="h-24 w-full" />;
 
@@ -59,7 +61,14 @@ export function SubscriptionsList() {
               )}
             </span>
           </Stack>
-          <span className="price text-text-primary">{formatCLP(s.agreedUnitPrice)}</span>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <span className="price text-text-primary">{formatCLP(s.agreedUnitPrice)}</span>
+            {s.status !== "cancelled" && (
+              <Button variant="ghost" size="sm" onClick={() => openPlanManage(s)}>
+                Gestionar
+              </Button>
+            )}
+          </div>
         </div>
       ))}
     </Stack>

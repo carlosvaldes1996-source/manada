@@ -8,6 +8,7 @@ import { SubscriptionProvider } from "./subscription-provider";
 import { PetProvider } from "./pet-provider";
 import { CartProvider } from "./cart-provider";
 import { SubscribeFlowProvider } from "./subscribe-flow-provider";
+import { PlanManageProvider } from "./plan-manage-provider";
 
 /**
  * Composición única de providers de la app, montada en el Root Layout.
@@ -26,7 +27,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             <PetProvider>
               <CartProvider>
                 <ToastProvider>
-                  <SubscribeFlowProvider>{children}</SubscribeFlowProvider>
+                  <SubscribeFlowProvider>
+                    <PlanManageProvider>{children}</PlanManageProvider>
+                  </SubscribeFlowProvider>
                 </ToastProvider>
               </CartProvider>
             </PetProvider>
@@ -42,3 +45,4 @@ export { usePet, type PetProfileChanges } from "./pet-provider";
 export { useSubscriptions } from "./subscription-provider";
 export { useCart } from "./cart-provider";
 export { useSubscribeFlow } from "./subscribe-flow-provider";
+export { usePlanManage } from "./plan-manage-provider";

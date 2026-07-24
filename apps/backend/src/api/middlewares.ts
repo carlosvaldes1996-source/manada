@@ -9,6 +9,7 @@ import {
 import { StoreCreatePet, StoreUpdatePet } from "./store/pets/validators";
 import { AdminCreateFormat } from "./admin/products/[id]/formats/validators";
 import { StoreAddSubscriptionItem } from "./store/carts/[id]/subscription-items/validators";
+import { StoreUpdateSubscription } from "./store/subscriptions/[id]/validators";
 
 /**
  * Campo calculado `subscription_price` en la Store API (Fase 5 · Etapa 2).
@@ -168,6 +169,11 @@ export default defineMiddlewares({
       matcher: "/store/subscriptions",
       method: ["GET"],
       middlewares: [subscriptionsAuth],
+    },
+    {
+      matcher: "/store/subscriptions/:id",
+      method: ["PATCH"],
+      middlewares: [subscriptionsAuth, validateAndTransformBody(StoreUpdateSubscription)],
     },
     {
       // Alta de línea de SUSCRIPCIÓN al carrito con precio suscrito (D55). Sin auth

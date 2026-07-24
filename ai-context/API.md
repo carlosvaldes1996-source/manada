@@ -5,7 +5,7 @@
 > |---|---|
 > | **Purpose** | Contratos de API entre frontend y backend, e integraciones externas CL. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9), medios de pago (§10), emails (§11), backoffice (§12). 🟡 EN CONSTRUCCIÓN: suscripción (§13, D55). |
+> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9), medios de pago (§10), emails (§11), backoffice (§12). suscripción (§13, D55/D56): creación al checkout + lectura + gestión (`PATCH`) IMPLEMENTADAS; scheduler + pago recurrente pendientes. |
 > | **Last Updated** | 2026-07-23 |
 > | **Depends On** | ARCHITECTURE.md, DATABASE.md |
 > | **Supersedes** | — |
@@ -332,13 +332,14 @@ en `product.details.after`.
 
 ---
 
-## 13. Contrato de suscripción (`/store/subscriptions`) — módulo custom `subscription` (D55)
+## 13. Contrato de suscripción (`/store/subscriptions`) — módulo custom `subscription` (D55 · D56)
 
 > Owner técnico: `apps/backend/src/modules/subscription/` + `src/api/store/subscriptions/` + los
 > Module Links `customer↔subscription` y `pet↔subscription`. Modelo en `DATABASE.md §9`.
-> **EN CONSTRUCCIÓN** — moat reabierto por D55, **por capas** (D55 §Decisión-2). Este contrato es el
-> **Punto 1** (creación al checkout con pago **simulado/manual** + lectura). Gestión (pausar/cancelar/
-> cambiar) y pago recurrente real son **bloques posteriores** y se anexarán aquí.
+> **IMPLEMENTADO:** creación al checkout con pago **simulado/manual** (Punto 1, D55) + **lectura**
+> (`GET`) + **gestión** (`PATCH`: frecuencia/pausar/reanudar/cancelar/saltar — D56·D). **PENDIENTE
+> (frente D55):** el **scheduler** (motor de entregas recurrentes) y el **pago recurrente real** — por
+> eso la gestión **configura** el plan pero aún no dispara entregas/cobros automáticos.
 
 ### 13.1 Decisión de arquitectura
 - **La suscripción (la fila) nace SERVER-SIDE al checkout, no desde un formulario:** un
@@ -368,9 +369,18 @@ en `product.details.after`.
   (`authenticate("customer", …)` + publishable key; propiedad por `customer_id`; ajena → **404**).
   Alimenta la vista read-only de `/cuenta` (Punto 1 · Bloque 1.4); la propiedad se resuelve traversando
   el Module Link (`customer.subscriptions`), como `/store/pets`.
-- **Diferido (Bloque 3 — gestión):** `PATCH /store/subscriptions/:id` (frecuencia/cantidad/dirección/
-  próxima fecha), `POST /store/subscriptions/:id/pause` · `/resume` · `/cancel` · `/skip`. Se anexan
-  a este contrato cuando se construya la gestión; **no existen aún** (no fingir).
+- **`PATCH /store/subscriptions/:id`** (gestión del plan, D56·D) → actualiza la suscripción del
+  cliente. Auth/propiedad **idénticas al GET** (ajena → **404**). Body **parcial**:
+  `{ frequency_weeks?: 2|4|6|8, status?: "active"|"paused"|"cancelled", next_delivery_date?: ISO }`.
+  Un solo endpoint flexible cubre las acciones de la `PlanManageSheet`: **cambiar frecuencia**
+  (`frequency_weeks`; NO mueve la próxima fecha —criterio Chewy—), **pausar / reanudar / cancelar**
+  (`status`; al reanudar, el front manda además una próxima fecha fresca) y **saltar** el próximo envío
+  (`next_delivery_date` = actual + frecuencia, computado en el front). Devuelve `{ subscription }`.
+  Owner: `src/api/store/subscriptions/[id]/` (validación zod en `middlewares.ts`).
+- **Honestidad (D56·D):** **aún NO existe el scheduler** que genere entregas/cobros a partir de estas
+  fechas (es un bloque posterior de D55). La gestión **configura** el plan; su ejecución automática
+  llega con el motor de entregas. Por eso se **excluyen** a propósito: **"adelantar/entregar ahora"**
+  (necesita el scheduler) y **cambiar formato/cantidad/dirección** (fast-follow).
 
 ### 13.3 `StoreSubscription` (shape del backend)
 `{ id, product_id, variant_id, quantity, frequency_weeks, next_delivery_date, status:
