@@ -1,5 +1,5 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils";
 import { SUBSCRIPTION_MODULE } from "../../../../modules/subscription";
 import SubscriptionModuleService from "../../../../modules/subscription/service";
 import { StoreUpdateSubscriptionType } from "./validators";
@@ -32,11 +32,36 @@ export async function PATCH(
     throw new MedusaError(MedusaError.Types.NOT_FOUND, `La suscripción ${id} no existe`);
   }
 
+  // Estado previo para derivar el evento de dominio (D57·R5): la transición, no el
+  // valor final, define qué correo se envía (reanudar manda status+fecha juntos).
+  const before = await subs.retrieveSubscription(id);
+
   const update: Record<string, unknown> = { ...req.validatedBody };
   if (typeof update.next_delivery_date === "string") {
     update.next_delivery_date = new Date(update.next_delivery_date);
   }
 
   const subscription = await subs.updateSubscriptions({ id, ...update });
+
+  // Evento de dominio según la transición (§11.3). Cambiar solo la frecuencia no
+  // emite (no genera correo). El cambio de status manda sobre el de fecha.
+  const body = req.validatedBody;
+  let eventName: string | undefined;
+  if (body.status && body.status !== before.status) {
+    eventName =
+      body.status === "paused"
+        ? "subscription.paused"
+        : body.status === "cancelled"
+          ? "subscription.cancelled"
+          : body.status === "active"
+            ? "subscription.resumed"
+            : undefined;
+  } else if (body.next_delivery_date != null && body.status == null) {
+    eventName = "subscription.skipped";
+  }
+  if (eventName) {
+    await req.scope.resolve(Modules.EVENT_BUS).emit({ name: eventName, data: { id } });
+  }
+
   res.json({ subscription });
 }

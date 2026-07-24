@@ -300,10 +300,46 @@ Mapper del front: `StoreSavedCard → SavedCardView` (`brandLabel` legible + `ex
 | Compra realizada | `order.placed` | `order-placed-email.ts` | subscriber **separado** de `food-purchased.ts` (anticipación, D35) |
 | Pedido enviado | `shipment.created` | `order-shipped.ts` | orden resuelta desde el fulfillment (link nativo); respeta `no_notification` |
 
-### 11.3 Suscripción — DIFERIDA
-No se implementan emails de suscripción: **no existen eventos de suscripción recurrente** en el
-backend (moat post-tracción, D22/D29). Con esta estructura, agregarlos es trivial cuando existan
-(nueva `.tsx` + entrada en el registro + subscriber). Sin trabajo muerto.
+### 11.3 Suscripción — EN VIVO (D57·R5): correos del ciclo de vida
+Cinco correos cubren el ciclo del **Plan Manada**, disparados por **eventos de dominio propios**
+(no nativos): la suscripción emite su evento y **un subscriber por correo lo escucha** — mismo
+patrón que §11.2, **sin acoplar el correo al `PATCH`**. Esto deja el terreno listo para el
+scheduler y el cobro recurrente de D55, que también consumirán estos eventos.
+
+**Eventos de dominio (nuevos)** — payload uniforme `{ id }` (id de la suscripción), emitidos con el
+**Event Bus** (`Modules.EVENT_BUS`):
+
+| Evento | Emitido por | Cuándo |
+|---|---|---|
+| `subscription.created` | `subscription-created.ts` (tras crear la fila) | checkout con línea de suscripción |
+| `subscription.paused` | `PATCH /store/subscriptions/:id` | `status` → `paused` |
+| `subscription.resumed` | `PATCH …` | `status` → `active` (desde no-activo) |
+| `subscription.cancelled` | `PATCH …` | `status` → `cancelled` |
+| `subscription.skipped` | `PATCH …` | cambia `next_delivery_date` **sin** cambiar `status` |
+
+El `PATCH` deriva el evento comparando el **estado previo** con el body; **cambiar solo la frecuencia
+NO emite evento** (no genera correo de ruido).
+
+**Correos ↔ eventos** — cada uno = **1 `.tsx` + 1 entrada en el registro + 1 subscriber** (patrón D45),
+100% sobre `EmailLayout` y los componentes comunes:
+
+| Email | Evento | Subscriber | Foco |
+|---|---|---|---|
+| Plan activo | `subscription.created` | `subscription-created-email.ts` | **explica cómo funciona el Plan Manada** (gestionar/pausar/cambiar frecuencia/cancelar) + resumen del plan; **NO repite la compra** (esa es `order.placed`, que no menciona la suscripción) |
+| Plan pausado | `subscription.paused` | `subscription-paused-email.ts` | "no recibirás envíos hasta reanudar"; CTA **Reanudar** |
+| Plan reanudado | `subscription.resumed` | `subscription-resumed-email.ts` | "sigue en marcha" (tono del momento in-sheet, R3) + próxima fecha estimada |
+| Plan cancelado | `subscription.cancelled` | `subscription-cancelled-email.ts` | cálido, sin culpa; invita a volver |
+| Envío saltado | `subscription.skipped` | `subscription-skipped-email.ts` | "movimos tu próximo envío al {fecha}" |
+
+**Datos:** un helper único (`src/lib/subscription-email.ts`) resuelve por `{ id }` el `customer.email`/
+`first_name` (Module Link `customer↔subscription`), el `product_title` (query, como el `GET`) y el
+**nombre de la mascota** si el link opcional `pet↔subscription` resuelve. Formato con `formatCLP` /
+`formatDate` del tema.
+
+**Honestidad (invariante):** los correos **describen lo ocurrido** y muestran la próxima fecha como
+**estimada**; **ninguno promete cobro ni despacho automático** (aún NO hay scheduler ni pago
+recurrente — D55). El "Plan activo" lo dice explícito ("todavía no hacemos cobros automáticos: cada
+compra la confirmas tú"). Modo DEV sin `RESEND_API_KEY` sigue **logueando** (no envía).
 
 ## 12. Contrato de Backoffice (`/admin/*`) — extensiones del Admin (D47 · D50)
 
@@ -381,6 +417,10 @@ en `product.details.after`.
   fechas (es un bloque posterior de D55). La gestión **configura** el plan; su ejecución automática
   llega con el motor de entregas. Por eso se **excluyen** a propósito: **"adelantar/entregar ahora"**
   (necesita el scheduler) y **cambiar formato/cantidad/dirección** (fast-follow).
+- **Emite eventos de dominio (D57·R5):** tras actualizar, el `PATCH` emite
+  `subscription.paused` / `.resumed` / `.cancelled` / `.skipped` según la transición (compara el estado
+  previo con el body; **cambiar solo la frecuencia no emite**) y la creación emite `subscription.created`
+  desde `subscription-created.ts` — los consumen los subscribers de correo del ciclo de vida (§11.3).
 
 ### 13.3 `StoreSubscription` (shape del backend)
 `{ id, product_id, variant_id, quantity, frequency_weeks, next_delivery_date, status:

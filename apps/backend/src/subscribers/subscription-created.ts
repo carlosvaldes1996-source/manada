@@ -57,6 +57,7 @@ export default async function subscriptionCreatedHandler({
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const subs = container.resolve<SubscriptionModuleService>(SUBSCRIPTION_MODULE);
+  const eventBus = container.resolve(Modules.EVENT_BUS);
 
   const {
     data: [order],
@@ -173,6 +174,11 @@ export default async function subscriptionCreatedHandler({
         console.warn(`[suscripción] No se pudo enlazar ${sub.id} a la mascota ${pet.id}:`, e);
       }
     }
+
+    // Evento de dominio (D57·R5): dispara el correo "Plan activo" de forma
+    // desacoplada (subscriber `subscription-created-email.ts`). Deja el terreno
+    // listo para el scheduler y el cobro recurrente de D55.
+    await eventBus.emit({ name: "subscription.created", data: { id: sub.id } });
 
     console.log(
       `[suscripción] Orden #${order.display_id}: creada ${sub.id} (${it.title ?? it.product_id}, cada ${weeks} sem, próxima ${next

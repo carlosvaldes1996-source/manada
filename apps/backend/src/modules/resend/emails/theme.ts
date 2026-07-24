@@ -47,5 +47,19 @@ export function formatCLP(amount: number | null | undefined): string {
   }).format(value)
 }
 
+/** Fecha corta en español para los correos, ej. "5 de agosto". Acepta ISO o Date. */
+export function formatDate(value: string | Date | null | undefined): string {
+  if (!value) return "—"
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+  return new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "long" }).format(date)
+}
+
+/** Etiqueta legible de frecuencia, espejo del front (`Cada N semanas`). */
+export function frequencyLabel(weeks: number | null | undefined): string {
+  const n = typeof weeks === "number" && weeks > 0 ? weeks : 4
+  return `Cada ${n} semanas`
+}
+
 /** URL pública del storefront para CTAs (misma env que usa el subscriber de reset). */
 export const storefrontUrl = process.env.STOREFRONT_URL || "http://localhost:3000"
