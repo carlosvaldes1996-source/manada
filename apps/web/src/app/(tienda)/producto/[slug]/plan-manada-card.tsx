@@ -14,14 +14,12 @@
  * (middlewares.ts) y llega en el producto; el front no recalcula el descuento.
  */
 
-import { useRouter } from "next/navigation";
 import { CalendarCheck, Check, RefreshCw } from "lucide-react";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
-import { useCart } from "@/components/providers";
+import { useSubscribeFlow } from "@/components/providers";
 import { SUBSCRIPTION_FREQUENCIES } from "@/hooks/use-subscription";
 import { effectiveSubscriptionPrice, formatCLP } from "@/lib/format";
 import type { Product, SubscriptionFrequencyWeeks } from "@/types";
@@ -36,9 +34,7 @@ export function PlanManadaCard({
   frequency: SubscriptionFrequencyWeeks;
   onFrequencyChange: (weeks: SubscriptionFrequencyWeeks) => void;
 }) {
-  const { addItem } = useCart();
-  const { toast } = useToast();
-  const router = useRouter();
+  const subscribeFlow = useSubscribeFlow();
 
   // Todo derivado del `product` (= variante seleccionada): reactivo por definición.
   const base = product.price.current;
@@ -46,17 +42,9 @@ export function PlanManadaCard({
   const savings = base - subPrice;
   const discountPct = product.subscriptionDiscount ?? 0;
 
-  const freqLabel =
-    SUBSCRIPTION_FREQUENCIES.find((f) => f.weeks === frequency)?.label ?? `Cada ${frequency} semanas`;
-
   function subscribe() {
-    addItem(product, { subscriptionWeeks: frequency });
-    toast({
-      title: "Suscripción agregada al carrito",
-      description: `${product.name} · ${freqLabel.toLowerCase()}`,
-      variant: "success",
-      action: { label: "Ver carrito", onClick: () => router.push("/carrito") },
-    });
+    // Flujo único (D56 · Bloque B): agrega al carrito + abre la hoja de confirmación.
+    subscribeFlow.start(product, frequency);
   }
 
   return (

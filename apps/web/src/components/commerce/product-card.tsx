@@ -8,7 +8,7 @@ import { discountPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Price } from "@/components/ui/price";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/components/providers";
+import { useCart, useSubscribeFlow } from "@/components/providers";
 import { useToast } from "@/components/ui/toast";
 import { DiscountBadge, StockBadge, SubscriptionBadge } from "./badges";
 import { ProductImage } from "./product-image";
@@ -33,6 +33,7 @@ export interface ProductCardProps {
 export function ProductCard({ product, showSubscribe = true, className }: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const subscribeFlow = useSubscribeFlow();
   const href = `/producto/${product.slug}`;
   const discount = discountPercent(product.price.current, product.price.compareAt);
   const soldOut = product.stock <= 0;
@@ -46,14 +47,20 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
     ? product.variants?.[0]?.price.current ?? product.price.current
     : product.price.current;
 
-  function add(subscribe = false) {
-    addItem(product, subscribe ? { subscriptionWeeks: 4 } : undefined);
+  function addOnce() {
+    addItem(product);
     toast({
-      title: subscribe ? `Suscripción iniciada` : `Agregado al carrito`,
+      title: `Agregado al carrito`,
       description: `${product.brand.name} · ${product.name}`,
       variant: "success",
       action: { label: "Ver carrito", onClick: () => (window.location.href = "/carrito") },
     });
+  }
+
+  function subscribe() {
+    // Flujo único (D56 · Bloque B): agrega + abre la hoja de confirmación.
+    // Frecuencia por defecto del catálogo; en la PDP se elige la natural.
+    subscribeFlow.start(product, 4);
   }
 
   return (
@@ -119,7 +126,7 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
               <Button
                 size="sm"
                 block
-                onClick={() => add(true)}
+                onClick={subscribe}
                 leadingIcon={<RefreshCw className="size-4" aria-hidden />}
               >
                 Suscribirme
@@ -129,7 +136,7 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
                 variant="secondary"
                 aria-label="Comprar una vez"
                 title="Comprar una vez"
-                onClick={() => add(false)}
+                onClick={addOnce}
               >
                 <ShoppingBag className="size-4" aria-hidden />
               </Button>
@@ -138,7 +145,7 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
             <Button
               size="sm"
               block
-              onClick={() => add(false)}
+              onClick={addOnce}
               disabled={soldOut}
               leadingIcon={<ShoppingBag className="size-4" aria-hidden />}
             >
