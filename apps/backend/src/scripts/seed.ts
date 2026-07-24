@@ -30,8 +30,9 @@ import { ApiKey } from "../../.medusa/types/query-entry-points";
 /**
  * Seed del MVP de Manada (D22, MVP-first).
  * - Mercado: Chile. Moneda: CLP (cero decimales; amount = pesos).
- * - Pago: `pp_system_default` = pago manual/offline de Medusa (transferencia).
- *   El pedido queda registrado y se confirma a mano en el Admin. Sin Webpay aún.
+ * - Pago: `pp_system_default` = proveedor interno de Medusa. Desde D58 ya NO es el
+ *   pago de cara al usuario (eso lo hace Flow, API.md §14): se conserva habilitado
+ *   en la región solo como vehículo para materializar la orden al confirmar Flow.
  * - Despacho: fulfillment `manual_manual` — se gestiona manualmente (D22).
  * - Catálogo alineado con apps/web/src/lib/data/catalog.ts (mismos slugs/precios).
  */

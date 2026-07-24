@@ -5,7 +5,7 @@
 > |---|---|
 > | **Purpose** | Modelo de datos: entidades, relaciones, y el diseño del moat (Perfil de Mascota). |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟢 Implementado y vivo: catálogo (§5), cuentas/sesión (§6), envío (§7), perfil de mascota (§8) — Medusa-native + módulo custom `pet`. 🟡 EN CONSTRUCCIÓN: suscripción (§9, módulo custom `subscription`, D55). |
+> | **Status** | 🟢 Implementado y vivo: catálogo (§5), cuentas/sesión (§6), envío (§7), perfil de mascota (§8) — Medusa-native + módulo custom `pet`; pago con Flow (§10, módulo custom `flow-payment`, D58). 🟡 EN CONSTRUCCIÓN: suscripción (§9, módulo custom `subscription`, D55). |
 > | **Last Updated** | 2026-07-23 |
 > | **Depends On** | ARCHITECTURE.md, UX.md (§3 personalización) |
 > | **Supersedes** | — |
@@ -206,3 +206,41 @@ que además fija el precio con descuento como precio custom de la línea → sob
 `order.items[].metadata` → el subscriber crea la suscripción con el snapshot (`agreed_unit_price` = el
 precio de la línea). Convive con los dos subscribers de `order.placed` ya existentes
 (`food-purchased.ts`, `order-placed-email.ts`) **sin tocarlos**: Medusa admite múltiples handlers por evento.
+
+---
+
+## 10. Pago con Flow — IMPLEMENTADO (D58) · módulo custom `flow-payment`
+
+Persiste el ciclo de cada **intento de pago con Flow** (pasarela real del checkout; contrato en
+`API.md §14`). Cuarto módulo custom (`apps/backend/src/modules/flow-payment`), **mismo patrón que
+`pet` (§8), `payment-method` (API.md §10) y `subscription` (§9)**: extiende Medusa sin tocar el core.
+Es el **eje de la idempotencia**: la orden se crea recién cuando Flow confirma el pago.
+
+### 10.1 Tabla `flow_payment`
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | text (pk, prefix `flowpay`) | |
+| `cart_id` | text, index | carrito de Medusa que se completa al confirmarse el pago |
+| `commerce_order` | text, index | referencia única enviada a Flow (`commerceOrder`) |
+| `token` | text, null, index | token que Flow devuelve y reenvía en el callback — **llave de conciliación** |
+| `flow_order` | text, null | nº de orden interno de Flow (`flowOrder`) |
+| `redirect_url` | text, null | URL del checkout de Flow (`url?token=`); permite **reusar** un intento pending |
+| `amount` | integer | total cobrado (CLP entero), snapshot para conciliar con Flow |
+| `currency_code` | text, default `clp` | |
+| `status` | enum `pending`/`paid`/`rejected`/`canceled`, default `pending` | **mutex de idempotencia** |
+| `raw_status` | integer, null | entero crudo de `payment/getStatus` (1 pend · 2 pagada · 3 rechazada · 4 anulada) |
+| `order_id` | text, null | orden de Medusa creada al confirmarse el pago |
+| `payment_collection_id` | text, null | payment collection del carrito, para capturar el pago tras completar |
+| `error` | text, null | último error (depurar callbacks fallidos) |
+
+### 10.2 Diseño (por qué así)
+- **Difiere la orden hasta el pago confirmado:** todo el post-pago cuelga de `order.placed` (correos §11
+  de API, suscripción §9, anticipación D35). El carrito se completa **solo cuando Flow confirma** (webhook
+  `urlConfirmation` + `payment/getStatus`), así la orden y sus efectos nacen con pago verificado, **sin
+  tocar subscribers**.
+- **Idempotencia en dos capas:** (1) `status` como mutex — si ya está `paid`, no-op; (2) `completeCartWorkflow`
+  es idempotente y toma un **lock** sobre `cart_id` (link `order_cart`: si la orden existe la devuelve sin
+  re-emitir `order.placed`). Aunque Flow reintente el callback o `urlReturn`/`urlConfirmation` lleguen a la
+  vez, la orden ocurre **exactamente una vez**.
+- **Sin FK a la orden:** `order_id`/`payment_collection_id` son punteros informativos; la fuente de verdad del
+  pago es Flow (re-consultado con `getStatus`), no el payload del callback.

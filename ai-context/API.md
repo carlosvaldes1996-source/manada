@@ -5,8 +5,8 @@
 > |---|---|
 > | **Purpose** | Contratos de API entre frontend y backend, e integraciones externas CL. |
 > | **Owner** | Carlos (fundador) · Claude |
-> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9), medios de pago (§10), emails (§11), backoffice (§12). suscripción (§13, D55/D56): creación al checkout + lectura + gestión (`PATCH`) IMPLEMENTADAS; scheduler + pago recurrente pendientes. |
-> | **Last Updated** | 2026-07-23 |
+> | **Status** | 🟢 Contratos IMPLEMENTADOS y vivos: catálogo (§5), carrito+checkout (§6), cuentas+sesión (§7), buscador+envío (§8), mascotas (§9), medios de pago (§10), emails (§11), backoffice (§12), pago con **Flow** (§14, D58). suscripción (§13, D55/D56): creación al checkout + lectura + gestión (`PATCH`) IMPLEMENTADAS; scheduler + pago recurrente pendientes. |
+> | **Last Updated** | 2026-07-24 |
 > | **Depends On** | ARCHITECTURE.md, DATABASE.md |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ de *contratos de API*. Regla `ARCHITECTURE.md §2`: todo contrato nuevo se escribe AQUÍ antes de implementarse. |
@@ -77,27 +77,38 @@ El `cart_id` se persiste en `localStorage` (`manada_cart_id`).
 - `POST /store/carts/:id/line-items` · `POST .../line-items/:lineId` · `DELETE .../line-items/:lineId`.
 - La línea de Medusa → `CartItem` con `mapLineItemProduct` (precio = `unit_price`).
 
-### 6.2 Checkout → orden (`checkout.ts`) — secuencia nativa
+### 6.2 Checkout → pago con Flow (`checkout.ts` + `flow.ts`) — secuencia (D58)
 1. `POST /store/carts/:id` — `email` (invitado) + `shipping_address` + `billing_address`
-   (Chile: `country_code: "cl"`, comuna→`city`, región→`province`).
+   (Chile: `country_code: "cl"`, comuna→`city`, región→`province`). El RUT va en `metadata.rut`.
 2. `GET /store/shipping-options?cart_id=:id` (`fulfillment.listCartOptions`) → opciones
    reales (Estándar $3.990 / Express $5.990) → `POST /store/carts/:id/shipping-methods`.
-3. Pago **manual**: `initiatePaymentSession(cart, { provider_id: "pp_system_default" })`
-   (crea payment collection + sesión).
-4. `POST /store/carts/:id/complete` → `{ type: "order", order }` = **orden real**
-   (o `{ type: "cart", error }` si falla). Tras crear la orden, el front vacía el
-   carrito (`clear`) y va a `/checkout/confirmacion?orden=<display_id>`.
+3. **Pago con Flow** (§14): `POST /store/carts/:id/flow-payment` → el backend crea la
+   orden de pago en Flow y devuelve `{ url }`. El front guarda un snapshot de compra
+   (analítica) y **redirige** al checkout de Flow (`window.location = url`).
+4. **La orden Medusa NO se crea aquí.** Nace cuando **Flow confirma el pago** (webhook
+   `urlConfirmation` + `payment/getStatus`, §14). El navegador vuelve por `urlReturn` a
+   `/checkout/confirmacion?estado=<exito|rechazado|cancelado|pendiente|error>&orden=<display_id>`;
+   en éxito el front mide `purchase` (snapshot) y vacía el carrito.
 
-### 6.3 Efectos nativos (sin código propio)
+> **Por qué se difiere la orden hasta la confirmación de Flow (D58):** en Manada TODO
+> el post-pago cuelga del evento nativo `order.placed` (§6.3), que se dispara al
+> **completar el carrito**. Mover ese `complete` del click del usuario al webhook de
+> Flow ya verificado garantiza que la orden y sus efectos (correos, suscripción,
+> anticipación) solo ocurran con **pago confirmado**, sin tocar los subscribers.
+
+### 6.3 Efectos al confirmarse el pago (evento nativo `order.placed`)
+Se disparan cuando Flow confirma y el backend completa el carrito (§14), **una sola vez**
+(idempotencia por `completeCartWorkflow` + registro `flow_payment`):
 - **Inventario:** crear la orden **reserva** stock (baja el disponible); el `stocked`
   físico baja al marcar el **fulfillment manual** en el Admin.
-- **Orden** queda `pending` con pago `authorized` (manual), visible en el Admin
-  para preparar el despacho a mano (D22). Sin courier/SII/WhatsApp.
+- **Orden** queda `pending` con el pago **capturado** (best-effort: refleja "Pagado" en
+  el Admin, ya que Flow cobró). Subscribers de `order.placed`: correo de compra (§11),
+  reancla de anticipación (D35), creación de suscripción (§13, D55). Sin courier/SII/WhatsApp.
 
-### 6.4 Siguiente etapa
-**Mercado Pago Checkout Pro** (payment provider module + webhook + redirect/
-confirmación). *La transferencia carrito→cliente al iniciar sesión ya está
-implementada — ver §7.3.*
+### 6.4 Estado
+Pago **integrado con Flow (D58, §14)** — reemplaza el pago manual de D24 (proveedor interno
+`pp_system_default` conservado solo como vehículo de Medusa para materializar la orden).
+*La transferencia carrito→cliente al iniciar sesión ya está implementada — ver §7.3.*
 
 ---
 
@@ -241,6 +252,12 @@ Referencias a las tarjetas guardadas del cliente para la vista "Mis tarjetas" de
 `/cuenta/pagos`. Segundo módulo custom (patrón idéntico a `pet`, §9). Encapsulado en
 `apps/web/src/lib/medusa/payment-methods.ts`; el frontend no conoce la forma del
 backend fuera del mapper.
+
+> **Nota (D58):** la pasarela real del checkout es **Flow** (§14), no Mercado Pago. Flow
+> hospeda los medios de pago del comprador, así que "Mis tarjetas" (guardar/reusar tarjetas)
+> sigue siendo una feature **futura**; este módulo persiste referencias de presentación y no
+> participa del flujo de pago actual. La mención a Mercado Pago abajo es el análisis histórico
+> que originó el esquema (se conserva; el esquema es agnóstico de la pasarela).
 
 ### 10.1 Decisión de arquitectura (evaluación Mercado Pago, 2026-07-12)
 - **Persistencia interna de REFERENCIAS, no gestión directa de tokens MP** en esta etapa:
@@ -428,3 +445,64 @@ en `product.details.after`.
 source_order_id: string|null, created_at, updated_at }`.
 Mapper del front (futuro, Bloque 1.4): `StoreSubscription → SubscriptionView` (frecuencia legible
 "Cada N semanas", `next_delivery_date` formateada, precio con `formatCLP`).
+
+---
+
+## 14. Contrato de pago con Flow — IMPLEMENTADO (D58)
+
+Pasarela de pago real del checkout (**reemplaza el pago manual de D24**). Doc oficial de
+Flow: `https://developers.flow.cl/api`. Módulo custom `flow-payment` (espejo de `pet`/
+`subscription`) + `src/lib/flow.ts` (cliente HTTP) + `src/lib/flow-settle.ts` (conciliación).
+**Owner del código:** `apps/backend/src/modules/flow-payment/`, `src/lib/flow*.ts`,
+`src/api/store/carts/[id]/flow-payment/`, `src/api/flow/`. Front: `apps/web/src/lib/medusa/flow.ts`.
+
+### 14.1 Principio (por qué se difiere la orden)
+Todo el post-pago de Manada cuelga del evento nativo `order.placed` (correos §11, suscripción
+§13, anticipación D35), que se dispara al **completar el carrito**. En vez de completar en el
+click (pago manual, D24), el carrito se completa **solo cuando Flow confirma el pago**. Así la
+orden y sus efectos nacen con pago verificado, **sin tocar ningún subscriber existente**. La
+confirmación **nunca** se asume por el retorno del navegador: se re-consulta a Flow con
+`payment/getStatus`.
+
+### 14.2 Firma (HMAC-SHA256)
+Todos los parámetros (excepto `s`) se ordenan **alfabéticamente por nombre**, se concatenan
+como `nombreValor` **sin separadores** y se firman con **HMAC-SHA256** usando `FLOW_SECRET_KEY`.
+El hash hex viaja como parámetro `s`. Implementado en `signParams` (`src/lib/flow.ts`).
+
+### 14.3 Endpoints propios
+- **`POST /store/carts/:id/flow-payment`** (pub key, guest OK) → `{ url }`. Asegura payment
+  collection + sesión del proveedor interno `pp_system_default`, crea el pago en Flow
+  (`payment/create`, `paymentMethod: 9` = todos los medios) por el **total del carrito**
+  (server-side, autoritativo), persiste `flow_payment` (`pending`) y devuelve la URL del
+  checkout de Flow. **Reusa** un intento `pending` del mismo carrito/monto (no duplica cobros).
+- **`POST /flow/confirmation`** (público, fuera de `/store`) — webhook `urlConfirmation` de Flow.
+  Recibe `token` (form-encoded) → `settleFlowPayment` → 200. Devuelve **500 solo** si el pago
+  está confirmado pero la orden no se pudo crear (para que Flow **reintente**).
+- **`POST|GET /flow/return`** (público) — `urlReturn` del navegador. Verifica con `settleFlowPayment`
+  y **redirige** a `${STOREFRONT_URL}/checkout/confirmacion?estado=…&orden=…`.
+
+### 14.4 Llamadas a Flow (REST)
+- **`POST payment/create`** (`${FLOW_API_URL}/payment/create`, form-encoded): `apiKey`,
+  `commerceOrder` (único), `subject`, `amount` (CLP entero), `email`, `currency: CLP`,
+  `paymentMethod: 9`, `urlConfirmation`, `urlReturn`, `optional` (JSON `{rut}`), `s`.
+  Respuesta `{ token, url, flowOrder }` → redirect = `url?token=token`.
+- **`GET payment/getStatus`** (`?apiKey&token&s`): fuente de verdad. `status` → **1** pendiente ·
+  **2** pagada · **3** rechazada · **4** anulada.
+
+### 14.5 Idempotencia (sin duplicados)
+Dos capas: (1) el registro `flow_payment` como mutex — si ya está `paid`, no-op; (2)
+`completeCartWorkflow` es idempotente y **toma un lock** sobre el `cart_id` (consulta el link
+`order_cart`: si la orden ya existe la devuelve **sin re-emitir** `order.placed`). Aunque Flow
+reintente el callback o `urlReturn`/`urlConfirmation` lleguen a la vez, la orden y sus efectos
+ocurren **exactamente una vez**.
+
+### 14.6 Configuración (env, nunca hardcodeada)
+`FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_API_URL` (`https://sandbox.flow.cl/api` ↔
+`https://www.flow.cl/api`). Las URLs de callback las arma el backend con `MEDUSA_BACKEND_URL`
+(confirmation/return) y `STOREFRONT_URL` (redirect final). El frontend **no** recibe secretos.
+En dev, Flow no alcanza `localhost` → usar una URL pública (ngrok) en `MEDUSA_BACKEND_URL`.
+
+### 14.7 `flow_payment` (shape del backend)
+`{ id, cart_id, commerce_order, token, flow_order, redirect_url, amount, currency_code,
+status: "pending"|"paid"|"rejected"|"canceled", raw_status: number|null, order_id: string|null,
+payment_collection_id: string|null, error: string|null, created_at, updated_at }`.

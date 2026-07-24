@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ShieldCheck, Truck } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
@@ -25,8 +24,7 @@ import {
   listShippingOptions,
   setCheckoutInfo,
   selectShippingMethod,
-  initManualPayment,
-  completeCart,
+  createFlowPayment,
   getShippingPolicy,
   saveCustomerRut,
   type CheckoutAddress,
@@ -34,31 +32,36 @@ import {
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
-import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
+import { trackBeginCheckout } from "@/lib/analytics";
+import { PENDING_PURCHASE_KEY } from "@/lib/checkout-snapshot";
 import { formatRut, isValidRut } from "@/lib/rut";
 import { REGIONS, getComunas } from "@/lib/chile-regions";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Único medio de pago del MVP: transferencia manual (Mercado Pago llega después). */
+/**
+ * Medio de pago: Flow (D58). Flow agrupa varios medios (tarjeta de crédito/débito
+ * y otros); el usuario elige en el checkout de Flow tras la redirección.
+ */
 const PAYMENT_OPTIONS: PaymentOption[] = [
   {
-    id: "manual",
-    label: "Transferencia bancaria",
-    description: "Te enviamos los datos para transferir y confirmamos tu pago a mano.",
+    id: "flow",
+    label: "Pagar con Flow",
+    description:
+      "Tarjeta de crédito o débito y otros medios. Te llevamos al checkout seguro de Flow para completar el pago.",
   },
 ];
 
 /**
  * Checkout — UNA sola pantalla (AUDIT U047), sobre el carrito REAL de Medusa
- * (Fase 5 · Etapa 3, D24). Flujo 100% nativo: email + dirección → shipping options
- * → shipping method → sesión de pago manual → `complete` = orden real (stock
- * descontado, visible en el Admin). Compra como invitado siempre posible.
+ * (Fase 5 · Etapa 3, D24). Flujo: email + dirección → shipping options → shipping
+ * method → **pago con Flow** (D58): se crea la orden de pago en Flow y se redirige
+ * al usuario a su checkout. La ORDEN Medusa se crea recién cuando Flow confirma el
+ * pago (webhook + payment/getStatus). Compra como invitado siempre posible.
  */
 export default function CheckoutPage() {
-  const { cart, items, subtotal, isLoading, clear } = useCart();
+  const { cart, items, subtotal, isLoading } = useCart();
   const { user } = useSession();
-  const router = useRouter();
   const cartId = cart?.id;
 
   // Inició el checkout: se dispara una vez, cuando ya hay ítems que pagar.
@@ -84,7 +87,7 @@ export default function CheckoutPage() {
   const [shipOptions, setShipOptions] = useState<ShippingOptionView[]>([]);
   const [shippingId, setShippingId] = useState<string>("");
   const [policy, setPolicy] = useState<ShippingPolicy | null>(null);
-  const [paymentId, setPaymentId] = useState("manual");
+  const [paymentId, setPaymentId] = useState("flow");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -198,27 +201,29 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     try {
-      // Flujo nativo de Medusa, en orden. El RUT viaja en metadata (→ orden).
+      // Prepara el carrito. El RUT viaja en metadata (→ orden). El monto NO se
+      // envía: el backend cobra el total del carrito.
       await setCheckoutInfo(cartId, email.trim(), address, rutFormatted);
       // Cliente autenticado: guardamos el RUT para prellenar futuras compras
-      // (best-effort — nunca bloquea la orden).
+      // (best-effort — nunca bloquea el pago).
       if (user) void saveCustomerRut(rutFormatted).catch(() => {});
       await selectShippingMethod(cartId, shippingId);
-      await initManualPayment(cartId);
-      const { order, error } = await completeCart(cartId);
-      if (error || !order) {
-        setSubmitError(error ?? "No se pudo completar la orden. Intenta de nuevo.");
-        return;
+      // Crea la orden de pago en Flow → URL de su checkout.
+      const { url } = await createFlowPayment(cartId);
+      // Snapshot para medir la compra al volver de Flow (el carrito se vacía en
+      // la confirmación, recién con el pago confirmado). No bloquea si falla.
+      try {
+        sessionStorage.setItem(PENDING_PURCHASE_KEY, JSON.stringify({ items, total }));
+      } catch {
+        /* almacenamiento no disponible: la analítica degrada, el pago sigue */
       }
-      // Compra realizada: se mide ANTES de vaciar el carrito (aún tenemos los
-      // ítems). `transaction_id` = nº de orden → deduplica en GA4/Ads.
-      trackPurchase({ transactionId: String(order.display_id), value: order.total, items });
-      // Orden creada: vaciamos el carrito (uno nuevo) y vamos a la confirmación.
-      await clear();
-      router.push(`/checkout/confirmacion?orden=${order.display_id}`);
+      // Redirige al checkout de Flow (el usuario elige el medio de pago allí).
+      window.location.href = url;
+      // No reseteamos `submitting`: dejamos la página. Si algo falla, el catch lo hace.
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Ocurrió un error al pagar.");
-    } finally {
+      setSubmitError(
+        err instanceof Error ? err.message : "No se pudo iniciar el pago. Intenta de nuevo.",
+      );
       setSubmitting(false);
     }
   }
@@ -296,12 +301,12 @@ export default function CheckoutPage() {
                 {errors.shipping && <p className="text-sm text-danger">{errors.shipping}</p>}
               </Block>
 
-              {/* Pago: transferencia manual (MP en la próxima etapa) */}
+              {/* Pago: Flow (elige el medio en su checkout tras la redirección) */}
               <Block title="¿Cómo pagas?">
                 <PaymentMethod options={PAYMENT_OPTIONS} value={paymentId} onValueChange={setPaymentId} />
                 <p className="inline-flex items-center gap-1.5 text-[13px] text-text-secondary">
                   <ShieldCheck className="size-4 text-[var(--success)]" aria-hidden />
-                  Coordinamos el pago por transferencia y preparamos tu despacho apenas se confirme.
+                  Te llevamos al checkout seguro de Flow para completar el pago. Preparamos tu pedido apenas se confirme.
                 </p>
               </Block>
             </Stack>
@@ -341,10 +346,10 @@ export default function CheckoutPage() {
                 <OrderSummary
                   subtotal={subtotal}
                   shipping={shippingCost}
-                  note="Al pagar aceptas los términos. Coordinamos la transferencia y el despacho."
+                  note="Al pagar aceptas los términos. Te llevamos a Flow para completar el pago de forma segura."
                 >
                   <Button block size="lg" onClick={pay} disabled={submitting || isLoading}>
-                    {submitting ? "Creando tu orden…" : `Pagar ${formatCLP(total)}`}
+                    {submitting ? "Redirigiéndote a Flow…" : `Pagar ${formatCLP(total)}`}
                   </Button>
                   <Button variant="ghost" block asChild>
                     <Link href="/carrito">Volver al carrito</Link>

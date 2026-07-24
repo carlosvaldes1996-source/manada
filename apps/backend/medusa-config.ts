@@ -48,6 +48,10 @@ module.exports = defineConfig({
     // Módulo custom `subscription` (D55, API.md §13): el moat de recurrencia,
     // construido por capas. Punto 1 = creación al checkout con pago manual.
     { resolve: './src/modules/subscription' },
+    // Módulo custom `flow-payment` (D58, API.md §14): la pasarela de pago real
+    // (Flow). Persiste el ciclo de cada intento de pago y es el eje de la
+    // idempotencia (la orden solo se crea cuando Flow confirma vía getStatus).
+    { resolve: './src/modules/flow-payment' },
     // Almacenamiento de archivos (packshots subidos desde el Admin). Provider
     // local: guarda en `<cwd>/static` (= el dir que Medusa expone en `/static`,
     // hardcodeado) y devuelve URLs bajo `backend_url`. Por defecto ese URL sería

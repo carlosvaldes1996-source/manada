@@ -1,18 +1,14 @@
-import type { HttpTypes } from "@medusajs/types";
 import { medusa } from "./client";
 import { CART_FIELDS, type MedusaCart } from "./cart";
 
 /**
  * Flujo de checkout sobre la Store API de Medusa (Fase 5 · Etapa 3, D24).
  *
- * Todo nativo de Medusa: email + dirección en el carrito → shipping options →
- * shipping method → sesión de pago (manual) → `complete` = **orden real**. El
- * backend descuenta stock (reserva) y la orden queda en el Admin para preparar el
- * despacho manual. Sin lógica de negocio propia; el frontend solo orquesta llamadas.
+ * Prepara el carrito para pagar: email + dirección → shipping options → shipping
+ * method. El PAGO lo maneja Flow (D58, `lib/medusa/flow.ts` → `createFlowPayment`):
+ * la orden se crea recién cuando Flow confirma el pago (webhook + payment/getStatus),
+ * no al hacer click. El frontend solo orquesta llamadas; sin lógica de negocio.
  */
-
-/** Proveedor de pago MANUAL (transferencia/offline). MP llega en la próxima etapa. */
-export const MANUAL_PAYMENT_PROVIDER = "pp_system_default";
 
 /** Dirección de despacho mínima válida para Medusa (Chile). */
 export interface CheckoutAddress {
@@ -79,33 +75,4 @@ export async function selectShippingMethod(cartId: string, optionId: string): Pr
     { fields: CART_FIELDS },
   );
   return cart as unknown as MedusaCart;
-}
-
-/** Inicia la sesión de pago MANUAL sobre el payment collection del carrito. */
-export async function initManualPayment(cartId: string): Promise<void> {
-  const { cart } = await medusa.store.cart.retrieve(cartId, {
-    fields: "id,region_id,currency_code,+payment_collection.id,*payment_collection.payment_sessions",
-  });
-  await medusa.store.payment.initiatePaymentSession(cart as HttpTypes.StoreCart, {
-    provider_id: MANUAL_PAYMENT_PROVIDER,
-  });
-}
-
-export interface CompletedOrder {
-  id: string;
-  display_id: number;
-  email: string;
-  total: number;
-}
-
-/** Completa el carrito → crea la ORDEN. Devuelve la orden o un mensaje de error. */
-export async function completeCart(
-  cartId: string,
-): Promise<{ order?: CompletedOrder; error?: string }> {
-  const res = await medusa.store.cart.complete(cartId);
-  if (res.type === "order") {
-    const o = res.order;
-    return { order: { id: o.id, display_id: o.display_id ?? 0, email: o.email ?? "", total: o.total ?? 0 } };
-  }
-  return { error: res.error?.message ?? "No se pudo completar la orden." };
 }

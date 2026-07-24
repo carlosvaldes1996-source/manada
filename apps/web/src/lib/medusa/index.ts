@@ -24,16 +24,13 @@ export {
   type MedusaCart,
 } from "./cart";
 export {
-  MANUAL_PAYMENT_PROVIDER,
   listShippingOptions,
   setCheckoutInfo,
   selectShippingMethod,
-  initManualPayment,
-  completeCart,
   type CheckoutAddress,
   type ShippingOptionView,
-  type CompletedOrder,
 } from "./checkout";
+export { createFlowPayment } from "./flow";
 export {
   mapCustomer,
   getCurrentCustomer,
