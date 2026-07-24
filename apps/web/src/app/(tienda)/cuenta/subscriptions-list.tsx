@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Stack, Row } from "@/components/ui/stack";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listMySubscriptions } from "@/lib/medusa/subscriptions";
+import { useSubscriptions } from "@/components/providers";
 import { formatCLP } from "@/lib/format";
 import type { SubscriptionView } from "@/types";
 
 /**
- * Lista read-only de las suscripciones del cliente (D55 · Punto 1). Reemplaza la
- * card "Próximamente" de /cuenta: ahora que el flujo card→checkout→suscripción es
- * real, aquí se ven las entregas recurrentes creadas. La gestión (pausar/cancelar/
- * cambiar frecuencia) es un bloque posterior; por eso todavía no hay acciones.
+ * Lista read-only de las suscripciones del cliente (D55 · Punto 1). Consume el
+ * `SubscriptionProvider` (D56·C, fuente única con la Home). Reemplaza la card
+ * "Próximamente" de /cuenta. La gestión (pausar/cancelar/cambiar frecuencia) es el
+ * Bloque D; por eso todavía no hay acciones.
  */
 
 const STATUS_LABEL: Record<SubscriptionView["status"], string> = {
@@ -23,19 +22,9 @@ const STATUS_LABEL: Record<SubscriptionView["status"], string> = {
 };
 
 export function SubscriptionsList() {
-  const [subs, setSubs] = useState<SubscriptionView[] | null>(null);
+  const { subscriptions: subs, isLoading } = useSubscriptions();
 
-  useEffect(() => {
-    let active = true;
-    listMySubscriptions()
-      .then((s) => active && setSubs(s))
-      .catch(() => active && setSubs([]));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (subs === null) return <Skeleton className="h-24 w-full" />;
+  if (isLoading && subs.length === 0) return <Skeleton className="h-24 w-full" />;
 
   if (subs.length === 0) {
     return (

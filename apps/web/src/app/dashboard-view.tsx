@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bone, Cookie, Sparkles, Stethoscope } from "lucide-react";
@@ -19,7 +19,7 @@ import {
 } from "@/components/pet";
 import { ProductCard, QuickBuyCard, CategoryTiles } from "@/components/commerce";
 import { AppShell } from "@/components/layout";
-import { useCart, usePet, useSession } from "@/components/providers";
+import { useCart, usePet, useSession, useSubscriptions } from "@/components/providers";
 import { petFoodAnticipation } from "@/lib/anticipation";
 import { recommendComplements } from "@/lib/recommend";
 import type { Product } from "@/types";
@@ -36,7 +36,16 @@ import type { Product } from "@/types";
 export function DashboardView({ products }: { products: Product[] }) {
   const { activePet, foodAssignedAt } = usePet();
   const { user } = useSession();
+  const { activeForProduct, refresh: refreshSubscriptions } = useSubscriptions();
   const { addItem } = useCart();
+
+  // La Home es el centro del plan: re-hidrata las suscripciones al entrar, para
+  // reflejar un plan recién creado (el subscriber de checkout es asíncrono; al
+  // llegar aquí ya terminó) sin depender de un re-login. El guard del provider
+  // evita fetches duplicados con la hidratación de sesión.
+  useEffect(() => {
+    void refreshSubscriptions();
+  }, [refreshSubscriptions]);
   const { toast } = useToast();
   const router = useRouter();
   // Definir qué come ≠ comprar (D39): el selector asigna sin tocar el carrito.
@@ -54,6 +63,10 @@ export function DashboardView({ products }: { products: Product[] }) {
     activePet && currentFood
       ? petFoodAnticipation(activePet, currentFood, foodAssignedAt[activePet.id])
       : null;
+
+  // Plan de suscripción ACTIVO para su alimento (D56·C): si existe, la card pasa a
+  // "centro del plan". Match por producto (product_id === currentFoodId).
+  const subscription = activeForProduct(activePet?.currentFoodId);
 
   // Pocos y muy relevantes (sin carrusel): cuidado de su especie, no alimento.
   const complements = activePet ? recommendComplements(activePet, products, 4) : [];
@@ -144,6 +157,7 @@ export function DashboardView({ products }: { products: Product[] }) {
                 pet={activePet}
                 food={currentFood}
                 anticipation={anticipation}
+                subscription={subscription}
                 onReorder={currentFood ? reorder : undefined}
                 reorderPending={reordering}
                 onDefineFood={() => setFoodOpen(true)}

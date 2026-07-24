@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Camera, Check, Circle, Clock, HelpCircle, RefreshCw, ShoppingBag } from "lucide-react";
+import { Camera, Check, Circle, Clock, HelpCircle, RefreshCw, ShoppingBag, Truck } from "lucide-react";
 import { fadeInUp } from "@/lib/motion";
 import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { RunOutEstimate } from "@/lib/anticipation";
-import type { Pet, Product } from "@/types";
+import type { Pet, Product, SubscriptionView } from "@/types";
 import { SPECIES_EMOJI } from "./pet-avatar";
 import { SPECIES_LABEL, STAGE_LABEL } from "./pet-status";
 
@@ -21,6 +21,9 @@ export interface PetStatusCardProps {
   food?: Product;
   /** Días restantes derivados de su alimento (null si falta peso o saco). */
   anticipation?: RunOutEstimate | null;
+  /** Plan de suscripción ACTIVO para su alimento (D56·C). Si existe, la card pasa
+   *  de "centro de compra" a "centro del plan": estado activo + próximo envío. */
+  subscription?: SubscriptionView | null;
   /** Pone su alimento en el carrito (recompra en dos clics). */
   onReorder?: () => void;
   /** Deshabilita el CTA mientras el carrito confirma. */
@@ -100,15 +103,39 @@ function PetPortrait({
  * de % (un "~100%" no significa nada): comunica el tiempo, no el porcentaje.
  * El tramo recorrido va en Miel (anticipación); el punto es "hoy".
  */
-function FoodTimeline({ estimate, className }: { estimate: RunOutEstimate; className?: string }) {
+function FoodTimeline({
+  estimate,
+  nextDeliveryDate,
+  className,
+}: {
+  estimate: RunOutEstimate;
+  /** Fecha del próximo envío (si hay plan activo): marca 📦 que cae ANTES del
+   *  "se acaba" — prueba visual de "nunca le falte" (D56·C). */
+  nextDeliveryDate?: Date;
+  className?: string;
+}) {
   const total = estimate.daysSincePurchase + estimate.daysLeft;
   const pct = total > 0 ? Math.round((estimate.daysSincePurchase / total) * 100) : 0;
   const dotPct = Math.min(94, Math.max(6, pct));
   const showTodayLabel = pct >= 15 && pct <= 85;
+  const deliveryPct = (() => {
+    if (!nextDeliveryDate) return null;
+    // Posición del envío en la línea SIN usar "hoy" (puro en render): días desde la
+    // compra al envío = total − (días del envío al "se acaba"), con las fechas
+    // absolutas que ya trae el estimate.
+    const daysDeliveryToRunout =
+      (estimate.runOutDate.getTime() - nextDeliveryDate.getTime()) / 86_400_000;
+    const p = total > 0 ? ((total - daysDeliveryToRunout) / total) * 100 : 0;
+    return Math.min(96, Math.max(4, Math.round(p)));
+  })();
   return (
     <div
       role="img"
-      aria-label={`Va ${pluralize(estimate.daysSincePurchase, "día")} con este saco; se acaba ${formatDeliveryDate(estimate.runOutDate)}`}
+      aria-label={
+        nextDeliveryDate
+          ? `Próximo envío ${formatDeliveryDate(nextDeliveryDate)}; el saco se acaba ${formatDeliveryDate(estimate.runOutDate)}`
+          : `Va ${pluralize(estimate.daysSincePurchase, "día")} con este saco; se acaba ${formatDeliveryDate(estimate.runOutDate)}`
+      }
       className={cn("max-w-sm", className)}
     >
       <div className="relative flex h-3 items-center">
@@ -122,6 +149,14 @@ function FoodTimeline({ estimate, className }: { estimate: RunOutEstimate; class
           className="absolute size-3 -translate-x-1/2 rounded-full bg-miel-600"
           style={{ left: `${dotPct}%` }}
         />
+        {deliveryPct != null && (
+          <span
+            aria-hidden
+            title="Próximo envío"
+            className="absolute size-3.5 -translate-x-1/2 rounded-full border-2 border-surface bg-terracota-500 shadow-sm"
+            style={{ left: `${deliveryPct}%` }}
+          />
+        )}
         <span
           aria-hidden
           className="absolute right-0 size-2.5 rounded-full border-2 border-terracota-200 bg-surface"
@@ -156,10 +191,14 @@ function PetPlan({
   pet,
   anticipation,
   hasFood,
+  subscription,
+  foodSlug,
 }: {
   pet: Pet;
   anticipation?: RunOutEstimate | null;
   hasFood: boolean;
+  subscription?: SubscriptionView | null;
+  foodSlug?: string;
 }) {
   const foodStatus = anticipation ? (
     <>
@@ -185,9 +224,35 @@ function PetPlan({
       <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <li className="flex items-center gap-2">{foodStatus}</li>
         <li className="flex items-center gap-2">
-          <RefreshCw className="size-4 text-text-secondary" aria-hidden />
-          <span className="text-[14px] font-semibold text-text-primary">Entregas automáticas</span>
-          <Badge variant="neutral">Próximamente</Badge>
+          {subscription ? (
+            <>
+              <Truck className="size-4 text-success-strong" aria-hidden />
+              <span className="text-[14px] font-semibold text-text-primary">Entregas automáticas</span>
+              <Badge variant="success">Activo</Badge>
+              {subscription.nextDeliveryDate && (
+                <span className="caption text-text-secondary">
+                  próximo {formatDeliveryDate(subscription.nextDeliveryDate)}
+                </span>
+              )}
+            </>
+          ) : hasFood && foodSlug ? (
+            <>
+              <RefreshCw className="size-4 text-text-secondary" aria-hidden />
+              <span className="text-[14px] font-semibold text-text-primary">Envío automático</span>
+              <Link
+                href={`/producto/${foodSlug}`}
+                className="caption font-semibold text-text-brand underline-offset-2 hover:underline"
+              >
+                Actívalo →
+              </Link>
+            </>
+          ) : (
+            <>
+              <RefreshCw className="size-4 text-text-secondary" aria-hidden />
+              <span className="text-[14px] font-semibold text-text-primary">Entregas automáticas</span>
+              <Badge variant="neutral">Próximamente</Badge>
+            </>
+          )}
         </li>
       </ul>
     </div>
@@ -206,11 +271,13 @@ export function PetStatusCard({
   pet,
   food,
   anticipation,
+  subscription,
   onReorder,
   reorderPending,
   onDefineFood,
   className,
 }: PetStatusCardProps) {
+  const isSubscribed = !!subscription;
   // Estado general: ok (>7 días) · queda poco (≤7) · falta un dato (peso/alimento).
   const state = anticipation
     ? anticipation.daysLeft > 7
@@ -230,18 +297,21 @@ export function PetStatusCard({
     .filter(Boolean)
     .join(" · ");
 
-  const badge =
-    state === "ok" ? (
-      <Badge variant="success" icon={<Check className="size-3.5" />}>
-        Todo va bien
-      </Badge>
-    ) : state === "low" ? (
-      <Badge variant="subscribe" icon={<Clock className="size-3.5" />}>
-        Queda poco
-      </Badge>
-    ) : (
-      <Badge variant="neutral">Falta un dato</Badge>
-    );
+  const badge = isSubscribed ? (
+    <Badge variant="success" icon={<Check className="size-3.5" />}>
+      Plan activo
+    </Badge>
+  ) : state === "ok" ? (
+    <Badge variant="success" icon={<Check className="size-3.5" />}>
+      Todo va bien
+    </Badge>
+  ) : state === "low" ? (
+    <Badge variant="subscribe" icon={<Clock className="size-3.5" />}>
+      Queda poco
+    </Badge>
+  ) : (
+    <Badge variant="neutral">Falta un dato</Badge>
+  );
 
   const headline = anticipation
     ? anticipation.daysLeft > 0
@@ -251,19 +321,22 @@ export function PetStatusCard({
       ? `Come ${food.brand.name} ${food.name}.`
       : "Aún no sabemos qué come.";
 
-  // Detalle observacional: el sistema observa, no solo calcula.
-  const subline = anticipation
-    ? [
-        anticipation.daysSincePurchase > 0
-          ? `Va ~${pluralize(anticipation.daysSincePurchase, "día")} con este saco.`
-          : "Saco recién comenzado.",
-        state === "low" ? "Pide con tiempo." : null,
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : food
-      ? "Cuéntanos su peso y te decimos cuánto le dura."
-      : "Dinos su alimento y nos adelantamos a la próxima bolsa.";
+  // Con plan activo, la promesa cumplida manda; si no, detalle observacional.
+  const subline =
+    isSubscribed && subscription?.nextDeliveryDate
+      ? `Su próximo envío llega el ${formatDeliveryDate(subscription.nextDeliveryDate)}.`
+      : anticipation
+        ? [
+            anticipation.daysSincePurchase > 0
+              ? `Va ~${pluralize(anticipation.daysSincePurchase, "día")} con este saco.`
+              : "Saco recién comenzado.",
+            state === "low" ? "Pide con tiempo." : null,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        : food
+          ? "Cuéntanos su peso y te decimos cuánto le dura."
+          : "Dinos su alimento y nos adelantamos a la próxima bolsa.";
 
   const reason =
     anticipation && food
@@ -312,12 +385,34 @@ export function PetStatusCard({
                 </p>
               )}
             </div>
-            {anticipation && <FoodTimeline estimate={anticipation} className="lg:pb-1" />}
+            {anticipation && (
+              <FoodTimeline
+                estimate={anticipation}
+                nextDeliveryDate={subscription?.nextDeliveryDate}
+                className="lg:pb-1"
+              />
+            )}
           </div>
 
           {/* Una acción dominante; lo demás la apoya. */}
           <div className="mt-auto flex flex-wrap items-center gap-3 pt-4">
-            {food && onReorder ? (
+            {isSubscribed ? (
+              <>
+                {/* Suscrito: la acción deja de ser "comprar" y pasa a administrar
+                    (read-only en C; la gestión completa llega en el Bloque D). */}
+                <Button asChild>
+                  <Link href="/cuenta">
+                    <Truck className="size-4" aria-hidden />
+                    Ver mi plan
+                  </Link>
+                </Button>
+                {food && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/producto/${food.slug}`}>Ver producto</Link>
+                  </Button>
+                )}
+              </>
+            ) : food && onReorder ? (
               <>
                 <Button
                   onClick={onReorder}
@@ -361,7 +456,13 @@ export function PetStatusCard({
 
       {/* ── El espacio del futuro: el plan, no la transacción ── */}
       <div className="border-t border-terracota-100 bg-surface/60 px-4 py-3 sm:px-5">
-        <PetPlan pet={pet} anticipation={anticipation} hasFood={Boolean(food)} />
+        <PetPlan
+          pet={pet}
+          anticipation={anticipation}
+          hasFood={Boolean(food)}
+          subscription={subscription}
+          foodSlug={food?.slug}
+        />
       </div>
     </motion.section>
   );

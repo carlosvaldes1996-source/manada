@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/components/ui/toast";
 import { MotionProvider } from "./motion-provider";
 import { SessionProvider } from "./session-provider";
+import { SubscriptionProvider } from "./subscription-provider";
 import { PetProvider } from "./pet-provider";
 import { CartProvider } from "./cart-provider";
 import { SubscribeFlowProvider } from "./subscribe-flow-provider";
@@ -11,22 +12,25 @@ import { SubscribeFlowProvider } from "./subscribe-flow-provider";
 /**
  * Composición única de providers de la app, montada en el Root Layout.
  * Orden: Motion (config global) → Tooltip (a11y de toda la app) → Session
- * (cuenta) → Pet (núcleo/moat) → Cart (comercio) → Toast (viewport de feedback) →
- * SubscribeFlow (hoja de confirmación de suscripción; necesita Cart, el más
- * interno para envolver todas las superficies que ofrecen suscribir).
+ * (cuenta) → Subscription (planes del cliente; hidrata con la sesión) → Pet
+ * (núcleo/moat) → Cart (comercio) → Toast (viewport de feedback) → SubscribeFlow
+ * (hoja de confirmación de suscripción; necesita Cart, el más interno para
+ * envolver todas las superficies que ofrecen suscribir).
  */
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <MotionProvider>
       <TooltipProvider delayDuration={200}>
         <SessionProvider>
-          <PetProvider>
-            <CartProvider>
-              <ToastProvider>
-                <SubscribeFlowProvider>{children}</SubscribeFlowProvider>
-              </ToastProvider>
-            </CartProvider>
-          </PetProvider>
+          <SubscriptionProvider>
+            <PetProvider>
+              <CartProvider>
+                <ToastProvider>
+                  <SubscribeFlowProvider>{children}</SubscribeFlowProvider>
+                </ToastProvider>
+              </CartProvider>
+            </PetProvider>
+          </SubscriptionProvider>
         </SessionProvider>
       </TooltipProvider>
     </MotionProvider>
@@ -35,5 +39,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
 export { useSession } from "./session-provider";
 export { usePet, type PetProfileChanges } from "./pet-provider";
+export { useSubscriptions } from "./subscription-provider";
 export { useCart } from "./cart-provider";
 export { useSubscribeFlow } from "./subscribe-flow-provider";
