@@ -45,6 +45,15 @@ const STEP_IDS = ["basico", "etapa"] as const;
 type StepId = (typeof STEP_IDS)[number];
 
 /**
+ * Borrador persistido en la pestaña (sessionStorage): si el usuario sale del flujo
+ * por error —clásico en móvil con el gesto "atrás", que abandona el route completo
+ * en vez de retroceder un paso— y vuelve, no pierde lo que ya había llenado. Se
+ * borra al completar el alta. No usamos localStorage a propósito: un borrador a
+ * medias no debe sobrevivir al cierre de la pestaña.
+ */
+const DRAFT_STORAGE_KEY = "manada_onboarding_draft";
+
+/**
  * Especies del MVP: solo perro y gato. "Otro" existe en el dominio pero se
  * ocultó del alta (simplificación 2026-07-12): el catálogo real no tiene
  * productos para otras especies y el flujo completo (razas, recomendación,
@@ -81,6 +90,40 @@ export function OnboardingWizard() {
   useEffect(() => {
     trackOnboardingStart();
   }, []);
+
+  // Restaura el borrador guardado al (re)montar. Corre solo en cliente, después de
+  // hidratar → sin mismatch de SSR. `restored` habilita el guardado recién después,
+  // para que este montaje no pise lo guardado con el estado por defecto.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as { draft?: Draft; stepIndex?: number };
+        if (saved.draft) setDraft(saved.draft);
+        if (
+          typeof saved.stepIndex === "number" &&
+          saved.stepIndex >= 0 &&
+          saved.stepIndex < STEP_IDS.length
+        ) {
+          setStepIndex(saved.stepIndex);
+        }
+      }
+    } catch {
+      /* almacenamiento no disponible o dato corrupto: se empieza limpio */
+    }
+    setRestored(true);
+  }, []);
+
+  // Guarda cada cambio del borrador (y el paso actual) una vez restaurado.
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ draft, stepIndex }));
+    } catch {
+      /* almacenamiento lleno/no disponible: el flujo sigue, solo sin persistir */
+    }
+  }, [restored, draft, stepIndex]);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -159,6 +202,12 @@ export function OnboardingWizard() {
       };
       pet.completeness = profileCompleteness(pet);
       await addPet(pet, { activate: true });
+      // Alta completada: el perfil ya existe, el borrador no debe reaparecer.
+      try {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {
+        /* no-op */
+      }
       router.push("/comenzar/recomendacion");
     } finally {
       finishingRef.current = false;
