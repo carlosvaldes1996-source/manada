@@ -472,7 +472,7 @@ function PreviewRow({ label, value, highlight }: { label: string; value?: string
   );
 }
 
-/** Input numérico de peso con stepper ±1 kg (peso exacto). */
+/** Input numérico de peso con stepper ±1 kg (peso exacto, acepta decimales). */
 function ExactWeightInput({
   value,
   onChange,
@@ -481,12 +481,32 @@ function ExactWeightInput({
   onChange: (kg: number | undefined) => void;
 }) {
   const round1 = (n: number) => Math.round(n * 10) / 10;
+  // Buffer de texto: un <input type="number"> controlado por un `number` no deja
+  // escribir el separador decimal (al teclear "4." el valor vuelve a 4 y borra el
+  // punto). Guardamos el texto crudo y emitimos el número parseado —mismo patrón
+  // que el editor de /cuenta— para poder ingresar 4,3 · 7,5 · 12,8 kg.
+  const [text, setText] = useState(value != null ? String(value) : "");
+  const [lastValue, setLastValue] = useState(value);
+  // Re-sincroniza el buffer cuando el peso cambia desde afuera (stepper, estimación
+  // por raza, borrador restaurado) sin pisar estados intermedios al teclear ("4.").
+  // Ajuste de estado en render (patrón recomendado por React, sin useEffect).
+  if (value !== lastValue) {
+    setLastValue(value);
+    const typed = parseFloat(text.replace(",", "."));
+    if (value !== (Number.isFinite(typed) ? typed : undefined)) {
+      setText(value != null ? String(value) : "");
+    }
+  }
+
+  const bump = (delta: number) =>
+    onChange(round1(Math.min(150, Math.max(0.1, (value ?? 0) + delta))));
+
   return (
     <div className="flex max-w-[280px] items-center gap-3">
       <button
         type="button"
         aria-label="Bajar 1 kg"
-        onClick={() => onChange(Math.max(1, round1((value ?? 1) - 1)))}
+        onClick={() => bump(-1)}
         className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
       >
         −
@@ -502,10 +522,12 @@ function ExactWeightInput({
           autoFocus
           trailing="kg"
           withField={false}
-          value={value ?? ""}
+          value={text}
           onChange={(e) => {
-            const n = parseFloat(e.target.value);
-            onChange(Number.isFinite(n) ? n : undefined);
+            const raw = e.target.value;
+            setText(raw);
+            const n = parseFloat(raw.replace(",", "."));
+            onChange(Number.isFinite(n) && n > 0 ? n : undefined);
           }}
           className="text-center"
         />
@@ -513,7 +535,7 @@ function ExactWeightInput({
       <button
         type="button"
         aria-label="Subir 1 kg"
-        onClick={() => onChange(Math.min(150, round1((value ?? 0) + 1)))}
+        onClick={() => bump(1)}
         className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border-default bg-surface text-xl font-bold text-text-primary transition-colors hover:bg-subtle"
       >
         +

@@ -84,14 +84,18 @@ export function LandingView({ products }: { products: Product[] }) {
               role="img"
               aria-label="Una mujer acaricia a su perro golden retriever en el living de su casa"
             />
-            <div className="absolute inset-x-3 bottom-3 rounded-[var(--radius-lg)] border border-terracota-100 bg-surface/95 p-4 shadow-lg backdrop-blur-sm sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-4 sm:max-w-[19rem]">
+            {/* En móvil la tarjeta se apoya abajo sobre una foto donde el perro está
+                bajo-centrado: se mantiene compacta (menos padding, sin las píldoras)
+                para tapar menos y dejar ver a la mascota. En sm+ flota arriba-derecha
+                sobre la pared (espacio negativo) y muestra todo. */}
+            <div className="absolute inset-x-3 bottom-3 rounded-[var(--radius-lg)] border border-terracota-100 bg-surface/95 p-3.5 shadow-lg backdrop-blur-sm sm:inset-x-auto sm:top-4 sm:right-4 sm:bottom-auto sm:max-w-[19rem] sm:p-4">
               <span className="overline inline-flex items-center gap-1.5 text-text-brand">
                 <Sparkles className="size-3.5" aria-hidden /> Para Toby 🐾
               </span>
               <h2 className="heading-4 mt-0.5 text-text-primary">
                 A <span className="pet-name">Toby</span> le quedan ~{TOBY_ANTICIPATION.daysLeft} días de comida
               </h2>
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-2.5 flex items-center gap-3 sm:mt-3">
                 {/* Misma fuente única de anticipación que la app (U040/U056) */}
                 <Progress
                   value={TOBY_ANTICIPATION.percentLeft}
@@ -104,7 +108,7 @@ export function LandingView({ products }: { products: Product[] }) {
                   ~{TOBY_ANTICIPATION.percentLeft}%
                 </span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 hidden flex-wrap gap-2 sm:flex">
                 <Badge variant="subscribe">
                   <CalendarClock className="size-3.5" aria-hidden /> Llega el martes
                 </Badge>

@@ -95,7 +95,7 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
+      <div className="@container flex flex-1 flex-col gap-1.5 p-4">
         <span className="overline text-text-secondary">{product.brand.name}</span>
         <h3 className="text-[15px] leading-snug font-semibold text-text-primary">
           <Link href={href} className="hover:text-text-brand">
@@ -117,12 +117,15 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
           />
         </span>
 
-        <div className="mt-auto flex gap-2 pt-3">
+        {/* Prioridad invertida en suscribibles: Suscribirme es la acción principal;
+            comprar una vez queda secundaria (presente, no compite). En cards angostas
+            (grilla móvil 2-col) los CTAs se apilan a ancho completo para que ninguno
+            se corte; cuando la card tiene espacio (rail, tablet, desktop) vuelven a una
+            fila compacta con el secundario como ícono. La container query mira el ancho
+            REAL de la card, no el del viewport — por eso el rail de la landing no cambia. */}
+        <div className="mt-auto flex flex-col gap-2 pt-3 @min-[13rem]:flex-row">
           {showSubscribe && product.subscribable && !soldOut ? (
             <>
-              {/* Prioridad invertida en suscribibles: Suscribirme es la acción
-                  principal; comprar una vez queda secundaria (presente, no compite).
-                  Misma fila que el resto del catálogo — sin ruido visual extra. */}
               <Button
                 size="sm"
                 block
@@ -134,11 +137,14 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
               <Button
                 size="sm"
                 variant="secondary"
+                block
+                className="@min-[13rem]:w-auto"
                 aria-label="Comprar una vez"
                 title="Comprar una vez"
                 onClick={addOnce}
+                leadingIcon={<ShoppingBag className="size-4" aria-hidden />}
               >
-                <ShoppingBag className="size-4" aria-hidden />
+                <span className="@min-[13rem]:sr-only">Comprar una vez</span>
               </Button>
             </>
           ) : (
