@@ -118,10 +118,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     input: { payment_collection_id: paymentCollectionId, provider_id: INTERNAL_PAYMENT_PROVIDER },
   });
 
-  // (2) Crea el pago en Flow. `commerceOrder` único (ms + sufijo aleatorio) para
-  //     que dos clicks casi simultáneos no colisionen en Flow.
+  // (2) Crea el pago en Flow. `commerceOrder` único (cola del carrito + ms + sufijo
+  //     aleatorio) para que dos clicks casi simultáneos no colisionen en Flow. Flow
+  //     LIMITA `commerceOrder` a 45 caracteres: usamos solo la cola del id del
+  //     carrito (parte más distintiva, para trazabilidad) y clampeamos por seguridad.
+  //     La conciliación real es por `token`/registro `flow_payment`, no por este string.
   const rand = Math.random().toString(36).slice(2, 6);
-  const commerceOrder = `MANADA-${cartId.replace(/^cart_/, "")}-${Date.now().toString(36)}${rand}`;
+  const cartTail = cartId.replace(/^cart_/, "").slice(-8);
+  const commerceOrder = `MANADA-${cartTail}-${Date.now().toString(36)}${rand}`.slice(0, 45);
   const backendUrl = (process.env.MEDUSA_BACKEND_URL || "http://localhost:9000").replace(/\/+$/, "");
   const rut = typeof cart.metadata?.rut === "string" ? (cart.metadata.rut as string) : undefined;
 
