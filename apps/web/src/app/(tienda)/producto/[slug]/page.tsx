@@ -1,13 +1,27 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProductByHandle, listProducts, getShippingPolicy } from "@/lib/medusa";
+import {
+  getCachedCatalog,
+  getCachedProductByHandle,
+  getCachedShippingPolicy,
+} from "@/lib/medusa/catalog-cache";
 import { categoryLabel } from "@/lib/catalog";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbSchema, productSchema, resolveProductImage } from "@/lib/seo";
 import { ProductView } from "./product-view";
 
-// La ficha se hidrata desde el backend en cada request (no en el build).
-export const dynamic = "force-dynamic";
+// Ficha cacheada con ISR (`revalidate` 300s): se sirve desde el edge sin round-trip
+// a Railway por visita. El desfase máximo (5 min) solo afecta datos cosméticos
+// (urgencia/agotado); add-to-cart y checkout validan stock y precio en vivo, así
+// que no hay riesgo de sobreventa ni de cobro con precio obsoleto.
+export const revalidate = 300;
+
+// Devolver [] activa ISR en un segmento dinámico (requisito de Next para revalidar
+// rutas en runtime): nada se prerenderiza en build —el catálogo vive en el backend—
+// y cada slug se renderiza on-demand la primera vez y queda cacheado por `revalidate`.
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -15,7 +29,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductByHandle(slug);
+  const product = await getCachedProductByHandle(slug);
   if (!product) return { title: "Producto" };
 
   const title = `${product.brand.name} · ${product.name}`;
@@ -46,9 +60,9 @@ export default async function ProductoPage({
 }) {
   const { slug } = await params;
   const [product, products, policy] = await Promise.all([
-    getProductByHandle(slug),
-    listProducts(),
-    getShippingPolicy(),
+    getCachedProductByHandle(slug),
+    getCachedCatalog(),
+    getCachedShippingPolicy(),
   ]);
   if (!product) notFound();
 

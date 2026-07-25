@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Product } from "@/types";
 import { medusa } from "./client";
 import { getRegionId } from "./region";
@@ -44,7 +45,14 @@ export async function searchProducts(query: string, limit = 24): Promise<Product
   return listProducts({ q, limit });
 }
 
-export async function getProductByHandle(handle: string): Promise<Product | null> {
+/**
+ * La PDP pide el producto dos veces por render (en `generateMetadata` y en el
+ * cuerpo de la página). `React.cache` deduplica esas llamadas dentro del mismo
+ * render → un solo request al backend por handle. No persiste entre requests (la
+ * frescura del catálogo la gobierna el `revalidate` de la ruta), así que no
+ * introduce datos obsoletos.
+ */
+export const getProductByHandle = cache(async (handle: string): Promise<Product | null> => {
   const region_id = await getRegionId();
   const { products } = await medusa.store.product.list({
     handle,
@@ -53,4 +61,4 @@ export async function getProductByHandle(handle: string): Promise<Product | null
     limit: 1,
   });
   return products[0] ? mapProduct(products[0]) : null;
-}
+});

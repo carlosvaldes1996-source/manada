@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import { categoryLabel } from "@/lib/catalog";
-import { listProducts } from "@/lib/medusa";
+import { getCachedCatalog } from "@/lib/medusa/catalog-cache";
 import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbSchema } from "@/lib/seo";
 import { CategoryView } from "./category-view";
 
-// El catálogo se hidrata desde el backend en cada request (no en el build).
-export const dynamic = "force-dynamic";
+// Catálogo cacheado con ISR (`revalidate` 300s): se sirve desde el edge sin
+// round-trip a Railway por visita. El desfase máximo (5 min) solo afecta datos
+// cosméticos (p. ej. urgencia de stock); carrito/checkout validan en vivo.
+export const revalidate = 300;
+
+// Devolver [] activa ISR en un segmento dinámico (requisito de Next para revalidar
+// rutas en runtime): nada se prerenderiza en build —el catálogo vive en el backend—
+// y cada slug se renderiza on-demand la primera vez y queda cacheado por `revalidate`.
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -31,7 +40,7 @@ export default async function CategoriaPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const products = await listProducts();
+  const products = await getCachedCatalog();
 
   const breadcrumb = breadcrumbSchema([
     { name: "Inicio", path: "/" },

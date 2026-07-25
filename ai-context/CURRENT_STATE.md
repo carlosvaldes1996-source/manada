@@ -6,7 +6,7 @@
 > | **Purpose** | Foto del estado actual: qué es real, qué frentes están abiertos y cuál es el siguiente paso. Se **reescribe** al cerrar cada hito (no se apila; la narración histórica vive en `DECISIONS.md`). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-24 |
+> | **Last Updated** | 2026-07-25 |
 > | **Depends On** | DECISIONS.md, ROADMAP.md |
 > | **Supersedes** | `history/05-bitacora-avances-2026-07.md` (versión-bitácora archivada) |
 > | **Source of Truth** | ✅ del *estado actual y el siguiente paso*. Único dueño del estado: ningún otro doc lo repite. |
@@ -41,6 +41,7 @@
 - **Funnel de adquisición** F1–F4 ✅ sobre catálogo real (O5, D33) — doc: `FUNNEL_TARGET.md`. **F4 rediseñado (D44, commit `d274925`): "carta de plan" en 2 columnas (altura→ancho), razones on-demand, anticipación comprimida con lugar reservado a suscripción, y "ya come otra marca" como buscador inteligente que rearma/GUARDA el plan. Solo presentación (sin tocar backend); smoke visual en vivo pendiente.** La recomendación (F4) corre sobre el **motor defendible** (D43): cálculo nutricional RER/MER + densidad calórica, puertas duras (nunca recomienda incompatible) vs. score de preferencia, explicación verificada. Determinístico, sin IA — doc: `RECOMMENDATION_ENGINE.md`. **Alta simplificada a 2 pasos (D54, rescate de `cristobal-cambios`):** el wizard `comenzar/*` agrupa especie+nombre+raza y etapa+peso —menos transiciones, se siente más rápido— con F3 (peso no bloqueante) y el feedback de ración intactos.
 - **Pet Experience** B1–B8 ✅ COMPLETA (B4 foto con andamio local honesto + B7 /cuenta manada-first cerrados en el Product Completion Pass, D41; B5/B6 persistidos vía `/store/pets`; **B8 Home logueada = centro de control**, D42: `PetStatusCard` con retrato + línea de tiempo del saco + "Plan de {nombre}" + recompra en dos taps + necesidades) — doc: `PET_EXPERIENCE_TARGET.md`. **Anticipación honesta** (D41): la cápsula invita a "Pedir de nuevo"; el reagendo/suscripción vuelven post-tracción. **`/cuenta` reorganizado en tabs (D54, rescate de `cristobal-cambios`):** Mi manada / Pedidos / **Mi perfil** (datos del humano: nombre/email/RUT + accesos a direcciones/tarjetas) — separa el perfil del humano del de la mascota (antes el humano no tenía casa propia). Dashboard (D42) intacto como home logueada; suscripción como card "Próximamente" (D29).
 - **Deploy (D30):** EN VIVO — backend en Railway (`manadabackend-production.up.railway.app`) + frontend en Vercel con dominio **`www.tumanada.cl`** (SSL). Doc: `DEPLOYMENT.md` (§0 estado + §4.1 runbook).
+- **Performance del catálogo (D59):** Home/PLP/PDP pasan de `force-dynamic` a **ISR `revalidate=300`** → se sirven desde el edge sin round-trip a Railway por visita (verificado `next start`: MISS→HIT, `s-maxage=300, stale-while-revalidate`). El catálogo se cachea vía `unstable_cache` (`lib/medusa/catalog-cache.ts`, `server-only`) porque el `fetch` sin cachear del SDK anulaba el `revalidate`; **carrito/checkout leen en vivo** (precio/stock reales al pagar). Doc: D59. **Aparte (fix UX móvil):** el wizard de alta (`comenzar/onboarding-wizard.tsx`) **persiste el borrador en `sessionStorage`** → un "atrás" accidental del navegador ya no borra lo llenado (se limpia al completar el alta).
 
 ## Frentes abiertos (en paralelo, cada uno en su chat/bloque)
 
@@ -61,7 +62,7 @@
 
 ## Claves del código (para no re-derivar)
 
-- **Capa Medusa del front:** `apps/web/src/lib/medusa/` — `client.ts` (SDK, JWT en localStorage/SSR nostore) · `products.ts`/`map-product.ts` (catálogo; `SUBSCRIPTIONS_ENABLED`) · `cart.ts` · `checkout.ts` · `auth.ts`/`account.ts` · `shipping.ts` · `pets.ts` (mapper `StorePet→Pet`).
+- **Capa Medusa del front:** `apps/web/src/lib/medusa/` — `client.ts` (SDK, JWT en localStorage/SSR nostore) · `products.ts`/`map-product.ts` (catálogo; `SUBSCRIPTIONS_ENABLED`; `getProductByHandle` con `React.cache`) · **`catalog-cache.ts`** (`server-only`; envolturas `unstable_cache` que usan SOLO las páginas ISR, D59) · `cart.ts` · `checkout.ts` · `auth.ts`/`account.ts` · `shipping.ts` · `pets.ts` (mapper `StorePet→Pet`).
 - **Providers:** `components/providers/` — `session-provider` (sesión JWT persistente) · `pet-provider` (hidrata `/store/pets` al login, empuja mascotas de invitado, `updatePet`/`assignFood` optimistas) · `cart-provider` (cart_id en localStorage). Coordinador: `hooks/use-auth-actions.ts` (login/registro/logout + `transferCart`).
 - **Backend custom:** `apps/backend/src/modules/pet` · `src/api/store/pets` (+ validators zod) · `src/subscribers/{password-reset,food-purchased}.ts` · `src/api/middlewares.ts` (`subscription_price`) · `src/lib/shipping.ts` + `src/scripts/{seed,setup-free-shipping}.ts`.
 - **Pago Flow (D58):** `src/modules/flow-payment` (modelo `flow_payment`) · `src/lib/flow.ts` (firma HMAC + `payment/create`/`getStatus`) · `src/lib/flow-settle.ts` (conciliación idempotente) · `src/api/store/carts/[id]/flow-payment` + `src/api/flow/{confirmation,return}`. Front: `apps/web/src/lib/medusa/flow.ts` + `app/checkout/*`. Contrato: `API.md §14`.
