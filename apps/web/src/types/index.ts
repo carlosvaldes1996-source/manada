@@ -144,6 +144,18 @@ export interface Product {
    * El frontend lo consume tal cual, sin recalcular (ver lib/format.ts).
    */
   subscriptionPrice?: number;
+  /**
+   * Destacado manual para la **vitrina** (landing y home sin mascota) — metadata
+   * `featured_landing`. Curación desde el Admin: si algún producto lo trae, la
+   * vitrina muestra solo esos; si ninguno, cae al comportamiento por defecto.
+   */
+  featuredLanding?: boolean;
+  /**
+   * Destacado manual para el riel de **complementos** de la mascota — metadata
+   * `featured_recommendation`. Cura dentro de lo ya elegible (misma especie,
+   * no-alimento); si ninguno lo trae, cae al comportamiento por defecto.
+   */
+  featuredRecommendation?: boolean;
   stock: number;
 }
 

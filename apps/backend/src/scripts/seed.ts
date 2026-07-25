@@ -318,6 +318,10 @@ export default async function seedManadaData({ container }: ExecArgs) {
   //                                        Articulaciones, Digestión sensible)
   //   not_for                          → condiciones contraindicadas, separadas por coma
   //                                       (mismo vocab; el motor NUNCA recomienda si calza)
+  //   featured_landing                 → boolean  (destaca en la vitrina: landing + home
+  //                                                sin mascota; si ninguno lo trae, orden por defecto)
+  //   featured_recommendation          → boolean  (destaca en el riel de complementos de la
+  //                                                mascota; cura dentro de lo elegible por especie)
   //
   // Nota: el Admin guarda metadata como strings; tanto el mapper como el
   // middleware de precio aceptan string o valor nativo (boolean/number).

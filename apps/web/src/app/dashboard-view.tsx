@@ -21,6 +21,7 @@ import { ProductCard, QuickBuyCard, CategoryTiles } from "@/components/commerce"
 import { AppShell } from "@/components/layout";
 import { useCart, usePet, usePlanManage, useSession, useSubscriptions } from "@/components/providers";
 import { petFoodAnticipation } from "@/lib/anticipation";
+import { featuredShowcase } from "@/lib/catalog";
 import { recommendComplements } from "@/lib/recommend";
 import type { Product } from "@/types";
 
@@ -224,7 +225,7 @@ export function DashboardView({ products }: { products: Product[] }) {
               title="Lo que las familias recompran"
             />
             <Grid cols={2} md={4} gap={4}>
-              {products.slice(0, 4).map((p) => (
+              {featuredShowcase(products, 4).map((p) => (
                 <ProductCard key={p.id} product={p} showSubscribe={false} />
               ))}
             </Grid>

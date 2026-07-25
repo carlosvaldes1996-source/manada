@@ -224,10 +224,18 @@ export function alternativeAngle(alt: Product, chosen: Product, pet: Pet): strin
 /**
  * Complementos de cuidado para el riel "también podría servirle": misma especie,
  * otra categoría (farmacia/accesorios), en stock primero.
+ *
+ * Curación manual (sin scoring): si dentro de lo elegible hay productos marcados
+ * `featured_recommendation` en el Admin, se muestran SOLO esos; si ninguno, cae
+ * al comportamiento por defecto. El flag cura dentro del set elegible —nunca
+ * salta las puertas de especie/categoría—, así un destacado sigue siendo apto.
  */
 export function recommendComplements(pet: Pet, products: Product[], limit = 4): Product[] {
-  return products
-    .filter((p) => p.category !== "alimento" && p.species.includes(pet.species))
+  const eligible = products.filter(
+    (p) => p.category !== "alimento" && p.species.includes(pet.species),
+  );
+  const featured = eligible.filter((p) => p.featuredRecommendation);
+  return (featured.length ? featured : eligible)
     .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0))
     .slice(0, limit);
 }

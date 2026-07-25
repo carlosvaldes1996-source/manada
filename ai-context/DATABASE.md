@@ -46,7 +46,15 @@ del producto (editable en el Admin, sección *Metadata*). **Convención de clave
 | `subscription_discount_percentage` | number | `15` | % de ahorro; **el precio de suscripción lo calcula el backend** (no se almacena) |
 | `rating` | number | `4.8` | 0–5 |
 | `review_count` | number | `212` | nº de reseñas |
+| `featured_landing` | boolean | `true` | destaca el producto en la **vitrina** (landing + home sin mascota) |
+| `featured_recommendation` | boolean | `true` | destaca el producto en el riel de **complementos** de la mascota |
 
+- **Vitrinas destacadas (curación sin scoring):** si algún producto trae el flag,
+  la vitrina/riel muestra SOLO los marcados; si ninguno lo trae, cae al
+  comportamiento por defecto (orden del catálogo). `featured_recommendation` cura
+  dentro de lo elegible (misma especie, no-alimento), nunca salta esas puertas.
+  Lógica en `apps/web/src/lib/catalog.ts` (`featuredShowcase`) y `lib/recommend.ts`
+  (`recommendComplements`). Permite armar campañas desde el Admin sin tocar código.
 - Semilla: `apps/backend/src/scripts/seed.ts` (comentario con la convención).
 - El Admin guarda metadata como **strings**; el backend y el mapper aceptan string
   o valor nativo (boolean/number). No requiere código por producto.

@@ -63,6 +63,19 @@ export function filterProductsForSlug(products: Product[], slug: string): Produc
   return products;
 }
 
+/**
+ * Vitrina de productos destacados (landing y home sin mascota). Curación manual
+ * desde el Admin (metadata `featured_landing`): si algún producto en stock lo
+ * trae, la vitrina muestra SOLO esos; si ninguno, cae al comportamiento por
+ * defecto (los primeros en stock, en el orden del catálogo). Sin scoring: la
+ * selección deja de depender del orden de creación sin nada que mantener.
+ */
+export function featuredShowcase(products: Product[], limit: number): Product[] {
+  const inStock = products.filter((p) => p.stock > 0);
+  const featured = inStock.filter((p) => p.featuredLanding);
+  return (featured.length ? featured : inStock).slice(0, limit);
+}
+
 /** Criterio de orden de la PLP. */
 export type SortId = "relevancia" | "precio-asc" | "precio-desc" | "descuento" | "vendidos";
 

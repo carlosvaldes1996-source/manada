@@ -21,6 +21,7 @@ import { FeatureCard } from "@/components/ui/feature-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CategoryTiles } from "@/components/commerce/category-tiles";
 import { ProductRail } from "@/components/commerce/product-rail";
+import { featuredShowcase } from "@/lib/catalog";
 import { TOBY_ANTICIPATION } from "@/lib/demo-data";
 import type { Product } from "@/types";
 
@@ -124,7 +125,7 @@ export function LandingView({ products }: { products: Product[] }) {
         <ProductRail
           overline="La vitrina"
           title="Lo que más recompran las familias"
-          products={products.filter((p) => p.stock > 0).slice(0, 6)}
+          products={featuredShowcase(products, 6)}
           href="/categoria/todo"
           linkLabel="Ver toda la tienda"
         />

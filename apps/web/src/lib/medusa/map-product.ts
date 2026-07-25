@@ -28,7 +28,8 @@ import { PET_CONDITIONS } from "@/lib/pet";
  *   thumbnail/images (native)                              → campos nativos de Medusa
  *   brand · species · stage · subscribable ·
  *   subscription_discount_percentage · rating · review_count ·
- *   kcal_per_kg · suitable_conditions · not_for            → `product.metadata`
+ *   kcal_per_kg · suitable_conditions · not_for ·
+ *   featured_landing · featured_recommendation             → `product.metadata`
  *   subscription_price (precio de suscripción ya calculado)  → campo calculado del
  *                                                              backend (middleware)
  */
@@ -234,6 +235,12 @@ export function mapProduct(product: StoreProduct): Product {
   const suitableConditions = metaEnumList(meta, "suitable_conditions", VALID_CONDITIONS);
   const notFor = metaEnumList(meta, "not_for", VALID_CONDITIONS);
 
+  // Curación manual de vitrinas (sin scoring): banderas administrables desde el
+  // Admin que dejan destacar productos sin depender del orden de creación. La
+  // selección con fallback vive en lib/catalog.ts y lib/recommend.ts.
+  const featuredLanding = metaBool(meta, "featured_landing");
+  const featuredRecommendation = metaBool(meta, "featured_recommendation");
+
   return {
     id: product.id,
     variantId: variant?.id,
@@ -255,6 +262,8 @@ export function mapProduct(product: StoreProduct): Product {
     subscribable,
     subscriptionDiscount,
     subscriptionPrice,
+    featuredLanding,
+    featuredRecommendation,
     stock: toStock(variant),
   };
 }

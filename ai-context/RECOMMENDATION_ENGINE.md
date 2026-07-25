@@ -70,6 +70,8 @@ categoría = `alimento` · especie coincide · etapa apropiada (universal o incl
 
 Recomendada = mayor score. Alternativas = siguientes elegibles en stock. Cambiar los pesos ajusta todo el ranking sin tocar lógica.
 
+**Destacado manual del riel de complementos (D60).** El riel "también podría necesitar" (`recommendComplements`) admite curación desde el Admin vía la metadata booleana `featured_recommendation`: si algún producto **ya elegible** (misma especie, no-alimento) la trae, el riel muestra solo esos; si ninguno, cae al comportamiento por defecto. El flag prioriza *dentro* de las puertas duras —nunca las salta—, así que un destacado siempre sigue siendo apto. Sin scoring propio. La vitrina general (landing / home sin mascota) usa el flag hermano `featured_landing` (`lib/catalog.ts`).
+
 ## 4. Explicación (verificada)
 
 `foodReasons` deriva las razones de los predicados que el motor ejecutó:
