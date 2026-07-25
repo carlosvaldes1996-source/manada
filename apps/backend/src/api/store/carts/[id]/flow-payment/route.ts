@@ -52,6 +52,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const flowService = req.scope.resolve<FlowPaymentModuleService>(FLOW_PAYMENT_MODULE);
   const config = getFlowConfig(); // lanza claro si faltan las llaves de Flow
 
+  // IMPORTANTE: Medusa calcula `total` a partir de las relaciones CARGADAS (ver
+  // `cartFieldsForRefreshSteps` de core-flows). Si solo se pide `items.id`, el
+  // subtotal de productos sale 0 y `total` queda = solo el envío. Por eso cargamos
+  // el precio de las líneas + métodos de envío + ajustes (promos, ej. envío gratis)
+  // para que `total` sea el REAL que se cobrará (= el total de la orden).
   const { data: carts } = await query.graph({
     entity: "cart",
     fields: [
@@ -61,7 +66,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       "completed_at",
       "total",
       "metadata",
-      "items.id",
+      "items.*",
+      "items.adjustments.*",
+      "items.tax_lines.*",
+      "shipping_methods.*",
+      "shipping_methods.adjustments.*",
+      "shipping_methods.tax_lines.*",
       "payment_collection.id",
     ],
     filters: { id: cartId },
