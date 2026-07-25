@@ -37,9 +37,13 @@ export const brand = {
   maxWidth: "600px",
 } as const
 
-/** Formatea montos en CLP (Medusa v2 entrega el total en unidad mayor). */
-export function formatCLP(amount: number | null | undefined): string {
-  const value = typeof amount === "number" && Number.isFinite(amount) ? amount : 0
+/** Formatea montos en CLP (Medusa v2 entrega el total en unidad mayor).
+ *  Acepta number, BigNumber (así llegan los totales desde query.graph) o string
+ *  numérico: coacciona con Number() para NO descartar a $0 un monto válido que no
+ *  llega como `number` primitivo. Blindaje para todos los correos. */
+export function formatCLP(amount: unknown): string {
+  const n = typeof amount === "number" ? amount : Number(amount)
+  const value = Number.isFinite(n) ? n : 0
   return new Intl.NumberFormat("es-CL", {
     style: "currency",
     currency: "CLP",
