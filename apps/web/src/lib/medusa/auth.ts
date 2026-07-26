@@ -54,36 +54,90 @@ export interface RegisterInput {
 
 /**
  * Registro nativo en tres pasos (patrón oficial de Medusa v2):
- * 1) token de registro (`auth.register`) — el SDK lo guarda,
- * 2) crear el customer (`store.customer.create`) con ese token,
+ * 1) identidad + clave (`auth.register`) — el SDK guarda el token,
+ * 2) crear y ligar el customer (`store.customer.create`) con ese token,
  * 3) `auth.login` → token de sesión definitivo (ya con `customer_id`).
- * Lanza si el correo ya existe (lo traduce `useAuthActions`).
+ *
+ * Blindado contra identidades "huérfanas" (D: bug de recuperar contraseña): cada
+ * paso es idempotente, así que un intento previo a medias (identidad creada pero
+ * sin customer ligado) se **completa** en el siguiente registro en vez de quedar
+ * roto para siempre:
+ * - Si `auth.register` falla porque la identidad ya existe, caemos a `auth.login`
+ *   con la clave dada: si coincide es el mismo dueño y recuperamos la sesión; si
+ *   no, el error propaga (correo en uso → lo traduce `useAuthActions`).
+ * - Si `store.customer.create` rechaza porque la identidad ya estaba ligada,
+ *   recuperamos el customer existente. Nunca dejamos la identidad sin cliente.
  */
 export async function registerCustomer(input: RegisterInput): Promise<User> {
   const email = input.email.trim().toLowerCase();
-  await medusa.auth.register(CUSTOMER, EMAILPASS, { email, password: input.password });
-  const { customer } = await medusa.store.customer.create({
-    email,
-    first_name: input.firstName.trim(),
-    last_name: input.lastName?.trim() || undefined,
-  });
-  await medusa.auth.login(CUSTOMER, EMAILPASS, { email, password: input.password });
-  return mapCustomer(customer);
+  const { password } = input;
+
+  try {
+    await medusa.auth.register(CUSTOMER, EMAILPASS, { email, password });
+  } catch {
+    // Identidad ya existente (p. ej. un registro previo que no ligó el customer):
+    // reautentica. Si la clave no coincide, el login lanza y propaga el error.
+    await medusa.auth.login(CUSTOMER, EMAILPASS, { email, password });
+  }
+
+  let user: User | null = null;
+  try {
+    const { customer } = await medusa.store.customer.create({
+      email,
+      first_name: input.firstName.trim(),
+      last_name: input.lastName?.trim() || undefined,
+    });
+    user = mapCustomer(customer);
+  } catch {
+    // La identidad ya estaba ligada a un customer (reintento): lo recuperamos abajo.
+  }
+
+  // Token de sesión definitivo (ya con `customer_id` ligado).
+  await medusa.auth.login(CUSTOMER, EMAILPASS, { email, password });
+  user ??= await getCurrentCustomer();
+  if (!user) throw new Error("No pudimos crear tu cuenta.");
+  return user;
 }
 
 /** Login nativo (emailpass). Sin MFA/terceros en el MVP. */
 export async function loginCustomer(email: string, password: string): Promise<User> {
+  const normalized = email.trim().toLowerCase();
   const result = await medusa.auth.login(CUSTOMER, EMAILPASS, {
-    email: email.trim().toLowerCase(),
+    email: normalized,
     password,
   });
   if (typeof result !== "string") {
     // Respuesta de redirección/MFA — no aplica al MVP emailpass.
     throw new Error("Este método de ingreso no está disponible.");
   }
-  const user = await getCurrentCustomer();
+  let user = await getCurrentCustomer();
+  if (!user) {
+    // Autenticado pero sin `customer` ligado: identidad "huérfana" (p. ej. un
+    // registro que falló tras `auth.register`, o un reset de contraseña sobre una
+    // identidad que nunca se ligó a un cliente). El token vale pero no trae
+    // `actor_id`, así que `customer.retrieve()` da 401. Ya tenemos sesión válida →
+    // creamos y ligamos el customer ahora (mismo paso que el registro) para
+    // auto-reparar la cuenta en vez de dejar al cliente fuera para siempre.
+    user = await healOrphanIdentity(normalized);
+  }
   if (!user) throw new Error("No se pudo cargar tu cuenta.");
   return user;
+}
+
+/**
+ * Repara una identidad autenticada sin `customer` ligado creando el cliente con
+ * el token de sesión (que aún no trae `actor_id`, igual que el token de registro).
+ * `store.customer.create` liga la identidad al nuevo customer. Devuelve `null` si
+ * no se pudo (p. ej. el fallo original era transitorio y la identidad sí estaba
+ * ligada → `create` rechaza con "already authenticated as a customer").
+ */
+async function healOrphanIdentity(email: string): Promise<User | null> {
+  try {
+    const { customer } = await medusa.store.customer.create({ email });
+    return mapCustomer(customer);
+  } catch {
+    return null;
+  }
 }
 
 /** Cierra la sesión (limpia el token del SDK). */
