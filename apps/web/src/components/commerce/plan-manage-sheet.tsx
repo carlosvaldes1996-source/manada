@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Ban, CalendarClock, CheckCircle2, Pause, Play, ShieldCheck, SkipForward } from "lucide-react";
+import { Ban, CalendarClock, CheckCircle2, CreditCard, Pause, Play, ShieldCheck, SkipForward } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import { Select } from "@/components/ui/select";
 import { Stack, Row } from "@/components/ui/stack";
 import { useToast } from "@/components/ui/toast";
 import { useSubscriptions } from "@/components/providers";
-import { updateMySubscription } from "@/lib/medusa/subscriptions";
+import { updateMySubscription, startSubscriptionCardUpdate } from "@/lib/medusa/subscriptions";
 import { SUBSCRIPTION_FREQUENCIES } from "@/hooks/use-subscription";
 import { formatCLP, formatDeliveryDate } from "@/lib/format";
 import { fadeInUp } from "@/lib/motion";
@@ -178,6 +178,24 @@ export function PlanManageSheet({
     void mutate({ status: "cancelled" }, "Plan cancelado", { closeAfter: true });
   }
 
+  // Actualizar tarjeta (D59, dunning): tokeniza una tarjeta nueva en Flow. Redirige a
+  // su checkout seguro; al volver, el backend refresca la tarjeta y reintenta el cobro.
+  async function updateCard() {
+    if (!sub || pending) return;
+    setPending(true);
+    try {
+      const { url } = await startSubscriptionCardUpdate(sub.id);
+      window.location.href = url;
+    } catch {
+      toast({
+        title: "No se pudo abrir la actualización de tarjeta",
+        description: "Vuelve a intentarlo en un momento.",
+        variant: "error",
+      });
+      setPending(false);
+    }
+  }
+
   return (
     <Dialog open={!!sub} onOpenChange={handleClose}>
       <DialogContent>
@@ -217,6 +235,36 @@ export function PlanManageSheet({
               <div className="mb-4 rounded-[var(--radius-md)] border border-border-default bg-surface px-4 py-2.5 text-[13px] text-text-secondary">
                 <Badge variant="neutral">Pausado</Badge>{" "}
                 <span className="align-middle">Reanúdalo cuando quieras.</span>
+              </div>
+            )}
+
+            {(sub.status === "past_due" || sub.status === "unpaid") && (
+              <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--urgency)]/25 bg-urgency-soft px-4 py-3">
+                <Stack gap={2}>
+                  <Row gap={2} align="center">
+                    <Badge variant={sub.status === "unpaid" ? "error" : "urgency"}>
+                      {sub.status === "unpaid" ? "Dado de baja" : "Pago pendiente"}
+                    </Badge>
+                    <span className="text-[13px] font-medium text-text-primary">
+                      {sub.status === "unpaid"
+                        ? "No pudimos renovar tu plan"
+                        : "No pudimos cobrar tu última renovación"}
+                    </span>
+                  </Row>
+                  <p className="text-[13px] text-text-secondary">
+                    {sub.status === "unpaid"
+                      ? "Actualiza tu tarjeta para reactivar el plan sin perder tu precio de suscripción."
+                      : "Actualiza tu tarjeta y retomamos la entrega. Lo reintentamos un par de veces antes de dar de baja el plan."}
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={updateCard}
+                    disabled={pending}
+                    leadingIcon={<CreditCard className="size-4" aria-hidden />}
+                  >
+                    {sub.status === "unpaid" ? "Reactivar con otra tarjeta" : "Actualizar mi tarjeta"}
+                  </Button>
+                </Stack>
               </div>
             )}
 
@@ -266,6 +314,25 @@ export function PlanManageSheet({
                   <span className="text-sm text-text-secondary">Precio por entrega</span>
                   <span className="price text-lg text-text-primary">{formatCLP(sub.agreedUnitPrice)}</span>
                 </Row>
+
+                {sub.card && (
+                  <Row justify="between" align="center" gap={3}>
+                    <span className="inline-flex items-center gap-2 text-sm text-text-secondary">
+                      <CreditCard className="size-4" aria-hidden />
+                      Tarjeta ····{sub.card.last4}
+                    </span>
+                    {(sub.status === "active" || sub.status === "paused") && (
+                      <button
+                        type="button"
+                        onClick={updateCard}
+                        disabled={pending}
+                        className="text-[13px] font-semibold text-text-brand underline-offset-2 hover:underline disabled:opacity-50"
+                      >
+                        Cambiar
+                      </button>
+                    )}
+                  </Row>
+                )}
               </Stack>
             </div>
 

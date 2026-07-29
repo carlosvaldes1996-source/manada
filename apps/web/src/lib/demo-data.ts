@@ -164,8 +164,8 @@ export const PRODUCTS: Product[] = [
 
 /** Carrito demo (2 líneas) para CartItem/Drawer/OrderSummary del styleguide. */
 export const DEMO_CART: CartItem[] = [
-  { product: PRODUCTS[0], quantity: 1, subscriptionWeeks: 4 },
-  { product: PRODUCTS[4], quantity: 2 },
+  { lineId: "demo-line-1", product: PRODUCTS[0], quantity: 1, subscriptionWeeks: 4 },
+  { lineId: "demo-line-2", product: PRODUCTS[4], quantity: 2 },
 ];
 
 /** Estimación de despacho de muestra (HonestShippingBlock del styleguide). */

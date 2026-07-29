@@ -9,6 +9,8 @@ import { useSubscriptions, usePlanManage } from "@/components/providers";
 import { formatCLP } from "@/lib/format";
 import type { SubscriptionView } from "@/types";
 
+type BadgeVariant = "subscribe" | "neutral" | "urgency" | "error";
+
 /**
  * Lista read-only de las suscripciones del cliente (D55 · Punto 1). Consume el
  * `SubscriptionProvider` (D56·C, fuente única con la Home). Reemplaza la card
@@ -20,6 +22,16 @@ const STATUS_LABEL: Record<SubscriptionView["status"], string> = {
   active: "Activa",
   paused: "Pausada",
   cancelled: "Cancelada",
+  past_due: "Pago pendiente",
+  unpaid: "Dada de baja",
+};
+
+const STATUS_BADGE: Record<SubscriptionView["status"], BadgeVariant> = {
+  active: "subscribe",
+  paused: "neutral",
+  cancelled: "neutral",
+  past_due: "urgency",
+  unpaid: "error",
 };
 
 export function SubscriptionsList() {
@@ -49,7 +61,7 @@ export function SubscriptionsList() {
           <Stack gap={1} className="min-w-0 flex-1">
             <Row gap={2} align="center" wrap>
               <span className="truncate text-[15px] font-semibold text-text-primary">{s.productTitle}</span>
-              <Badge variant={s.status === "active" ? "subscribe" : "neutral"}>{STATUS_LABEL[s.status]}</Badge>
+              <Badge variant={STATUS_BADGE[s.status]}>{STATUS_LABEL[s.status]}</Badge>
             </Row>
             <span className="text-[13px] text-text-secondary">
               {s.frequencyLabel}

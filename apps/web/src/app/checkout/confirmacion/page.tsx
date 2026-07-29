@@ -13,7 +13,15 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Estado = "exito" | "pendiente" | "rechazado" | "cancelado" | "error";
+type Estado =
+  | "exito"
+  | "pendiente"
+  | "rechazado"
+  | "cancelado"
+  | "error"
+  // Estados propios de la 1ª compra suscrita (D59, retorno de /flow/register-return):
+  | "tarjeta_rechazada" // no se pudo registrar la tarjeta
+  | "cobro_rechazado"; // tarjeta OK pero el cobro falló
 
 /**
  * Confirmación post-pago con Flow (D58). El estado llega en la URL desde el
@@ -36,7 +44,8 @@ export default async function ConfirmacionPage({
         <Stack gap={6} align="center" className="mx-auto max-w-xl text-center">
           {estado === "exito" && <SuccessView orden={orden} />}
           {estado === "pendiente" && <PendingView />}
-          {estado === "rechazado" && <RejectedView />}
+          {(estado === "rechazado" || estado === "cobro_rechazado") && <RejectedView />}
+          {estado === "tarjeta_rechazada" && <CardRejectedView />}
           {estado === "cancelado" && <CanceledView />}
           {estado === "error" && <ErrorView />}
         </Stack>
@@ -46,7 +55,14 @@ export default async function ConfirmacionPage({
 }
 
 function normalizeEstado(estado: string | undefined, orden: string | undefined): Estado {
-  if (estado === "exito" || estado === "pendiente" || estado === "rechazado" || estado === "cancelado") {
+  if (
+    estado === "exito" ||
+    estado === "pendiente" ||
+    estado === "rechazado" ||
+    estado === "cancelado" ||
+    estado === "tarjeta_rechazada" ||
+    estado === "cobro_rechazado"
+  ) {
     return estado;
   }
   if (estado === "error") return "error";
@@ -136,6 +152,31 @@ function RejectedView() {
         <h1 className="display-l text-text-primary">Tu pago fue rechazado</h1>
         <p className="body-l text-text-secondary">
           No se realizó ningún cobro. Puedes volver al carrito e intentar de nuevo, con este u otro medio de pago.
+        </p>
+      </Stack>
+      <Row gap={3} wrap className="justify-center">
+        <Button asChild>
+          <Link href="/carrito">Volver al carrito</Link>
+        </Button>
+        <Button variant="secondary" asChild>
+          <Link href="/">Volver al inicio</Link>
+        </Button>
+      </Row>
+    </>
+  );
+}
+
+function CardRejectedView() {
+  return (
+    <>
+      <span className="grid size-16 place-items-center rounded-full bg-error-soft text-error-strong" aria-hidden>
+        <XCircle className="size-9" />
+      </span>
+      <Stack gap={2} align="center">
+        <h1 className="display-l text-text-primary">No pudimos registrar tu tarjeta</h1>
+        <p className="body-l text-text-secondary">
+          No se realizó ningún cobro. Para suscribirte necesitamos una tarjeta válida: vuelve al
+          carrito e inténtalo de nuevo.
         </p>
       </Stack>
       <Row gap={3} wrap className="justify-center">

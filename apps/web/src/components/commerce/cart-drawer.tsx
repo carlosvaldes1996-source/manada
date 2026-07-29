@@ -69,7 +69,7 @@ export function CartDrawer({ children, freeShippingThreshold = 30000 }: CartDraw
             <div>
               {items.map((line) => (
                 <CartItem
-                  key={line.product.id}
+                  key={line.lineId}
                   line={line}
                   onQuantityChange={updateQuantity}
                   onRemove={removeItem}

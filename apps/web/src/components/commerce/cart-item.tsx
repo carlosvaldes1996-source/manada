@@ -13,8 +13,9 @@ import { ProductImage } from "./product-image";
 
 export interface CartItemProps {
   line: CartLine;
-  onQuantityChange: (productId: string, quantity: number) => void;
-  onRemove: (productId: string) => void;
+  /** Operan por `lineId` (no por producto): un producto puede tener 2 líneas. */
+  onQuantityChange: (lineId: string, quantity: number) => void;
+  onRemove: (lineId: string) => void;
   /** Compacto (drawer) vs. completo (página de carrito). */
   compact?: boolean;
   className?: string;
@@ -59,7 +60,7 @@ export function CartItem({ line, onQuantityChange, onRemove, compact = false, cl
               </span>
             )}
           </div>
-          <IconButton label={`Quitar ${product.name}`} size="sm" onClick={() => onRemove(product.id)}>
+          <IconButton label={`Quitar ${product.name}`} size="sm" onClick={() => onRemove(line.lineId)}>
             <Trash2 className="size-4" aria-hidden />
           </IconButton>
         </div>
@@ -73,7 +74,7 @@ export function CartItem({ line, onQuantityChange, onRemove, compact = false, cl
         <div className="mt-1 flex items-center justify-between">
           <QuantitySelector
             value={line.quantity}
-            onChange={(q) => onQuantityChange(product.id, q)}
+            onChange={(q) => onQuantityChange(line.lineId, q)}
             size="sm"
             label={`Cantidad de ${product.name}`}
           />

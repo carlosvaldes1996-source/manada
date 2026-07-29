@@ -34,6 +34,8 @@ interface StoreSubscription {
   status: SubscriptionStatus;
   agreed_unit_price: number;
   currency_code: string;
+  card: { brand: string; last4: string } | null;
+  last_charge_error: string | null;
 }
 
 function freqLabel(weeks: number): string {
@@ -54,6 +56,8 @@ function mapSubscription(s: StoreSubscription): SubscriptionView {
     status: s.status,
     agreedUnitPrice: s.agreed_unit_price,
     currencyCode: s.currency_code,
+    card: s.card ?? undefined,
+    lastChargeError: s.last_charge_error ?? null,
   };
 }
 
@@ -74,4 +78,19 @@ export async function updateMySubscription(
   changes: UpdateSubscriptionInput,
 ): Promise<void> {
   await medusa.client.fetch(`/store/subscriptions/${id}`, { method: "PATCH", body: changes });
+}
+
+/**
+ * Inicia la ACTUALIZACIÓN de la tarjeta de una suscripción (D59, dunning) — contrato
+ * `POST /store/subscriptions/:id/payment-method` (API.md §13.3). Devuelve la URL de
+ * Flow para tokenizar la tarjeta nueva; el llamador redirige a ella. Al volver, Flow
+ * concilia (refresca la tarjeta y reintenta el cobro) y redirige a `/cuenta?tarjeta=…`.
+ */
+export async function startSubscriptionCardUpdate(id: string): Promise<{ url: string }> {
+  const res = await medusa.client.fetch<{ url: string }>(
+    `/store/subscriptions/${id}/payment-method`,
+    { method: "POST", body: {} },
+  );
+  if (!res?.url) throw new Error("No se pudo iniciar la actualización de la tarjeta.");
+  return { url: res.url };
 }

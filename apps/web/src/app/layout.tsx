@@ -85,6 +85,10 @@ export default function RootLayout({
     <html
       lang="es-CL"
       className={`${fraunces.variable} ${hanken.variable} h-full`}
+      // Extensiones (p. ej. Lusha) y el script de tema mutan <html> antes de hidratar.
+      // suppressHydrationWarning es shallow: solo silencia el aviso de los atributos de
+      // <html>, no del contenido. Patrón recomendado por Next para html/body.
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col antialiased">
         <JsonLd schema={organizationSchema()} />

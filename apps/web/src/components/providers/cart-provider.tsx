@@ -6,7 +6,6 @@ import {
   addLineItem,
   addSubscriptionLineItem,
   createCart,
-  findLineIdByProduct,
   mapCartItems,
   type MedusaCart,
   removeLineItem,
@@ -41,8 +40,8 @@ interface CartContextValue {
     product: Product,
     opts?: { quantity?: number; subscriptionWeeks?: SubscriptionFrequencyWeeks },
   ) => Promise<void>;
-  removeItem: (productId: string) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  removeItem: (lineId: string) => Promise<void>;
+  updateQuantity: (lineId: string, quantity: number) => Promise<void>;
   /** Reemplaza el carrito con la respuesta de una operación de checkout. */
   applyCart: (cart: MedusaCart) => void;
   /** Re-lee el carrito desde el backend. */
@@ -121,9 +120,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateQuantity = useCallback<CartContextValue["updateQuantity"]>(
-    async (productId, quantity) => {
+    async (lineId, quantity) => {
       const current = cartRef.current;
-      const lineId = findLineIdByProduct(current, productId);
       if (!current || !lineId) return;
       const updated =
         quantity <= 0
@@ -135,9 +133,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const removeItem = useCallback<CartContextValue["removeItem"]>(
-    async (productId) => {
+    async (lineId) => {
       const current = cartRef.current;
-      const lineId = findLineIdByProduct(current, productId);
       if (!current || !lineId) return;
       const updated = await removeLineItem(current.id, lineId);
       setCart(updated ?? null);

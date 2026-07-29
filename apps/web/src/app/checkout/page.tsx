@@ -16,6 +16,7 @@ import {
   ProductImage,
   ShippingMethod,
   PaymentMethod,
+  AuthSheet,
   type ShippingOption,
   type PaymentOption,
 } from "@/components/commerce";
@@ -25,6 +26,7 @@ import {
   setCheckoutInfo,
   selectShippingMethod,
   createFlowPayment,
+  createSubscriptionPayment,
   getShippingPolicy,
   saveCustomerRut,
   type CheckoutAddress,
@@ -64,6 +66,12 @@ export default function CheckoutPage() {
   const { user } = useSession();
   const cartId = cart?.id;
 
+  // Carrito con al menos una línea de suscripción (D59): el pago tokeniza la tarjeta
+  // (Modelo A de Flow) en vez de un cobro único. Suscribir REQUIERE cuenta (no se
+  // puede tokenizar a un invitado) → si no hay sesión, se pide ingresar antes.
+  const hasSubscription = useMemo(() => items.some((i) => i.subscriptionWeeks), [items]);
+  const needsLogin = hasSubscription && !user;
+
   // Inició el checkout: se dispara una vez, cuando ya hay ítems que pagar.
   const beganCheckoutRef = useRef(false);
   useEffect(() => {
@@ -90,6 +98,9 @@ export default function CheckoutPage() {
   const [paymentId, setPaymentId] = useState("flow");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Gate de suscripción en contexto (opción A): al pagar sin sesión se abre el
+  // modal de identificación; tras autenticar, se retoma el pago automáticamente.
+  const [authOpen, setAuthOpen] = useState(false);
 
   // Prellena una sola vez los datos del cliente autenticado, sin pisar lo que ya
   // escribió (ajuste de estado en render guardado — patrón recomendado de React,
@@ -183,10 +194,24 @@ export default function CheckoutPage() {
     return Object.keys(e).length === 0;
   }
 
-  async function pay() {
+  // CTA de pago: valida el formulario, luego decide identidad. Suscribir requiere
+  // cuenta → si falta sesión, identifica EN CONTEXTO (modal) en vez de rebotar a
+  // /ingresar (que hacía perder el carrito y caer en onboarding). Al autenticar,
+  // `onAuthenticated` retoma `submitPayment` directo (la sesión ya quedó iniciada).
+  function pay() {
     if (!cartId || submitting) return;
     setSubmitError(null);
     if (!validate()) return;
+    if (needsLogin) {
+      setAuthOpen(true);
+      return;
+    }
+    void submitPayment();
+  }
+
+  async function submitPayment() {
+    if (!cartId || submitting || !validate()) return;
+    setSubmitError(null);
 
     const address: CheckoutAddress = {
       first_name: firstName.trim(),
@@ -208,8 +233,10 @@ export default function CheckoutPage() {
       // (best-effort — nunca bloquea el pago).
       if (user) void saveCustomerRut(rutFormatted).catch(() => {});
       await selectShippingMethod(cartId, shippingId);
-      // Crea la orden de pago en Flow → URL de su checkout.
-      const { url } = await createFlowPayment(cartId);
+      // Suscripción → tokeniza la tarjeta (Modelo A). Compra única → cobro directo.
+      const { url } = hasSubscription
+        ? await createSubscriptionPayment(cartId)
+        : await createFlowPayment(cartId);
       // Snapshot para medir la compra al volver de Flow (el carrito se vacía en
       // la confirmación, recién con el pago confirmado). No bloquea si falla.
       try {
@@ -343,13 +370,25 @@ export default function CheckoutPage() {
 
                 {submitError && <Alert variant="error">{submitError}</Alert>}
 
+                {needsLogin && (
+                  <Alert variant="info">
+                    Tu pedido incluye una suscripción. Al pagar te pediremos ingresar o crear tu
+                    cuenta —sin salir de aquí— para guardar tu plan y tu medio de pago de forma
+                    segura.
+                  </Alert>
+                )}
+
                 <OrderSummary
                   subtotal={subtotal}
                   shipping={shippingCost}
                   note="Al pagar aceptas los términos. Te llevamos a Flow para completar el pago de forma segura."
                 >
                   <Button block size="lg" onClick={pay} disabled={submitting || isLoading}>
-                    {submitting ? "Redirigiéndote a Flow…" : `Pagar ${formatCLP(total)}`}
+                    {submitting
+                      ? "Redirigiéndote a Flow…"
+                      : hasSubscription
+                        ? `Suscribirme y pagar ${formatCLP(total)}`
+                        : `Pagar ${formatCLP(total)}`}
                   </Button>
                   <Button variant="ghost" block asChild>
                     <Link href="/carrito">Volver al carrito</Link>
@@ -360,6 +399,18 @@ export default function CheckoutPage() {
           </div>
         </Stack>
       </Section>
+
+      {/* Gate de suscripción en contexto: identificarse sin abandonar el checkout. */}
+      <AuthSheet
+        open={authOpen}
+        onOpenChange={setAuthOpen}
+        onAuthenticated={() => {
+          // La sesión ya quedó iniciada en el backend (login/register hicieron
+          // transferCart + refresh): retomamos el pago sin esperar el re-render.
+          setAuthOpen(false);
+          void submitPayment();
+        }}
+      />
     </AppShell>
   );
 }

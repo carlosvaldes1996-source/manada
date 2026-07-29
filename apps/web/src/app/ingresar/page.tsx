@@ -44,7 +44,12 @@ export default function IngresarPage() {
     const { ok, error } = await login(email, password);
     if (ok) {
       toast({ title: "¡Hola de nuevo!", description: "Bienvenido de vuelta a tu manada.", variant: "success" });
-      router.push("/");
+      // Vuelve a `?next=` si es una ruta interna (p. ej. el checkout de suscripción,
+      // D59). Se lee de la URL sin `useSearchParams` para no exigir un Suspense boundary.
+      const next = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("next")
+        : null;
+      router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
     } else {
       setFormError(error ?? "No pudimos iniciar tu sesión.");
       setLoading(false);

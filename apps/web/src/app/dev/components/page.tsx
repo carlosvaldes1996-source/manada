@@ -520,7 +520,7 @@ function CommerceSection() {
       <Demo name="CartItem" when="Línea de carrito: cantidad, subtotal y eliminar. Página y drawer." canvasClassName="block">
         <div className="max-w-md">
           {(items.length ? items : DEMO_CART).slice(0, 2).map((line) => (
-            <CartItem key={line.product.id} line={line} onQuantityChange={updateQuantity} onRemove={removeItem} />
+            <CartItem key={line.lineId} line={line} onQuantityChange={updateQuantity} onRemove={removeItem} />
           ))}
         </div>
       </Demo>

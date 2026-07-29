@@ -114,7 +114,7 @@ export default function CarritoPage() {
                 <Stack gap={3}>
                   {subscriptionLines.map((line) => (
                     <CartItem
-                      key={line.product.id}
+                      key={line.lineId}
                       line={line}
                       onQuantityChange={updateQuantity}
                       onRemove={removeItem}
@@ -136,7 +136,7 @@ export default function CarritoPage() {
                 <Stack gap={3}>
                   {oneTimeLines.map((line) => (
                     <CartItem
-                      key={line.product.id}
+                      key={line.lineId}
                       line={line}
                       onQuantityChange={updateQuantity}
                       onRemove={removeItem}

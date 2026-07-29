@@ -19,9 +19,10 @@ import {
   ProductRail,
   StockBadge,
   VariantSelector,
+  PlanManadaCard,
 } from "@/components/commerce";
-import { PlanManadaCard } from "./plan-manada-card";
 import { usePet, useCart } from "@/components/providers";
+import { naturalFrequencyWeeks } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
 import { categoryLabel } from "@/lib/catalog";
@@ -42,21 +43,6 @@ import type { Product, SubscriptionFrequencyWeeks } from "@/types";
  * - U064: el criterio de "para tu mascota" es transparente en el copy.
  */
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** Frecuencias de suscripción ofrecidas, en semanas (espejo del hook). */
-const OFFERED_WEEKS: SubscriptionFrequencyWeeks[] = [2, 4, 6, 8];
-
-/**
- * Frecuencia "natural" sugerida por defecto en la card: la más cercana a cuánto
- * dura el saco (D55). Si no hay duración (sin mascota/peso), cae a 4 semanas.
- */
-function naturalFrequencyWeeks(durationDays?: number): SubscriptionFrequencyWeeks {
-  if (!durationDays) return 4;
-  const weeks = durationDays / 7;
-  return OFFERED_WEEKS.reduce((best, w) =>
-    Math.abs(w - weeks) < Math.abs(best - weeks) ? w : best,
-  );
-}
 
 export function ProductView({
   product,

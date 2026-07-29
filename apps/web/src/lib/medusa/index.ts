@@ -19,7 +19,6 @@ export {
   removeLineItem,
   transferCartToCustomer,
   mapCartItems,
-  findLineIdByProduct,
   CART_FIELDS,
   type MedusaCart,
 } from "./cart";
@@ -30,7 +29,7 @@ export {
   type CheckoutAddress,
   type ShippingOptionView,
 } from "./checkout";
-export { createFlowPayment } from "./flow";
+export { createFlowPayment, createSubscriptionPayment } from "./flow";
 export {
   mapCustomer,
   getCurrentCustomer,

@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import {
   Sparkles,
   ArrowRight,
-  BellRing,
   Check,
   Search,
   Store,
@@ -25,17 +24,18 @@ import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/drawer";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/toast";
-import { ProductImage } from "@/components/commerce/product-image";
+import { ProductImage, PlanManadaCard } from "@/components/commerce";
 import { PetAvatar } from "@/components/pet/pet-avatar";
 import { usePet, useCart, useSession } from "@/components/providers";
+import { naturalFrequencyWeeks } from "@/hooks/use-subscription";
 import { fade, fadeInUp } from "@/lib/motion";
-import { trackRecommendationShown, trackSubscription } from "@/lib/analytics";
+import { trackRecommendationShown } from "@/lib/analytics";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
-import type { Pet, Product } from "@/types";
+import type { Pet, Product, SubscriptionFrequencyWeeks } from "@/types";
 import {
   recommendFoodRanked,
   recommendFoodAlternatives,
@@ -43,9 +43,8 @@ import {
   foodReasons,
   alternativeAngle,
   pricePerKg,
-  type FoodPlan,
 } from "@/lib/recommend";
-import { formatCLP, formatDeliveryDate, pluralize } from "@/lib/format";
+import { formatCLP, pluralize } from "@/lib/format";
 
 /** Entrada a la tienda que preserva el journey (nunca la landing — FUNNEL_TARGET §1.5). */
 const STORE_HREF = "/categoria/todo";
@@ -53,35 +52,46 @@ const STORE_HREF = "/categoria/todo";
 /** De qué comida está hecho el plan que se muestra:
  *  - `recommended` — la que elegiríamos o una alternativa que el usuario prefirió (la COMPRA).
  *  - `owned` — su marca de siempre (declaró "ya come otra marca"): ya la tiene en casa, así
- *    que el plan se GUARDA (no se agrega al carrito). Misma anticipación, otra forma válida
+ *    que el plan se GUARDA (no se agrega al carrito). Misma cadencia, otra forma válida
  *    de completar el journey (FUNNEL_TARGET §1.5, puerta de lealtad de marca). */
 type PlanMode = "recommended" | "owned";
 
 /**
  * Recomendación consultiva — "El plan de {mascota}" (Funnel F4, FUNNEL_TARGET §1.5).
  *
- * REDISEÑO 2026-07-12 (2ª iteración): el onboarding ya convenció → esta pantalla NO persuade,
- * solo se decide. Principio operativo: "¿esto ayuda a decidir AHORA o puede aparecer después?".
- * En desktop la altura se convierte en ancho con dos columnas ("decidir" | "el valor"); las
- * razones viven bajo demanda; la anticipación se comprime a ~2 líneas sin perder su lugar
- * reservado (ahí crecerá la suscripción). Cuatro salidas de primer nivel (§1.5):
- *  1. Me gusta → "Sumar al pedido" (primary).
- *  2. No me convence → "Ver otras opciones (N)" → Sheet.
- *  3. Seguir mirando → "Seguir en la tienda".
- *  4. Ya come otra marca → Sheet buscador (search + exploración): su marca REARMA el plan
- *     (mismos cálculos, misma anticipación) y se GUARDA sin empujar el cambio.
+ * REDISEÑO 2026-07-26 (3ª iteración): deja de sentirse como "el último paso del onboarding"
+ * y se siente como "el primer contacto con el e-commerce". El onboarding ya convenció → aquí
+ * solo se decide QUÉ alimento comprar, y la pantalla empuja hacia la SUSCRIPCIÓN de la forma
+ * más simple posible. Reutiliza el MISMO patrón de la PDP (D56): `PlanManadaCard` (suscripción,
+ * recomendada) + compra única como salida secundaria siempre presente. Así suscribirse se
+ * siente idéntico en toda la tienda (no hay un flujo especial de onboarding).
  *
- * Catálogo REAL (Store API, O5): sumar/guardar registra qué come (`assignFood`, seam B6) →
- * enciende su anticipación real. Límite honesto D29: recordatorio, no cobro ni envío recurrente.
+ * Evolución sobre la "carta de plan" de D44: se RETIRA la capa de promesas aún no confiables
+ * —"le durará ~X días", "aviso el 29", fechas y leads 3/5/7— (el proxy de suscripción que D44
+ * dejó con "lugar reservado"). Ahora que la suscripción es real (D55–D58), ese lugar lo ocupa
+ * la frecuencia sugerida de la card, sin fechas ni cálculos expuestos. Honestidad D57 intacta.
+ *
+ * Mobile primero: jerarquía de PDP simplificada — producto → suscripción/compra única → CTA →
+ * cambiar producto / ya come otra marca / ir a la tienda → acordeón "¿por qué?". Las
+ * alternativas y la marca propia viven en Sheets (menos cajas visibles).
+ *
+ * Cuatro salidas de primer nivel (§1.5):
+ *  1. Me convence → Suscribirme (primary, recomendada) o Sumar al pedido (compra única).
+ *  2. No me convence → "Ver otras opciones (N)" → Sheet de alternativas igual de válidas.
+ *  3. Seguir mirando → "Seguir en la tienda".
+ *  4. Ya come otra marca → Sheet buscador: su marca REARMA el plan y se GUARDA (sin empujar
+ *     el cambio, puerta de lealtad de marca).
+ *
+ * Catálogo REAL (Store API, O5): sumar/guardar registra qué come (`assignFood`, seam B6).
  */
 export function RecommendationView({ products }: { products: Product[] }) {
   const router = useRouter();
-  const { activePet, assignFood } = usePet();
+  const { activePet, assignFood, isHydrating } = usePet();
   const { addItem } = useCart();
   const { toast } = useToast();
   const reduced = usePrefersReducedMotion();
-  // Con sesión (alta de 2ª mascota): el pedido va directo al carrito, sin pasar
-  // por el registro "valor primero" (que es solo para visitantes).
+  // La sesión decide solo el DESTINO DE SALIDA (tienda vs. sus mascotas), no el
+  // camino de compra: sumar al pedido lleva SIEMPRE al carrito (invitado o cliente).
   const { status } = useSession();
   const isAuthed = status === "authenticated";
 
@@ -119,8 +129,8 @@ export function RecommendationView({ products }: { products: Product[] }) {
     () => (activePet && food ? foodPlan(activePet, food) : undefined),
     [activePet, food],
   );
-  // Razones "por qué esta" — solo las cualitativas: la ración vive en la línea de
-  // valor, así que la sacamos de aquí para no repetir el mismo número (síntesis).
+  // Razones "por qué esta" — solo las cualitativas: la ración vive en otra parte, así
+  // que la sacamos de aquí para no repetir el mismo número (síntesis).
   const whyReasons = useMemo(
     () =>
       activePet && food
@@ -133,10 +143,24 @@ export function RecommendationView({ products }: { products: Product[] }) {
     [activePet, products, food],
   );
 
-  // Sin mascota (entrada directa a la URL) → al alta.
+  // Frecuencia de suscripción sugerida (la natural: la más cercana a cuánto dura el saco).
+  // Fuente ÚNICA compartida con la PDP; sin fechas ni cálculos expuestos al usuario. Se
+  // re-deriva al cambiar de comida (otro saco dura distinto) con el patrón de "reset de
+  // estado al cambiar una prop" (sin efecto, en render), igual que la PDP.
+  const naturalFreq = naturalFrequencyWeeks(plan?.estimate.daysLeft);
+  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(naturalFreq);
+  const [freqAnchor, setFreqAnchor] = useState<string | undefined>(food?.id);
+  if (food && freqAnchor !== food.id) {
+    setFreqAnchor(food.id);
+    setFrequency(naturalFreq);
+  }
+
+  // Sin mascota (entrada directa a la URL) → al alta. Se espera a que el perfil
+  // termine de hidratar (espejo local del invitado, D-persistencia) para no
+  // rebotar al onboarding en una recarga antes de restaurar la mascota.
   useEffect(() => {
-    if (!activePet) router.replace("/comenzar");
-  }, [activePet, router]);
+    if (!isHydrating && !activePet) router.replace("/comenzar");
+  }, [isHydrating, activePet, router]);
 
   // Momento "aha" del embudo: se mostró la recomendación (una vez por producto
   // recomendado, para no re-disparar al re-render).
@@ -153,7 +177,6 @@ export function RecommendationView({ products }: { products: Product[] }) {
   // Salir sin descartar el journey: tienda (invitado) o sus mascotas (con sesión).
   // NUNCA la landing (FUNNEL_TARGET §1.5, principio 4).
   const exitHref = isAuthed ? "/cuenta/mascotas" : STORE_HREF;
-  const weightEstimated = Boolean(activePet.weightSource && activePet.weightSource !== "exacto");
 
   /** Elegir una alternativa igual de válida (la COMPRA): rearma el plan y cierra el sheet. */
   function chooseAlternative(id: string) {
@@ -175,12 +198,20 @@ export function RecommendationView({ products }: { products: Product[] }) {
     setPlanMode("recommended");
   }
 
-  /** Me gusta / reponer: sumar la comida mostrada al pedido real + aprender qué come. */
+  /**
+   * Compra única / reponer: sumar la comida mostrada al pedido real + aprender qué come.
+   *
+   * Funnel unificado (cierre de F5, validado por Carlos 2026-07-26): se elimina el
+   * muro invitado→`/crear-cuenta` que había ANTES del carrito. Todos van al carrito
+   * (invitado o cliente), igual que desde la PDP y que "Suscribirme". El invitado
+   * compra como invitado (D17/D26); la cuenta se materializa recién en el checkout y
+   * solo donde es estructuralmente necesaria (la suscripción, que exige `customer_id`).
+   */
   function addToOrder() {
     if (!food) return;
     addItem(food, { quantity: 1 });
     assignFood(activePet!.id, food.id);
-    router.push(isAuthed ? "/carrito" : "/crear-cuenta");
+    router.push("/carrito");
   }
 
   /** Ya la tiene en casa: guardar su plan (asigna current_food) sin tocar el carrito. */
@@ -220,31 +251,36 @@ export function RecommendationView({ products }: { products: Product[] }) {
     );
   }
 
+  const foodPerKg = pricePerKg(food);
+  const subscribable = !isOwned && food.subscribable;
+
   return (
     <FunnelShell exitHref={exitHref}>
-      <Section spacing="md">
+      <Section spacing="sm">
         <motion.div
           variants={reduced ? fade : fadeInUp}
           initial="hidden"
           animate="visible"
           className="mx-auto w-full max-w-4xl"
         >
-          <Stack gap={6}>
-            {/* Cierre del onboarding: no "paso 6" sino "listo". Sin párrafo: ya convenció. */}
-            <Stack gap={2} align="center" className="text-center">
+          <Stack gap={4}>
+            {/* Cierre del onboarding: no "paso 6" sino "listo". El título es solo el
+                marco emocional (la card es la protagonista): compacto y sin robar foco. */}
+            <Stack gap={1} align="center" className="text-center">
               <span className="overline inline-flex items-center gap-1.5 text-text-brand">
                 <Sparkles className="size-3.5" aria-hidden /> El perfil de {activePet.name} está listo
               </span>
-              <h1 className="display-l text-text-primary">
+              <h1 className="heading-2 text-text-primary">
                 El plan de <span className="pet-name">{activePet.name}</span>
               </h1>
             </Stack>
 
-            {/* LA CARTA DE PLAN — dos columnas en desktop: "decidir" | "el valor".
-                Convierte altura en ancho; el CTA queda arriba a la vista sin scroll. */}
-            <div className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-border-default bg-surface p-6 shadow-sm lg:flex-row lg:gap-8 lg:p-8">
-              {/* Columna A — decidir */}
-              <Stack gap={4} className="min-w-0 flex-1">
+            {/* LA CARTA DE PLAN — dos columnas en desktop: "el producto" | "la decisión".
+                En móvil apila: producto → suscripción/compra única → CTA (jerarquía de PDP). */}
+            <div className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-border-default bg-surface p-6 shadow-sm lg:flex-row lg:gap-8 lg:p-6">
+              {/* Columna A — el producto: identidad + etiqueta del plan. Centrada en
+                  vertical en desktop para que su vacío quede balanceado (no "colgado"). */}
+              <Stack gap={4} className="min-w-0 flex-1 lg:justify-center">
                 <Row gap={4} align="start">
                   <div className="relative grid size-[84px] shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-white">
                     <ProductImage
@@ -258,7 +294,6 @@ export function RecommendationView({ products }: { products: Product[] }) {
                     <span className="overline text-text-secondary">{food.brand.name}</span>
                     <h2 className="heading-3 text-text-primary">{food.name}</h2>
                     {food.rating && <Rating value={food.rating.value} count={food.rating.count} />}
-                    <Price now={food.price.current} was={food.price.compareAt} size="lg" />
                   </Stack>
                 </Row>
 
@@ -292,86 +327,110 @@ export function RecommendationView({ products }: { products: Product[] }) {
                     </>
                   )}
                 </div>
-
-                {/* Salidas 1 y 2: me gusta (primary) · no me convence (bajo demanda) */}
-                <Stack gap={2} className="border-t border-border-default pt-4">
-                  {isOwned ? (
-                    <>
-                      <Button
-                        size="lg"
-                        block
-                        onClick={savePlan}
-                        trailingIcon={<Check className="size-4" aria-hidden />}
-                      >
-                        Guardar el plan de {activePet.name}
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={addToOrder}
-                        className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
-                      >
-                        <Repeat className="size-4" aria-hidden /> o reponerla ahora
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        size="lg"
-                        block
-                        onClick={addToOrder}
-                        trailingIcon={<ArrowRight className="size-4" aria-hidden />}
-                      >
-                        Sumar al pedido de {activePet.name}
-                      </Button>
-                      {alternatives.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setAltOpen(true)}
-                          className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
-                        >
-                          ¿No te convence? Ver otras opciones ({alternatives.length})
-                          <ChevronRight className="size-4" aria-hidden />
-                        </button>
-                      )}
-                    </>
-                  )}
-                </Stack>
-
-                {/* Razones bajo demanda: el onboarding ya convenció, no las mostramos por defecto */}
-                {!isOwned && whyReasons.length > 0 && (
-                  <WhyDisclosure petName={activePet.name} reasons={whyReasons} />
-                )}
               </Stack>
 
-              {/* Columna B — el valor: anticipación (reservada) + una línea de datos */}
-              <Stack gap={3} className="lg:w-[320px] lg:shrink-0 lg:border-l lg:border-border-default lg:pl-8">
-                <AnticipationProposal key={food.id} petName={activePet.name} plan={plan} food={food} />
-                {plan && (
-                  <p className="text-sm text-text-secondary">
-                    Come <strong className="text-text-primary">~{plan.rationGrams} g</strong>/día
-                    {plan.pricePerKg && (
-                      <>
-                        {" · rinde "}
-                        <strong className="text-text-primary">{formatCLP(plan.pricePerKg)}</strong>/kg
-                      </>
+              {/* Columna B — la decisión: suscripción (recomendada) + compra única.
+                  MISMO patrón y componente que la PDP (D56): así comprar se siente idéntico. */}
+              <Stack
+                gap={3}
+                className="lg:w-[360px] lg:shrink-0 lg:border-l lg:border-border-default lg:pl-8"
+              >
+                {isOwned ? (
+                  /* Su marca de siempre: no se compra, se GUARDA el plan (puede reponer). */
+                  <Stack gap={3}>
+                    <Stack gap={1}>
+                      <span className="overline text-text-secondary">Su alimento de siempre</span>
+                      <Price now={food.price.current} was={food.price.compareAt} size="xl" />
+                    </Stack>
+                    <Button
+                      size="lg"
+                      block
+                      onClick={savePlan}
+                      trailingIcon={<Check className="size-4" aria-hidden />}
+                    >
+                      Guardar el plan de {activePet.name}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={addToOrder}
+                      className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
+                    >
+                      <Repeat className="size-4" aria-hidden /> o reponerla ahora
+                    </button>
+                  </Stack>
+                ) : (
+                  <>
+                    {/* Suscripción primero (recomendada) — card idéntica a la PDP, precio y
+                        frecuencia reactivos. La frecuencia por defecto es la natural. */}
+                    {subscribable && (
+                      <PlanManadaCard
+                        product={food}
+                        frequency={frequency}
+                        onFrequencyChange={setFrequency}
+                      />
                     )}
-                  </p>
+
+                    {subscribable && <Separator />}
+
+                    {/* Compra única — salida secundaria (D56). Con suscripción presente va
+                        COMPACTA (label+precio en línea, botón md) para recortar altura y dar
+                        el foco a la suscripción; sin suscripción es el CTA principal. */}
+                    {subscribable ? (
+                      <Stack gap={2}>
+                        <Row justify="between" align="center" gap={2}>
+                          <span className="overline text-text-secondary">Compra única</span>
+                          <Price now={food.price.current} was={food.price.compareAt} size="md" />
+                        </Row>
+                        <Button
+                          size="md"
+                          block
+                          variant="secondary"
+                          onClick={addToOrder}
+                          trailingIcon={<ArrowRight className="size-4" aria-hidden />}
+                        >
+                          Sumar al pedido
+                        </Button>
+                      </Stack>
+                    ) : (
+                      <Stack gap={3}>
+                        <Stack gap={1}>
+                          <span className="overline text-text-secondary">Compra única</span>
+                          <Price now={food.price.current} was={food.price.compareAt} size="xl" />
+                          {foodPerKg && (
+                            <span className="text-[13px] text-text-secondary">
+                              {formatCLP(foodPerKg)} por kilo
+                            </span>
+                          )}
+                        </Stack>
+                        <Button
+                          size="lg"
+                          block
+                          onClick={addToOrder}
+                          trailingIcon={<ArrowRight className="size-4" aria-hidden />}
+                        >
+                          Sumar al pedido de {activePet.name}
+                        </Button>
+                      </Stack>
+                    )}
+                  </>
                 )}
-                {weightEstimated && (
-                  <p className="text-[13px] text-text-muted">
-                    Estimado con su peso aproximado — al confirmarlo, afinamos el plan.
-                  </p>
-                )}
+
               </Stack>
             </div>
 
-            {/* Salidas 3 y 4: seguir mirando · ya come otra marca — de primer nivel, no enterradas */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button variant="ghost" block asChild>
-                <Link href={STORE_HREF}>
-                  <Store className="size-4" aria-hidden /> Seguir en la tienda
-                </Link>
-              </Button>
+            {/* Salidas secundarias: cambiar producto · ya come otra marca · ir a la tienda.
+                Apiladas en móvil; en fila en desktop para que se vean sin scroll bajo la card. */}
+            <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-2 sm:max-w-3xl sm:grid-cols-none sm:grid-flow-col sm:auto-cols-fr">
+              {!isOwned && alternatives.length > 0 && (
+                <Button
+                  variant="ghost"
+                  block
+                  onClick={() => setAltOpen(true)}
+                  trailingIcon={<ChevronRight className="size-4" aria-hidden />}
+                >
+                  Ver otras opciones ({alternatives.length})
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 block
@@ -380,7 +439,20 @@ export function RecommendationView({ products }: { products: Product[] }) {
               >
                 {activePet.name} ya come otra marca
               </Button>
+              <Button variant="ghost" block asChild>
+                <Link href={STORE_HREF}>
+                  <Store className="size-4" aria-hidden /> Seguir en la tienda
+                </Link>
+              </Button>
             </div>
+
+            {/* Cierre: "¿por qué?" como acordeón, al final (el onboarding ya convenció;
+                aquí solo respalda la confianza para quien la busca). */}
+            {!isOwned && whyReasons.length > 0 && (
+              <div className="mx-auto w-full max-w-md">
+                <WhyDisclosure reasons={whyReasons} />
+              </div>
+            )}
           </Stack>
         </motion.div>
       </Section>
@@ -409,137 +481,10 @@ export function RecommendationView({ products }: { products: Product[] }) {
   );
 }
 
-/* --------------------------------- Anticipación --------------------------------- */
-
-/** Días antes de que se acabe en que ofrecemos avisar (preferencia local). */
-const LEAD_OPTIONS: { days: number; label: string }[] = [
-  { days: 3, label: "3 días antes" },
-  { days: 5, label: "5 días antes" },
-  { days: 7, label: "1 semana antes" },
-];
-
-function minusDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() - days);
-  return next;
-}
-
-/**
- * Módulo de anticipación — el corazón de la propuesta (FUNNEL_TARGET §1.5, principio 2),
- * comprimido a ~2 líneas pero con su lugar reservado: aquí crecerá la suscripción/recompra
- * recurrente post-tracción, sin rediseñar la pantalla. El sistema ya sabe cuándo se acaba;
- * el usuario solo confirma o ajusta (los días de aviso viven en un popover para no sumar
- * altura). Límite honesto (D29): recordatorio, nunca cobro ni envío recurrente.
- */
-function AnticipationProposal({ petName, plan, food }: { petName: string; plan?: FoodPlan; food?: Product }) {
-  const [confirmed, setConfirmed] = useState(false);
-  const [leadDays, setLeadDays] = useState(5);
-
-  /**
-   * Confirmar el recordatorio = intención de recompra recurrente. Es el proxy
-   * de "suscripción" del embudo mientras el moat recurrente sigue diferido (D29).
-   */
-  function confirm() {
-    setConfirmed(true);
-    if (food) trackSubscription(food, "reminder");
-  }
-
-  const eyebrow = (
-    <span className="overline inline-flex items-center gap-1.5 text-miel-700">
-      <BellRing className="size-3.5" aria-hidden /> Nos anticipamos por {petName}
-    </span>
-  );
-
-  // Sin peso no hay fecha: invitamos a completarlo (honesto, sin inventar).
-  if (!plan) {
-    return (
-      <div className="rounded-[var(--radius-lg)] border-[1.5px] border-miel-300 bg-accent-soft p-4">
-        {eyebrow}
-        <p className="mt-1.5 text-sm text-text-primary">
-          Confirma su peso y calculamos cuándo se le acaba para avisarte a tiempo.
-        </p>
-      </div>
-    );
-  }
-
-  const reminderDate = minusDays(plan.estimate.runOutDate, leadDays);
-
-  return (
-    <div className="rounded-[var(--radius-lg)] border-[1.5px] border-miel-300 bg-accent-soft p-4">
-      {eyebrow}
-      {confirmed ? (
-        <div className="mt-1.5 flex items-start gap-2">
-          <Check className="mt-0.5 size-4 shrink-0 text-[var(--success)]" aria-hidden />
-          <p className="text-sm text-text-primary">
-            Te avisaremos alrededor del{" "}
-            <strong className="font-semibold">{formatDeliveryDate(reminderDate)}</strong>.{" "}
-            <button
-              type="button"
-              onClick={() => setConfirmed(false)}
-              className="font-semibold text-text-brand underline-offset-4 hover:underline"
-            >
-              Cambiar
-            </button>
-          </p>
-        </div>
-      ) : (
-        <>
-          <p className="mt-1.5 text-sm text-text-primary">
-            <strong className="price text-lg">Le durará ~{pluralize(plan.estimate.daysLeft, "día")}</strong>
-            <span className="text-text-secondary"> · aviso {formatDeliveryDate(reminderDate)}</span>
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button
-              variant="subscribe"
-              size="sm"
-              leadingIcon={<Check className="size-4" aria-hidden />}
-              onClick={confirm}
-            >
-              Confirmar recordatorio
-            </Button>
-            <Popover>
-              <PopoverTrigger className="text-[13px] font-semibold text-text-secondary underline-offset-4 hover:text-text-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)]">
-                Ajustar
-              </PopoverTrigger>
-              <PopoverContent className="w-auto">
-                <div className="flex flex-col gap-2">
-                  <span className="caption text-text-secondary">Avisarme…</span>
-                  <div
-                    className="flex flex-wrap gap-2"
-                    role="group"
-                    aria-label="Cuándo avisarte"
-                  >
-                    {LEAD_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.days}
-                        type="button"
-                        aria-pressed={leadDays === opt.days}
-                        onClick={() => setLeadDays(opt.days)}
-                        className={
-                          "rounded-[var(--radius-pill)] border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)] " +
-                          (leadDays === opt.days
-                            ? "border-miel-500 bg-miel-100 text-neutral-800"
-                            : "border-border-default text-text-secondary hover:bg-subtle")
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 /* ----------------------------------- Piezas ------------------------------------- */
 
 /** "¿Por qué esta?" — razones cualitativas bajo demanda (no persuade por defecto). */
-function WhyDisclosure({ petName, reasons }: { petName: string; reasons: string[] }) {
+function WhyDisclosure({ reasons }: { reasons: string[] }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
@@ -550,7 +495,7 @@ function WhyDisclosure({ petName, reasons }: { petName: string; reasons: string[
         className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-focus)]"
       >
         <HelpCircle className="size-4" aria-hidden />
-        ¿Por qué esta para {petName}?
+        ¿Por qué recomendamos este alimento?
         <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
       {open && (
@@ -664,8 +609,8 @@ function normalize(s: string): string {
  * Sheet "ya come otra marca" (salida 4): buscador inteligente = búsqueda + exploración.
  * Se enfoca solo al abrir, filtra en vivo mientras escribe y, sin texto, deja explorar el
  * catálogo completo (misma experiencia que buscar un alimento dentro de Manada). Elegir su
- * marca de siempre rearma el plan (mismos cálculos, misma anticipación) sin empujar el cambio
- * (FUNNEL_TARGET §1.5, puerta de lealtad). El copy de confianza vive aquí, donde importa.
+ * marca de siempre rearma el plan sin empujar el cambio (FUNNEL_TARGET §1.5, puerta de
+ * lealtad). El copy de confianza vive aquí, donde importa.
  */
 function BrandFoodSheet({
   open,

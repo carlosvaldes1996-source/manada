@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Card "Plan Manada" (D48 diseño · D55 cableada) — el patrón de suscripción en la
- * PDP. Es la vía de compra RECURRENTE: elegir frecuencia + suscribir.
+ * Card "Plan Manada" (D48 diseño · D55 cableada) — el patrón ÚNICO de suscripción
+ * del sitio. Es la vía de compra RECURRENTE: elegir frecuencia + suscribir. La usan
+ * la PDP y el cierre del onboarding (recomendación F4) para que suscribirse se sienta
+ * idéntico en ambas superficies (por eso vive en `components/commerce`, no en la PDP).
  *
  * COMPONENTE CONTROLADO (Bloque A del rediseño de suscripción): NO tiene estado
- * propio. El formato (vía `product`) y la `frequency` viven en la PDP —una sola
- * fuente de verdad, igual que la compra única— así que al cambiar de formato TODO
- * se recalcula solo (precio suscrito, ahorro, %, y la frecuencia natural que
- * re-deriva la página). Esta card es puro render.
+ * propio. El formato (vía `product`) y la `frequency` viven en la página que la usa
+ * —una sola fuente de verdad, igual que la compra única— así que al cambiar de
+ * formato TODO se recalcula solo (precio suscrito, ahorro, %, y la frecuencia natural
+ * que re-deriva la página). Esta card es puro render.
  *
  * Los números son REALES: `subscriptionPrice` lo calcula el backend
  * (middlewares.ts) y llega en el producto; el front no recalcula el descuento.
@@ -48,8 +50,8 @@ export function PlanManadaCard({
   }
 
   return (
-    <div className="relative rounded-[var(--radius-xl)] border-[1.5px] border-terracota-400 bg-surface p-5 pt-6">
-      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-[var(--radius-pill)] bg-miel-400 px-3 py-1 text-[12px] font-semibold text-neutral-800 shadow-sm">
+    <div className="relative rounded-[var(--radius-xl)] border-[1.5px] border-terracota-400 bg-surface p-5 pt-7">
+      <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-[var(--radius-pill)] bg-miel-400 px-3 py-1 text-[12px] font-semibold text-neutral-800 shadow-sm">
         Recomendado: Suscripción
       </span>
 

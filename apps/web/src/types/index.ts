@@ -165,14 +165,31 @@ export interface Product {
 export type SubscriptionFrequencyWeeks = 2 | 4 | 6 | 8;
 
 export interface CartItem {
+  /**
+   * Id de la línea de carrito de Medusa — **identidad única** del ítem. Un mismo
+   * producto puede existir a la vez como suscripción y como compra única (dos
+   * líneas distintas): por eso el carrito se opera por línea, nunca por producto.
+   */
+  lineId: string;
   product: Product;
   quantity: number;
   /** Si la línea es por suscripción, su frecuencia en semanas. */
   subscriptionWeeks?: SubscriptionFrequencyWeeks;
 }
 
-/** Estado de una suscripción recurrente (D55). */
-export type SubscriptionStatus = "active" | "paused" | "cancelled";
+/**
+ * Estado de una suscripción recurrente (D55 · dunning D59).
+ * - `past_due`: un cobro de renovación falló; se está reintentando.
+ * - `unpaid`: se agotaron los reintentos → dada de baja por falta de pago
+ *   (distinta de `cancelled`, que es decisión del cliente).
+ */
+export type SubscriptionStatus = "active" | "paused" | "cancelled" | "past_due" | "unpaid";
+
+/** Tarjeta enlazada a una suscripción (referencia, nunca el PAN) — D59. */
+export interface SubscriptionCard {
+  brand: string;
+  last4: string;
+}
 
 /** Suscripción del cliente, para la vista de gestión en /cuenta (D55, API.md §13). */
 export interface SubscriptionView {
@@ -189,6 +206,10 @@ export interface SubscriptionView {
   /** Precio pactado por entrega (CLP). */
   agreedUnitPrice: number;
   currencyCode: string;
+  /** Tarjeta con la que se cobran las renovaciones (D59), si hay. */
+  card?: SubscriptionCard;
+  /** Último error de cobro (dunning, D59): para explicar el estado `past_due`/`unpaid`. */
+  lastChargeError?: string | null;
 }
 
 /** Despacho honesto: fecha y costo reales, siempre visibles (UX.md §1). */

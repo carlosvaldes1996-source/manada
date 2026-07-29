@@ -111,7 +111,7 @@ export function mapCartItems(cart: MedusaCart | null): CartItem[] {
   const items = [...(cart?.items ?? [])];
   items.sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
   return items.map((line) => {
-    const item: CartItem = { product: mapLineItemProduct(line), quantity: line.quantity };
+    const item: CartItem = { lineId: line.id, product: mapLineItemProduct(line), quantity: line.quantity };
     // La intención de suscripción viaja en la metadata de la línea (D55): si está,
     // la exponemos como frecuencia para que el carrito/checkout la distingan.
     const meta = line.metadata as { is_subscription?: unknown; frequency_weeks?: unknown } | null;
@@ -122,7 +122,3 @@ export function mapCartItems(cart: MedusaCart | null): CartItem[] {
   });
 }
 
-/** Busca la línea que corresponde a un `productId` (product_id de Medusa). */
-export function findLineIdByProduct(cart: MedusaCart | null, productId: string): string | undefined {
-  return cart?.items?.find((l) => l.product_id === productId)?.id;
-}

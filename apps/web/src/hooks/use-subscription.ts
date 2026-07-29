@@ -16,6 +16,20 @@ export const SUBSCRIPTION_FREQUENCIES: {
 ];
 
 /**
+ * Frecuencia "natural" sugerida por defecto: la más cercana a cuánto dura el saco
+ * (D55). Si no hay duración (sin mascota/peso), cae a 4 semanas —el default seguro—.
+ * Fuente ÚNICA compartida por la PDP y el cierre del onboarding (recomendación F4)
+ * para que "Frecuencia sugerida" signifique lo mismo en todo el sitio.
+ */
+export function naturalFrequencyWeeks(durationDays?: number): SubscriptionFrequencyWeeks {
+  if (!durationDays) return 4;
+  const weeks = durationDays / 7;
+  return SUBSCRIPTION_FREQUENCIES.reduce((best, f) =>
+    Math.abs(f.weeks - weeks) < Math.abs(best.weeks - weeks) ? f : best,
+  ).weeks;
+}
+
+/**
  * Estado de suscripción para un producto (SubscriptionBox de la PDP).
  * Calcula precio con descuento y ahorro a partir de `subscriptionDiscount`.
  * Una sola fuente de verdad para la cápsula de suscripción y el CTA.

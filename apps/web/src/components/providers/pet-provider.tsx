@@ -73,6 +73,12 @@ interface PetContextValue {
   setPetPhoto: (petId: string, dataUrl: string | null) => void;
   /** Fecha ISO en que se asignó el alimento actual de cada mascota (por id). */
   foodAssignedAt: Record<string, string>;
+  /**
+   * `true` mientras se resuelve la primera hidratación del perfil (espejo local
+   * del invitado o backend del cliente). Deja distinguir "aún cargando" de "no
+   * hay mascota", para no redirigir al onboarding en una recarga antes de tiempo.
+   */
+  isHydrating: boolean;
 }
 
 /** Campos del perfil editables desde la UI (subset de `Pet`, B5). */
@@ -138,11 +144,87 @@ function overlayStoredPhotos(pets: Pet[]): Pet[] {
   });
 }
 
+/* ------------------- Espejo local del perfil de INVITADO --------------------- */
+
+/**
+ * `localStorage` que refleja el perfil de mascota del INVITADO (ids `local_…`),
+ * espejo del patrón del carrito (`manada_cart_id`). Invariantes (directiva de
+ * Carlos): (1) es SOLO un reflejo del estado temporal del onboarding —jamás
+ * persiste ids reales del backend— y (2) al autenticarse/migrar con éxito se
+ * LIMPIA, porque desde ahí el backend es la fuente única y este espejo quedaría
+ * obsoleto. Sirve para sobrevivir recargas/pestañas nuevas antes de crear la cuenta.
+ */
+const GUEST_PETS_KEY = "manada.guest_pets";
+
+interface GuestPetsSnapshot {
+  pets: Pet[];
+  activePetId: string | null;
+  foodAssignedAt: Record<string, string>;
+}
+
+/** Lee el espejo del invitado, filtrando defensivamente a solo ids `local_…`. */
+function readGuestPets(): GuestPetsSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(GUEST_PETS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GuestPetsSnapshot>;
+    const pets = (parsed.pets ?? []).filter((p) => p && isLocalId(p.id));
+    if (pets.length === 0) return null;
+    return {
+      pets,
+      activePetId: parsed.activePetId ?? null,
+      foodAssignedAt: parsed.foodAssignedAt ?? {},
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persiste el espejo del invitado. La foto vive aparte (PHOTOS_KEY) y se
+ * re-superpone al leer, así que aquí se OMITE (evita duplicar el data-URL y
+ * llenar la cuota). Solo se guardan las mascotas `local_…`.
+ */
+function writeGuestPets(
+  pets: Pet[],
+  activePetId: string | null,
+  foodAssignedAt: Record<string, string>,
+) {
+  if (typeof window === "undefined") return;
+  try {
+    const slim = pets.map((p) => ({ ...p, avatarUrl: undefined }));
+    const ids = new Set(pets.map((p) => p.id));
+    const activeId = activePetId && ids.has(activePetId) ? activePetId : (pets[0]?.id ?? null);
+    const assigned: Record<string, string> = {};
+    for (const id of ids) if (foodAssignedAt[id]) assigned[id] = foodAssignedAt[id];
+    window.localStorage.setItem(
+      GUEST_PETS_KEY,
+      JSON.stringify({ pets: slim, activePetId: activeId, foodAssignedAt: assigned }),
+    );
+  } catch (err) {
+    // Cuota llena o storage bloqueado: el perfil vive igual en memoria esta sesión.
+    console.warn("[pets] no se pudo guardar el perfil de invitado en el dispositivo", err);
+  }
+}
+
+/** Borra el espejo del invitado (al migrar/autenticar o cerrar sesión). */
+function clearGuestPets() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(GUEST_PETS_KEY);
+  } catch {
+    // noop: si no se puede limpiar, el próximo login lo sobreescribe/ignora igual.
+  }
+}
+
 export function PetProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
+  const { status, isLoading: sessionLoading } = useSession();
   const [pets, setPets] = useState<Pet[]>([]);
   const [activePetId, setActivePetId] = useState<string | null>(null);
   const [foodAssignedAt, setFoodAssignedAt] = useState<Record<string, string>>({});
+  // Primera hidratación en curso (evita el redirect prematuro al onboarding).
+  const [isHydrating, setIsHydrating] = useState(true);
 
   // Refs para leer estado fresco dentro de callbacks/efectos sin stale closures.
   const statusRef = useRef(status);
@@ -160,16 +242,52 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
 
   /** Guard de sincronización en curso (evita el doble efecto de StrictMode). */
   const syncingRef = useRef(false);
+  /** El espejo local del invitado ya se sembró (una sola vez por montaje). */
+  const guestHydratedRef = useRef(false);
   /** Intención de adoptar las mascotas de invitado en la próxima autenticación
    *  (solo el registro la enciende; ver `requestGuestTransfer`). */
   const transferGuestsRef = useRef(false);
 
-  // Al autenticarse: hidratar TODO desde el backend (una sola fuente). Solo el
-  // registro "valor primero" empuja además las mascotas de invitado; el login a
-  // una cuenta existente NO (la memoria del onboarding se descarta al hidratar).
-  // Al recargar con sesión persistida, la memoria arranca vacía → es solo hidratación.
+  // Hidratación del perfil según la sesión (una sola fuente de verdad por modo):
+  //  · INVITADO (anónimo) → espejo local del onboarding (`localStorage`), que
+  //    sobrevive recargas y pestañas nuevas.
+  //  · AUTENTICADO → backend (fuente única, D34); el registro "valor primero"
+  //    además EMPUJA las mascotas de invitado y luego LIMPIA el espejo local
+  //    (desde aquí el backend manda; el espejo quedaría obsoleto). El login a una
+  //    cuenta existente NO adopta (la memoria del onboarding se reemplaza).
+  // Se espera a que la sesión resuelva (`sessionLoading`) para no sembrar el perfil
+  // de invitado cuando en realidad hay una sesión persistida.
   useEffect(() => {
-    if (status !== "authenticated" || syncingRef.current) return;
+    if (sessionLoading) return;
+
+    // INVITADO: sembrar desde el espejo local, una sola vez por montaje. El seteo
+    // va diferido (microtask), mismo patrón que la sesión/carrito, para no encadenar
+    // renders síncronos dentro del efecto.
+    if (status !== "authenticated") {
+      if (guestHydratedRef.current) return;
+      guestHydratedRef.current = true;
+      void (async () => {
+        const stored = readGuestPets();
+        if (stored) {
+          const seeded = overlayStoredPhotos(stored.pets).map((p) => ({
+            ...p,
+            completeness: profileCompleteness(p),
+          }));
+          setPets(seeded);
+          setFoodAssignedAt(stored.foodAssignedAt);
+          setActivePetId((prev) => {
+            if (prev) return prev;
+            const wanted = stored.activePetId;
+            return wanted && seeded.some((p) => p.id === wanted) ? wanted : seeded[0].id;
+          });
+        }
+        setIsHydrating(false);
+      })();
+      return;
+    }
+
+    // AUTENTICADO: fuente única = backend. syncingRef evita el doble efecto de StrictMode.
+    if (syncingRef.current) return;
     syncingRef.current = true;
 
     // Leer y consumir el intent: si no lo encendió el registro, no adoptamos nada.
@@ -177,6 +295,9 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     transferGuestsRef.current = false;
 
     void (async () => {
+      // Solo se limpia el espejo local si NO falló una migración (para no perder
+      // una mascota aún no persistida). Cierra la garantía "migrado ⇒ limpio".
+      let migrationFailed = false;
       try {
         // 1 · Push de mascotas locales (espejo de transferCart) — SOLO en registro.
         //     Se conserva también su alimento asignado (el backend re-estampa la fecha).
@@ -195,6 +316,7 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
               migrateStoredPhoto(guest.id, created.id);
               if (guest.id === activeLocalId) nextActiveId = created.id;
             } catch (err) {
+              migrationFailed = true;
               console.warn("[pets] no se pudo transferir una mascota de invitado", err);
             }
           }
@@ -213,10 +335,22 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
         // Sin backend no rompemos la sesión: la memoria queda como esté.
         console.warn("[pets] hidratación de mascotas falló", err);
       } finally {
+        // Ya autenticado y con el backend como fuente única → el espejo local es
+        // obsoleto: se limpia (salvo migración fallida, para no perder datos).
+        if (!migrationFailed) clearGuestPets();
+        setIsHydrating(false);
         syncingRef.current = false;
       }
     })();
-  }, [status]);
+  }, [status, sessionLoading]);
+
+  // Espejo local del perfil de INVITADO: solo en modo anónimo y solo ids `local_…`.
+  // Sobrevive recargas hasta que se cree la cuenta y se migre (donde se limpia).
+  useEffect(() => {
+    if (sessionLoading || status === "authenticated") return;
+    const localPets = pets.filter((p) => isLocalId(p.id));
+    if (localPets.length > 0) writeGuestPets(localPets, activePetId, foodAssignedAt);
+  }, [pets, activePetId, foodAssignedAt, status, sessionLoading]);
 
   const addPet = useCallback<PetContextValue["addPet"]>(async (pet, opts) => {
     let final = pet;
@@ -240,6 +374,7 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
     setPets([]);
     setActivePetId(null);
     setFoodAssignedAt({});
+    clearGuestPets(); // cerrar sesión olvida también el espejo de invitado.
   }, []);
 
   const assignFood = useCallback<PetContextValue["assignFood"]>((petId, foodId) => {
@@ -308,8 +443,9 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       updatePet,
       setPetPhoto,
       foodAssignedAt,
+      isHydrating,
     }),
-    [pets, activePetId, addPet, requestGuestTransfer, clearPets, assignFood, updatePet, setPetPhoto, foodAssignedAt],
+    [pets, activePetId, addPet, requestGuestTransfer, clearPets, assignFood, updatePet, setPetPhoto, foodAssignedAt, isHydrating],
   );
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
