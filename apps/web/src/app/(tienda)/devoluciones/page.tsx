@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 
-export const metadata: Metadata = { title: "Cambios y devoluciones" };
+export const metadata: Metadata = {
+  title: "Cambios y devoluciones",
+  alternates: { canonical: "/devoluciones" },
+};
 
 export default function DevolucionesPage() {
   return (

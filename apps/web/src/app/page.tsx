@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { getCachedCatalog } from "@/lib/medusa/catalog-cache";
 import { HomeSwitch } from "./home-switch";
+
+// Canonical propio de la home (antes lo aportaba el layout raíz, que se filtraba
+// al resto de páginas). El resto de metadata (título, OG, etc.) viene del layout.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /**
  * Home. Server component: hidrata el catálogo real desde el backend y delega en

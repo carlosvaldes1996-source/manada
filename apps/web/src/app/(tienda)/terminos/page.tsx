@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { SITE } from "@/config/site";
 
-export const metadata: Metadata = { title: "Términos y condiciones" };
+export const metadata: Metadata = {
+  title: "Términos y condiciones",
+  alternates: { canonical: "/terminos" },
+};
 
 export default function TerminosPage() {
   return (

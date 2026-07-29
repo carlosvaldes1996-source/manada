@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { SITE } from "@/config/site";
 
-export const metadata: Metadata = { title: "Política de privacidad" };
+export const metadata: Metadata = {
+  title: "Política de privacidad",
+  alternates: { canonical: "/privacidad" },
+};
 
 export default function PrivacidadPage() {
   return (

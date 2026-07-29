@@ -42,9 +42,10 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   applicationName: SITE.name,
-  // Canonical por defecto (la home). Las páginas indexables (PLP/PDP) declaran
-  // el suyo. `metadataBase` resuelve las rutas relativas a producción.
-  alternates: { canonical: "/" },
+  // Sin canonical global: un `canonical: "/"` aquí se hereda a TODA página que no
+  // lo sobrescriba, marcándolas como duplicado de la home (y bloqueando su
+  // indexación). Cada ruta declara el suyo (la home en `page.tsx`; PLP/PDP e
+  // informativas en su metadata). `metadataBase` resuelve las rutas relativas.
   openGraph: {
     type: "website",
     locale: "es_CL",
