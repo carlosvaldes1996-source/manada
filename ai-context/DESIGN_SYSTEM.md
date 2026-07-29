@@ -267,6 +267,7 @@ Tokens aplicados. Librería: **shadcn/ui re-estilizado** sobre Tailwind.
   - *Ghost:* texto `text.primary`, hover `bg.subtle`.
   - *Subscribe (acento):* `bg miel.500`, texto `neutral.800`, ícono suscripción two-tone.
 - **Input/Select:** `bg.surface`, borde `border.default`, `radius.md`, foco anillo `border.focus` 2px; label `caption`; error con `estado error`.
+  - *Regla móvil (a11y/UX):* todo control **editable** (`<input>`/`<textarea>`) debe rendir **≥ 16px en móvil** — iOS Safari hace auto-zoom irreversible al enfocar campos con `font-size < 16px` y descuadra el layout. Implementación: `text-base md:text-[15px]` (16px < 768px, 15px de diseño en desktop). Los triggers no editables (Select/Combobox, que son `<button>`) no aplican.
 - **Card:** `bg.surface`, `radius.lg`, `shadow.sm`, padding 24, hover `shadow.md`.
 - **Badge/Chip:** `radius.pill`, `caption` 600. Variantes por estado semántico (suscripción = `accent-soft`/`miel.700`).
 - **Product Card:** ver §12.

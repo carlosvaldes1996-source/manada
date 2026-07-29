@@ -57,7 +57,7 @@ export function Coupon({ onApply, appliedCode, onRemove, className }: CouponProp
             placeholder="Código de descuento"
             aria-label="Código de descuento"
             aria-invalid={error ? true : undefined}
-            className="h-11 w-full rounded-[var(--radius-md)] border border-border-default bg-surface pr-3 pl-9 text-[15px] uppercase placeholder:normal-case placeholder:text-text-muted focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-terracota-100 aria-[invalid=true]:border-[var(--error)]"
+            className="h-11 w-full rounded-[var(--radius-md)] border border-border-default bg-surface pr-3 pl-9 text-base md:text-[15px] uppercase placeholder:normal-case placeholder:text-text-muted focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-terracota-100 aria-[invalid=true]:border-[var(--error)]"
           />
         </div>
         <Button type="submit" variant="secondary" loading={loading} disabled={!code.trim()}>

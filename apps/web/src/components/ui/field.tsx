@@ -63,4 +63,4 @@ export function Field({
 
 /** Clases compartidas por los controles de formulario (input/select/textarea). */
 export const controlClasses =
-  "w-full rounded-[var(--radius-md)] border border-border-default bg-surface px-3.5 py-3 text-[15px] text-text-primary transition-colors placeholder:text-text-muted hover:border-border-strong focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-terracota-100 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-[var(--error)] aria-[invalid=true]:ring-[var(--error-soft)]";
+  "w-full rounded-[var(--radius-md)] border border-border-default bg-surface px-3.5 py-3 text-base md:text-[15px] text-text-primary transition-colors placeholder:text-text-muted hover:border-border-strong focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-terracota-100 disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-[var(--error)] aria-[invalid=true]:ring-[var(--error-soft)]";

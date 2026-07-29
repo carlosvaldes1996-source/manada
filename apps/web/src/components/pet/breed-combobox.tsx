@@ -170,7 +170,7 @@ export function BreedCombobox({ species, value, onChange, id }: BreedComboboxPro
               aria-expanded
               aria-controls={listId}
               aria-activedescendant={items[activeIndex] ? `${listId}-${activeIndex}` : undefined}
-              className="h-11 w-full bg-transparent text-[15px] text-text-primary outline-none placeholder:text-text-muted"
+              className="h-11 w-full bg-transparent text-base md:text-[15px] text-text-primary outline-none placeholder:text-text-muted"
             />
           </div>
           <ul id={listId} role="listbox" className="max-h-60 overflow-auto p-1.5">

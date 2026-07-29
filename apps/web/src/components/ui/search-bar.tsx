@@ -49,7 +49,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
             if (!isControlled) setInternal(e.target.value);
             props.onChange?.(e);
           }}
-          className="w-full bg-transparent text-[15px] text-text-primary outline-none placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden"
+          className="w-full bg-transparent text-base md:text-[15px] text-text-primary outline-none placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden"
           {...props}
         />
         {current && (
