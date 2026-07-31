@@ -297,13 +297,17 @@ export function ProductView({
             {/* Compra única (U045): precio de la variante elegida + cantidad + CTA */}
             <Stack gap={3}>
               <Row justify="between" align="end" wrap gap={3}>
+                {/* Elementos de bloque (`<p>`), no `<span>`, para que el extractor
+                    de texto de Google no concatene "Compra única$79.990$4.444 por
+                    kilo" en el snippet. Sin cambio visual: son ítems de la flex-column
+                    y Preflight resetea los márgenes de `<p>`. */}
                 <Stack gap={1}>
-                  <span className="overline text-text-secondary">Compra única</span>
+                  <p className="overline text-text-secondary">Compra única</p>
                   <Price now={unitPrice} was={selected.price.compareAt} size="xl" />
                   {pricePerKg && (
-                    <span className="text-[13px] text-text-secondary">
+                    <p className="text-[13px] text-text-secondary">
                       {formatCLP(pricePerKg)} por kilo
-                    </span>
+                    </p>
                   )}
                 </Stack>
                 <StockBadge stock={selected.stock} />

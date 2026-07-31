@@ -95,6 +95,12 @@ export interface ProductVariant {
   format: string;
   price: Price;
   stock: number;
+  /**
+   * SKU de la variante (Medusa `variant.sku`), si está definido. Identificador
+   * único que Google recomienda emitir en el schema Product para casar la ficha
+   * con listados de merchant. Ausente en muchas variantes → se omite del schema.
+   */
+  sku?: string;
 }
 
 export interface Product {

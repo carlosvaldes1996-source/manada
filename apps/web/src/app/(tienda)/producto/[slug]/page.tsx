@@ -7,7 +7,13 @@ import {
 } from "@/lib/medusa/catalog-cache";
 import { categoryLabel } from "@/lib/catalog";
 import { JsonLd } from "@/components/seo/json-ld";
-import { breadcrumbSchema, productSchema, resolveProductImage } from "@/lib/seo";
+import {
+  breadcrumbSchema,
+  productMetaDescription,
+  productMetaTitle,
+  productSchema,
+  resolveProductImage,
+} from "@/lib/seo";
 import { ProductView } from "./product-view";
 
 // Ficha cacheada con ISR (`revalidate` 300s): se sirve desde el edge sin round-trip
@@ -32,8 +38,11 @@ export async function generateMetadata({
   const product = await getCachedProductByHandle(slug);
   if (!product) return { title: "Producto" };
 
-  const title = `${product.brand.name} · ${product.name}`;
-  const description = `${product.name}${product.format ? ` (${product.format})` : ""} de ${product.brand.name}. Cómpralo en Manada con despacho a domicilio en Chile.`;
+  // Título y descripción únicos por producto (lib/seo, dueño de los textos SEO):
+  // "Producto · Marca · Manada" + una descripción natural con el diferenciador de
+  // Manada. Maximizan que Google adopte nuestros metadatos en vez de raspar la UI.
+  const title = productMetaTitle(product);
+  const description = productMetaDescription(product);
   const canonical = `/producto/${slug}`;
   // Solo se usa la foto del producto si es una URL válida; si es un emoji placeholder
   // se omite `images` y Next aplica el `opengraph-image` de marca (file-convention).

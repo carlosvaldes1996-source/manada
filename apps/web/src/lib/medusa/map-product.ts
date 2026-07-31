@@ -178,6 +178,7 @@ function toVariants(product: StoreProduct): ProductVariant[] {
       format: v.title || "Único",
       price: toPrice(v),
       stock: toStock(v),
+      ...(v.sku ? { sku: v.sku } : {}),
     }))
     .sort((a, b) => a.price.current - b.price.current);
 }
