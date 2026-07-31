@@ -464,8 +464,8 @@ function NavigationSection() {
 /* ------------------------------------ Chrome ---------------------------------- */
 function ChromeSection() {
   return (
-    <GuideSection id="chrome" title="Chrome" blurb="El esqueleto de la app: AppShell envuelve Header (con Navbar/MegaMenu/PetSwitcher), Footer y BottomNav.">
-      <Demo name="Header" when="Sticky con blur: logo · buscador · selector de mascota · carrito. Navbar por necesidad en desktop." canvasClassName="block p-0 overflow-hidden">
+    <GuideSection id="chrome" title="Chrome" blurb="El esqueleto de la app: AppShell envuelve Header (con Navbar/MegaMenu/AccountMenu), Footer y BottomNav.">
+      <Demo name="Header" when="Sticky con blur: logo · buscador · menú único de cuenta/mascota · carrito. Navbar por necesidad en desktop." canvasClassName="block p-0 overflow-hidden">
         <div className="relative">
           <Header />
         </div>

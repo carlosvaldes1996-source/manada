@@ -51,7 +51,7 @@ MI CUENTA
 ```
 
 ### 2.2 Modelo de navegación
-- **Header (desktop):** logo · buscador prominente (centro) · selector de mascota · cuenta · carrito.
+- **Header (desktop):** logo (→ Inicio) · buscador prominente (centro) · **menú único de identidad** · carrito. El menú de identidad (D61, `components/pet/account-menu.tsx`) es un solo control de avatar —la cara de la mascota, *sin nombre en la barra*— que al abrir separa explícitamente **"Tu mascota"** (Ver perfil → perfil canónico `/cuenta/mascotas` · Cambiar de mascota ≥2 · Agregar) de **"Tu cuenta"** (Mi cuenta `/cuenta` + Cerrar sesión · o Ingresar + Crear cuenta para invitados). Sustituye el par anterior "selector de mascota con nombre navegable + ícono de cuenta suelto", que hacía leer el nombre de la mascota como el perfil del usuario.
 - **Mega-menú** disparado por "Comprar": columnas por **especie → necesidad → etapa**, con accesos directos personalizados ("Lo de siempre de Toby").
 - **Móvil:** barra inferior fija — Inicio · Comprar · Buscar · Mascotas · Carrito. Menú especie/necesidad en sheet.
 - **Buscador:** overlay full con sugerencias, búsquedas recientes, "para {mascota}", y resultados con filtros (especie, edad, marca, precio, suscribible).

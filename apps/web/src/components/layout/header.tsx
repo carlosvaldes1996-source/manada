@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, Lock, User } from "lucide-react";
+import { ShoppingBag, Lock } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { HeaderSearch } from "./header-search";
 import { useCart, usePet } from "@/components/providers";
-import { PetSwitcher } from "@/components/pet/pet-switcher";
+import { AccountMenu } from "@/components/pet/account-menu";
 import { Logo } from "./logo";
 import { Navbar } from "./navbar";
 import { MobileNav } from "./mobile-nav";
@@ -23,7 +23,7 @@ export interface HeaderProps {
 
 /**
  * Header global sticky con blur (DESIGN_SYSTEM §12.4): logo · buscador central ·
- * selector de mascota + carrito. En desktop monta la <Navbar> por necesidad;
+ * menú único de cuenta/mascota + carrito. En desktop monta la <Navbar> por necesidad;
  * en móvil, el <MobileNav>. Las variantes "checkout" y "marketing" reducen el chrome.
  */
 export function Header({ variant = "default" }: HeaderProps) {
@@ -90,14 +90,10 @@ export function Header({ variant = "default" }: HeaderProps) {
           <HeaderSearch />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
-          <PetSwitcher />
-          <Link href="/cuenta" aria-label="Mi cuenta" className="hidden sm:block">
-            <IconButton label="Mi cuenta" asChild>
-              <span>
-                <User className="size-5" strokeWidth={1.75} aria-hidden />
-              </span>
-            </IconButton>
-          </Link>
+          {/* Menú único de identidad: separa "tu mascota" (perfil) de "tu cuenta"
+              (humano) en un solo control — antes el nombre de la mascota se leía
+              como el perfil del usuario (auditoría de navegación). */}
+          <AccountMenu />
           <CartButton />
         </div>
       </Container>

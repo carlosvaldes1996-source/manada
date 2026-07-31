@@ -6,7 +6,7 @@ export * from "./pet-status";
 export * from "./pet-status-card";
 export * from "./pet-action-grid";
 export * from "./pet-card";
-export * from "./pet-switcher";
+export * from "./account-menu";
 export * from "./pet-profile-header";
 export * from "./pet-edit-card";
 export * from "./pet-edit-dialog";
