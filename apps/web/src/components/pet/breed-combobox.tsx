@@ -37,7 +37,7 @@ export function BreedCombobox({ species, value, onChange, id }: BreedComboboxPro
   const [query, setQuery] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(0);
 
-  const mestizo = mestizoLabel(species);
+  const mestizo = mestizoLabel();
 
   const items = React.useMemo<string[]>(() => {
     if (!hasList) return [];

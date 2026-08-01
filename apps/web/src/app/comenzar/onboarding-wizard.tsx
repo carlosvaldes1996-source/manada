@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, HelpCircle, Check, Scale, Utensils } from "lucide-react";
+import { ArrowLeft, ArrowRight, HelpCircle, Check, Scale, Utensils, AlertTriangle } from "lucide-react";
 import type { LifeStage, Pet, Species, WeightSource } from "@/types";
 import { FunnelShell } from "@/components/layout";
 import { Section } from "@/components/ui/section";
@@ -15,7 +15,7 @@ import { PetAvatar } from "@/components/pet/pet-avatar";
 import { BreedCombobox } from "@/components/pet/breed-combobox";
 import { usePet } from "@/components/providers";
 import { dailyRationGrams } from "@/lib/anticipation";
-import { findBreed, estimateWeightFromBreed, sizeBucketsForSpecies, midpoint } from "@/lib/breeds";
+import { findBreed, estimateWeightFromBreed, sizeBucketsForSpecies, midpoint, overweightSignal } from "@/lib/breeds";
 import { profileCompleteness } from "@/lib/pet";
 import { trackOnboardingStart } from "@/lib/analytics";
 import { fade, fadeInUp } from "@/lib/motion";
@@ -588,6 +588,21 @@ function WeightKnownStep({
       </Row>
     ) : null;
 
+  // Aviso de posible sobrepeso (advisory): solo con raza de rango conocido y peso
+  // que supera su máximo típico con margen. No cambia la ración: la seguimos
+  // calculando con el peso indicado; solo invitamos a confirmarlo.
+  const overweight = overweightSignal(species, breed, weightKg);
+  const overweightNote = overweight ? (
+    <Row gap={2} className="rounded-[var(--radius-md)] bg-urgency-soft px-3.5 py-2.5 text-sm text-text-primary">
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-urgency-strong" aria-hidden />
+      <span>
+        {weightKg} kg está ~{overweight.excessPct}% sobre el máximo típico de la raza (~{overweight.typicalMax} kg).
+        Podría indicar <strong>sobrepeso</strong>: te sugerimos confirmarlo con tu veterinario. De todos modos
+        calculamos su ración con el peso que nos diste.
+      </span>
+    </Row>
+  ) : null;
+
   // Especie sin lista curada ("otro"): sólo peso exacto, no bloqueante.
   if (!hasSpeciesData) {
     return (
@@ -595,6 +610,7 @@ function WeightKnownStep({
         <ExactWeightInput value={weightKg} onChange={(kg) => onSetWeight(kg, kg != null ? "exacto" : undefined)} />
         <p className="text-[13px] text-text-muted">Si no lo sabes, puedes continuar y ajustarlo luego.</p>
         {ration}
+        {overweightNote}
       </Stack>
     );
   }
@@ -665,6 +681,7 @@ function WeightKnownStep({
       )}
 
       {ration}
+      {overweightNote}
     </Stack>
   );
 }
