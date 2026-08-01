@@ -19,8 +19,13 @@ import { EmailTemplate } from "../modules/resend";
 export default async function passwordResetHandler({
   event,
   container,
-}: SubscriberArgs<{ entity_id: string; token: string; actor_type: string }>) {
-  const { entity_id: email, token, actor_type } = event.data;
+}: SubscriberArgs<{
+  entity_id: string;
+  token: string;
+  actor_type: string;
+  metadata?: Record<string, unknown> | null;
+}>) {
+  const { entity_id: email, token, actor_type, metadata } = event.data;
 
   // Solo clientes del storefront (ignora usuarios del Admin).
   if (actor_type !== "customer") return;
@@ -28,12 +33,17 @@ export default async function passwordResetHandler({
   const storefront = process.env.STOREFRONT_URL || "http://localhost:3000";
   const url = `${storefront}/recuperar/nueva?token=${token}&email=${encodeURIComponent(email)}`;
 
+  // Mismo token de un solo uso, dos marcos: si viene de la auto-provisión de cuenta
+  // (obj 4, `metadata.activation`) el correo es "Define tu contraseña"; si no, es el
+  // reset de siempre. La ruta por defecto queda idéntica.
+  const isActivation = Boolean(metadata?.activation);
+
   const notificationModuleService = container.resolve(Modules.NOTIFICATION);
   await notificationModuleService.createNotifications({
     to: email,
     channel: "email",
-    template: EmailTemplate.ResetPassword,
-    data: { url, email },
+    template: isActivation ? EmailTemplate.AccountActivation : EmailTemplate.ResetPassword,
+    data: { url, email, first_name: (metadata?.first_name as string | undefined) ?? undefined },
   });
 }
 

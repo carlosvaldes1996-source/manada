@@ -9,6 +9,7 @@
 import * as React from "react"
 import WelcomeEmail, { subject as welcomeSubject } from "./welcome"
 import ResetPasswordEmail, { subject as resetSubject } from "./reset-password"
+import AccountActivationEmail, { subject as activationSubject } from "./account-activation"
 import OrderPlacedEmail, { subject as orderPlacedSubject } from "./order-placed"
 import OrderShippedEmail, { subject as orderShippedSubject } from "./order-shipped"
 import SubscriptionCreatedEmail, { subject as subCreatedSubject } from "./subscription-created"
@@ -21,6 +22,7 @@ import SubscriptionSkippedEmail, { subject as subSkippedSubject } from "./subscr
 export const EmailTemplate = {
   Welcome: "welcome",
   ResetPassword: "reset-password",
+  AccountActivation: "account-activation",
   OrderPlaced: "order-placed",
   OrderShipped: "order-shipped",
   SubscriptionCreated: "subscription-created",
@@ -45,6 +47,10 @@ export const emailTemplates: Record<EmailTemplateId, TemplateEntry> = {
   [EmailTemplate.ResetPassword]: {
     subject: resetSubject,
     render: (data) => React.createElement(ResetPasswordEmail, data),
+  },
+  [EmailTemplate.AccountActivation]: {
+    subject: activationSubject,
+    render: (data) => React.createElement(AccountActivationEmail, data),
   },
   [EmailTemplate.OrderPlaced]: {
     subject: orderPlacedSubject,
