@@ -57,7 +57,7 @@ export function LandingView({ products }: { products: Product[] }) {
             </Stack>
             <Row gap={3} wrap>
               <Button size="lg" asChild>
-                <Link href="/comenzar">Crear el perfil de tu mascota</Link>
+                <Link href="/comenzar">Crea el perfil de tu mascota</Link>
               </Button>
               {/* Puerta a la tienda sin cuenta (e-commerce como piso);
                   "Ingresar" vive en el header. */}
