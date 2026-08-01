@@ -5,37 +5,33 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Sparkles,
   ArrowRight,
   Check,
   Search,
   Store,
   Repeat,
   RotateCcw,
-  ChevronRight,
   ChevronDown,
   HelpCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { FunnelShell } from "@/components/layout";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/drawer";
 import { useToast } from "@/components/ui/toast";
 import { ProductImage, PlanManadaCard } from "@/components/commerce";
 import { PetAvatar } from "@/components/pet/pet-avatar";
 import { usePet, useCart, useSession } from "@/components/providers";
-import { naturalFrequencyWeeks } from "@/hooks/use-subscription";
 import { fade, fadeInUp } from "@/lib/motion";
 import { trackRecommendationShown } from "@/lib/analytics";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
-import type { Pet, Product, SubscriptionFrequencyWeeks } from "@/types";
+import type { Product, SubscriptionFrequencyWeeks } from "@/types";
 import {
   recommendFoodRanked,
   recommendFoodAlternatives,
@@ -45,6 +41,7 @@ import {
   pricePerKg,
 } from "@/lib/recommend";
 import { formatCLP, pluralize } from "@/lib/format";
+import { overweightSignal } from "@/lib/breeds";
 
 /** Entrada a la tienda que preserva el journey (nunca la landing — FUNNEL_TARGET §1.5). */
 const STORE_HREF = "/categoria/todo";
@@ -59,25 +56,21 @@ type PlanMode = "recommended" | "owned";
 /**
  * Recomendación consultiva — "El plan de {mascota}" (Funnel F4, FUNNEL_TARGET §1.5).
  *
- * REDISEÑO 2026-07-26 (3ª iteración): deja de sentirse como "el último paso del onboarding"
- * y se siente como "el primer contacto con el e-commerce". El onboarding ya convenció → aquí
- * solo se decide QUÉ alimento comprar, y la pantalla empuja hacia la SUSCRIPCIÓN de la forma
- * más simple posible. Reutiliza el MISMO patrón de la PDP (D56): `PlanManadaCard` (suscripción,
- * recomendada) + compra única como salida secundaria siempre presente. Así suscribirse se
- * siente idéntico en toda la tienda (no hay un flujo especial de onboarding).
+ * REDISEÑO 2026-07-31 (4ª iteración): adopta el DISEÑO validado en la rama de Cristóbal
+ * —columna angosta mobile-first, cierre con check de éxito + ración como prueba, y una
+ * "tarjeta destacada" con banda de color ("NUESTRA MEJOR RECOMENDACIÓN") + badges— sobre
+ * la FUNCIONALIDAD real de nuestra rama. La tarjeta de Cristóbal se construyó sobre el
+ * recordatorio proxy (D29); aquí ese lugar lo ocupa la SUSCRIPCIÓN REAL: `PlanManadaCard`
+ * (el patrón único del sitio, D56) + compra única, exactamente como la PDP, para que
+ * suscribirse se sienta idéntico en toda la tienda.
  *
- * Evolución sobre la "carta de plan" de D44: se RETIRA la capa de promesas aún no confiables
- * —"le durará ~X días", "aviso el 29", fechas y leads 3/5/7— (el proxy de suscripción que D44
- * dejó con "lugar reservado"). Ahora que la suscripción es real (D55–D58), ese lugar lo ocupa
- * la frecuencia sugerida de la card, sin fechas ni cálculos expuestos. Honestidad D57 intacta.
+ * Mobile primero: una sola columna que fluye — cierre → advertencia de peso (si aplica) →
+ * tarjeta destacada (producto) → suscripción → compra única → "¿por qué?" → alternativas
+ * en línea → salidas secundarias. Sin dos columnas que se corten en pantallas chicas.
  *
- * Mobile primero: jerarquía de PDP simplificada — producto → suscripción/compra única → CTA →
- * cambiar producto / ya come otra marca / ir a la tienda → acordeón "¿por qué?". Las
- * alternativas y la marca propia viven en Sheets (menos cajas visibles).
- *
- * Cuatro salidas de primer nivel (§1.5):
- *  1. Me convence → Suscribirme (primary, recomendada) o Sumar al pedido (compra única).
- *  2. No me convence → "Ver otras opciones (N)" → Sheet de alternativas igual de válidas.
+ * Cuatro salidas (§1.5):
+ *  1. Me convence → Suscribirme (recomendada, `PlanManadaCard`) o Sumar al pedido (compra única).
+ *  2. No me convence → alternativas igual de válidas EN LÍNEA (elegir rearma el plan).
  *  3. Seguir mirando → "Seguir en la tienda".
  *  4. Ya come otra marca → Sheet buscador: su marca REARMA el plan y se GUARDA (sin empujar
  *     el cambio, puerta de lealtad de marca).
@@ -115,7 +108,6 @@ export function RecommendationView({ products }: { products: Product[] }) {
   // eligiendo una alternativa (recommended) o su marca de siempre (owned).
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [planMode, setPlanMode] = useState<PlanMode>("recommended");
-  const [altOpen, setAltOpen] = useState(false);
   const [brandOpen, setBrandOpen] = useState(false);
 
   const food = useMemo(
@@ -125,10 +117,6 @@ export function RecommendationView({ products }: { products: Product[] }) {
   const isRecommended = Boolean(food && recommended && food.id === recommended.id);
   const isOwned = planMode === "owned";
 
-  const plan = useMemo(
-    () => (activePet && food ? foodPlan(activePet, food) : undefined),
-    [activePet, food],
-  );
   // Razones "por qué esta" — solo las cualitativas: la ración vive en otra parte, así
   // que la sacamos de aquí para no repetir el mismo número (síntesis).
   const whyReasons = useMemo(
@@ -142,18 +130,17 @@ export function RecommendationView({ products }: { products: Product[] }) {
     () => (activePet && food ? recommendFoodAlternatives(activePet, products, food, 3) : []),
     [activePet, products, food],
   );
+  // Plan nutricional del saco (RER/MER) — SOLO para mostrar (ración en el cierre y
+  // "dura X días" en la tarjeta). No modifica el cálculo: lee la función pura existente.
+  const plan = useMemo(
+    () => (activePet && food ? foodPlan(activePet, food) : undefined),
+    [activePet, food],
+  );
 
-  // Frecuencia de suscripción sugerida (la natural: la más cercana a cuánto dura el saco).
-  // Fuente ÚNICA compartida con la PDP; sin fechas ni cálculos expuestos al usuario. Se
-  // re-deriva al cambiar de comida (otro saco dura distinto) con el patrón de "reset de
-  // estado al cambiar una prop" (sin efecto, en render), igual que la PDP.
-  const naturalFreq = naturalFrequencyWeeks(plan?.estimate.daysLeft);
-  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(naturalFreq);
-  const [freqAnchor, setFreqAnchor] = useState<string | undefined>(food?.id);
-  if (food && freqAnchor !== food.id) {
-    setFreqAnchor(food.id);
-    setFrequency(naturalFreq);
-  }
+  // Frecuencia de suscripción: por defecto 4 semanas en TODOS los flujos (decisión
+  // de producto 2026-07). Fuente única con la PDP; el usuario puede cambiarla y su
+  // elección se conserva al cambiar de comida.
+  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(4);
 
   // Sin mascota (entrada directa a la URL) → al alta. Se espera a que el perfil
   // termine de hidratar (espejo local del invitado, D-persistencia) para no
@@ -174,15 +161,19 @@ export function RecommendationView({ products }: { products: Product[] }) {
 
   if (!activePet) return null;
 
+  // Señal de posible sobrepeso (advisory): raza de rango conocido + peso sobre su
+  // máximo típico. No altera el plan ni la ración; solo invita a revisarlo.
+  const overweight = overweightSignal(activePet.species, activePet.breed, activePet.weightKg);
+
   // Salir sin descartar el journey: tienda (invitado) o sus mascotas (con sesión).
   // NUNCA la landing (FUNNEL_TARGET §1.5, principio 4).
   const exitHref = isAuthed ? "/cuenta/mascotas" : STORE_HREF;
+  const weightEstimated = Boolean(activePet.weightSource && activePet.weightSource !== "exacto");
 
-  /** Elegir una alternativa igual de válida (la COMPRA): rearma el plan y cierra el sheet. */
+  /** Elegir una alternativa igual de válida (la COMPRA): rearma el plan. */
   function chooseAlternative(id: string) {
     setSelectedId(id);
     setPlanMode("recommended");
-    setAltOpen(false);
   }
 
   /** Elegir la marca que ya come (la TIENE): rearma el plan en modo "owned" y cierra. */
@@ -253,6 +244,36 @@ export function RecommendationView({ products }: { products: Product[] }) {
 
   const foodPerKg = pricePerKg(food);
   const subscribable = !isOwned && food.subscribable;
+  const daysLeft = plan?.estimate.daysLeft;
+  // Hasta 2 alternativas EN LÍNEA (diseño Cristóbal): no una lista larga ni un Sheet oculto.
+  const sideAlternatives = alternatives.slice(0, 2);
+
+  /** Banda superior de la tarjeta destacada, según de qué comida esté hecho el plan. */
+  const bandLabel = isOwned ? (
+    <>
+      <span className="overline text-white">La comida de {activePet.name}</span>
+      <button
+        type="button"
+        onClick={resetToRecommended}
+        className="inline-flex items-center gap-1 text-[12px] font-semibold text-white/85 underline-offset-2 hover:underline"
+      >
+        <RotateCcw className="size-3" aria-hidden /> ver la sugerida
+      </button>
+    </>
+  ) : isRecommended ? (
+    <span className="overline tracking-widest text-white">Nuestra mejor recomendación</span>
+  ) : (
+    <>
+      <span className="overline text-white">Tu elección para {activePet.name}</span>
+      <button
+        type="button"
+        onClick={resetToRecommended}
+        className="text-[12px] font-semibold text-white/85 underline-offset-2 hover:underline"
+      >
+        ver la sugerida
+      </button>
+    </>
+  );
 
   return (
     <FunnelShell exitHref={exitHref}>
@@ -261,176 +282,198 @@ export function RecommendationView({ products }: { products: Product[] }) {
           variants={reduced ? fade : fadeInUp}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-4xl"
+          className="mx-auto w-full max-w-2xl"
         >
-          <Stack gap={4}>
-            {/* Cierre del onboarding: no "paso 6" sino "listo". El título es solo el
-                marco emocional (la card es la protagonista): compacto y sin robar foco. */}
+          <Stack gap={5}>
+            {/* Cierre del onboarding (diseño Cristóbal): check de éxito + "plan listo",
+                con la ración como prueba concreta de que el perfil sirvió. */}
             <Stack gap={1} align="center" className="text-center">
-              <span className="overline inline-flex items-center gap-1.5 text-text-brand">
-                <Sparkles className="size-3.5" aria-hidden /> El perfil de {activePet.name} está listo
+              <span className="grid size-11 place-items-center rounded-full bg-success-soft text-success-strong">
+                <Check className="size-5" aria-hidden />
               </span>
-              <h1 className="heading-2 text-text-primary">
-                El plan de <span className="pet-name">{activePet.name}</span>
+              <h1 className="display-l text-text-primary">
+                ¡Plan listo para <span className="pet-name">{activePet.name}</span>!
               </h1>
+              {plan && (
+                <p className="body-m text-text-secondary">
+                  Según su perfil, necesita{" "}
+                  <strong className="text-text-primary">{plan.rationGrams} g</strong> al día
+                  {weightEstimated && " (estimado)"}
+                </p>
+              )}
             </Stack>
 
-            {/* LA CARTA DE PLAN — dos columnas en desktop: "el producto" | "la decisión".
-                En móvil apila: producto → suscripción/compra única → CTA (jerarquía de PDP). */}
-            <div className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-border-default bg-surface p-6 shadow-sm lg:flex-row lg:gap-8 lg:p-6">
-              {/* Columna A — el producto: identidad + etiqueta del plan. Centrada en
-                  vertical en desktop para que su vacío quede balanceado (no "colgado"). */}
-              <Stack gap={4} className="min-w-0 flex-1 lg:justify-center">
+            {overweight && (
+              <Row
+                gap={2}
+                className="rounded-[var(--radius-md)] bg-urgency-soft px-3.5 py-2.5 text-sm text-text-primary"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-urgency-strong" aria-hidden />
+                <span>
+                  El peso de {activePet.name} (~{activePet.weightKg} kg) está ~{overweight.excessPct}% sobre el
+                  máximo típico de su raza (~{overweight.typicalMax} kg). Podría indicar <strong>sobrepeso</strong>:
+                  te sugerimos confirmarlo con tu veterinario. Su plan y ración se calculan con el peso indicado.
+                </span>
+              </Row>
+            )}
+
+            {/* TARJETA DESTACADA (diseño Cristóbal): banda de color + identidad del
+                producto. Borde neutro para NO competir con la card de suscripción de
+                abajo (el foco terracota es la suscripción). Una sola columna: en móvil
+                fluye sin cortarse; el cuerpo mantiene la imagen shrink-0 y el texto min-w-0. */}
+            <div className="overflow-hidden rounded-[var(--radius-xl)] border border-border-default bg-surface shadow-sm">
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 bg-terracota-400 px-5 py-2 text-center">
+                {bandLabel}
+              </div>
+
+              <div className="p-5 sm:p-6">
                 <Row gap={4} align="start">
-                  <div className="relative grid size-[84px] shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-white">
+                  <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle sm:size-28">
                     <ProductImage
                       image={food.imageUrl}
                       alt={`${food.brand.name} ${food.name}`}
-                      sizes="84px"
-                      emojiClassName="text-4xl"
+                      className="p-2"
+                      sizes="112px"
+                      emojiClassName="text-5xl"
                     />
                   </div>
-                  <Stack gap={1} className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
                     <span className="overline text-text-secondary">{food.brand.name}</span>
                     <h2 className="heading-3 text-text-primary">{food.name}</h2>
                     {food.rating && <Rating value={food.rating.value} count={food.rating.count} />}
-                  </Stack>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {food.format && (
+                        <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-border-default px-2.5 py-0.5 text-[12px] font-semibold text-text-secondary">
+                          {food.format}
+                        </span>
+                      )}
+                      {daysLeft && (
+                        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-terracota-100 px-2.5 py-0.5 text-[12px] font-semibold text-terracota-700">
+                          Dura {pluralize(daysLeft, "día")}
+                        </span>
+                      )}
+                    </div>
+                    {weightEstimated && (
+                      <p className="mt-1.5 text-[12px] text-text-muted">Estimado con su peso aproximado.</p>
+                    )}
+                  </div>
                 </Row>
 
-                {/* Etiqueta del plan, según de qué comida esté hecho */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {isOwned ? (
-                    <>
-                      <Badge variant="neutral">La comida de {activePet.name}</Badge>
-                      <button
-                        type="button"
-                        onClick={resetToRecommended}
-                        className="inline-flex items-center gap-1 text-[13px] font-semibold text-text-brand underline-offset-4 hover:underline"
-                      >
-                        <RotateCcw className="size-3.5" aria-hidden /> ver la que sugerimos
-                      </button>
-                    </>
-                  ) : isRecommended ? (
-                    <Badge variant="brand" icon={<Sparkles className="size-3.5" aria-hidden />}>
-                      La que elegiríamos para {activePet.name}
-                    </Badge>
-                  ) : (
-                    <>
-                      <Badge variant="neutral">Tu elección para {activePet.name}</Badge>
-                      <button
-                        type="button"
-                        onClick={resetToRecommended}
-                        className="text-[13px] font-semibold text-text-brand underline-offset-4 hover:underline"
-                      >
-                        ver la que sugerimos
-                      </button>
-                    </>
-                  )}
-                </div>
-              </Stack>
-
-              {/* Columna B — la decisión: suscripción (recomendada) + compra única.
-                  MISMO patrón y componente que la PDP (D56): así comprar se siente idéntico. */}
-              <Stack
-                gap={3}
-                className="lg:w-[360px] lg:shrink-0 lg:border-l lg:border-border-default lg:pl-8"
-              >
-                {isOwned ? (
-                  /* Su marca de siempre: no se compra, se GUARDA el plan (puede reponer). */
-                  <Stack gap={3}>
-                    <Stack gap={1}>
-                      <span className="overline text-text-secondary">Su alimento de siempre</span>
-                      <Price now={food.price.current} was={food.price.compareAt} size="xl" />
-                    </Stack>
-                    <Button
-                      size="lg"
-                      block
-                      onClick={savePlan}
-                      trailingIcon={<Check className="size-4" aria-hidden />}
-                    >
-                      Guardar el plan de {activePet.name}
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={addToOrder}
-                      className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
-                    >
-                      <Repeat className="size-4" aria-hidden /> o reponerla ahora
-                    </button>
-                  </Stack>
-                ) : (
-                  <>
-                    {/* Suscripción primero (recomendada) — card idéntica a la PDP, precio y
-                        frecuencia reactivos. La frecuencia por defecto es la natural. */}
-                    {subscribable && (
-                      <PlanManadaCard
-                        product={food}
-                        frequency={frequency}
-                        onFrequencyChange={setFrequency}
-                      />
-                    )}
-
-                    {subscribable && <Separator />}
-
-                    {/* Compra única — salida secundaria (D56). Con suscripción presente va
-                        COMPACTA (label+precio en línea, botón md) para recortar altura y dar
-                        el foco a la suscripción; sin suscripción es el CTA principal. */}
-                    {subscribable ? (
-                      <Stack gap={2}>
-                        <Row justify="between" align="center" gap={2}>
-                          <span className="overline text-text-secondary">Compra única</span>
-                          <Price now={food.price.current} was={food.price.compareAt} size="md" />
-                        </Row>
-                        <Button
-                          size="md"
-                          block
-                          variant="secondary"
-                          onClick={addToOrder}
-                          trailingIcon={<ArrowRight className="size-4" aria-hidden />}
-                        >
-                          Sumar al pedido
-                        </Button>
-                      </Stack>
-                    ) : (
-                      <Stack gap={3}>
-                        <Stack gap={1}>
-                          <span className="overline text-text-secondary">Compra única</span>
-                          <Price now={food.price.current} was={food.price.compareAt} size="xl" />
-                          {foodPerKg && (
-                            <span className="text-[13px] text-text-secondary">
-                              {formatCLP(foodPerKg)} por kilo
-                            </span>
-                          )}
-                        </Stack>
-                        <Button
-                          size="lg"
-                          block
-                          onClick={addToOrder}
-                          trailingIcon={<ArrowRight className="size-4" aria-hidden />}
-                        >
-                          Sumar al pedido de {activePet.name}
-                        </Button>
-                      </Stack>
-                    )}
-                  </>
+                {/* "¿Por qué?" — acordeón bajo el producto (el onboarding ya convenció;
+                    aquí solo respalda la confianza para quien la busca). */}
+                {!isOwned && whyReasons.length > 0 && (
+                  <div className="mt-4 border-t border-border-default pt-4">
+                    <WhyDisclosure reasons={whyReasons} />
+                  </div>
                 )}
-
-              </Stack>
+              </div>
             </div>
 
-            {/* Salidas secundarias: cambiar producto · ya come otra marca · ir a la tienda.
-                Apiladas en móvil; en fila en desktop para que se vean sin scroll bajo la card. */}
-            <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-2 sm:max-w-3xl sm:grid-cols-none sm:grid-flow-col sm:auto-cols-fr">
-              {!isOwned && alternatives.length > 0 && (
+            {/* DECISIÓN — MISMO patrón y componentes que la PDP (D56): suscripción real
+                (PlanManadaCard) + compra única. Sin recordatorio/fechas: la cadencia vive
+                en la frecuencia de la card. Suscribirse se siente idéntico en toda la tienda. */}
+            {isOwned ? (
+              /* Su marca de siempre: no se compra, se GUARDA el plan (puede reponer). */
+              <Stack gap={3} className="rounded-[var(--radius-xl)] border border-border-default bg-surface p-5">
+                <Stack gap={1}>
+                  <span className="overline text-text-secondary">Su alimento de siempre</span>
+                  <Price now={food.price.current} was={food.price.compareAt} size="xl" />
+                  {foodPerKg && (
+                    <span className="text-[13px] text-text-secondary">{formatCLP(foodPerKg)} por kilo</span>
+                  )}
+                </Stack>
                 <Button
-                  variant="ghost"
+                  size="lg"
                   block
-                  onClick={() => setAltOpen(true)}
-                  trailingIcon={<ChevronRight className="size-4" aria-hidden />}
+                  onClick={savePlan}
+                  trailingIcon={<Check className="size-4" aria-hidden />}
                 >
-                  Ver otras opciones ({alternatives.length})
+                  Guardar el plan de {activePet.name}
                 </Button>
-              )}
+                <button
+                  type="button"
+                  onClick={addToOrder}
+                  className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
+                >
+                  <Repeat className="size-4" aria-hidden /> o reponerla ahora
+                </button>
+              </Stack>
+            ) : (
+              <>
+                {/* Suscripción primero (recomendada) — card idéntica a la PDP, precio y
+                    frecuencia reactivos. La frecuencia por defecto es 4 semanas. */}
+                {subscribable && (
+                  <PlanManadaCard
+                    product={food}
+                    frequency={frequency}
+                    onFrequencyChange={setFrequency}
+                  />
+                )}
+
+                {/* Compra única — salida secundaria (D56) cuando hay suscripción; si el
+                    producto no es suscribible, es el CTA principal. */}
+                <div className="rounded-[var(--radius-xl)] border border-border-default bg-surface p-5">
+                  {subscribable ? (
+                    <Stack gap={3}>
+                      <Row justify="between" align="center" gap={2} wrap>
+                        <span className="overline text-text-secondary">Compra única</span>
+                        <Price now={food.price.current} was={food.price.compareAt} size="md" />
+                      </Row>
+                      <Button
+                        size="md"
+                        block
+                        variant="secondary"
+                        onClick={addToOrder}
+                        trailingIcon={<ArrowRight className="size-4" aria-hidden />}
+                      >
+                        Sumar al pedido
+                      </Button>
+                    </Stack>
+                  ) : (
+                    <Stack gap={3}>
+                      <Stack gap={1}>
+                        <span className="overline text-text-secondary">Compra única</span>
+                        <Price now={food.price.current} was={food.price.compareAt} size="xl" />
+                        {foodPerKg && (
+                          <span className="text-[13px] text-text-secondary">
+                            {formatCLP(foodPerKg)} por kilo
+                          </span>
+                        )}
+                      </Stack>
+                      <Button
+                        size="lg"
+                        block
+                        onClick={addToOrder}
+                        trailingIcon={<ArrowRight className="size-4" aria-hidden />}
+                      >
+                        Sumar al pedido de {activePet.name}
+                      </Button>
+                    </Stack>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Alternativas igual de válidas EN LÍNEA (diseño Cristóbal): elegir una
+                promueve esa comida a destacada y rearma el plan completo. */}
+            {!isOwned && sideAlternatives.length > 0 && (
+              <Stack gap={3}>
+                <span className="overline text-text-secondary">Otras opciones igual de válidas</span>
+                {sideAlternatives.map((alt) => (
+                  <AltCard
+                    key={alt.id}
+                    product={alt}
+                    angle={alternativeAngle(alt, food, activePet)}
+                    petName={activePet.name}
+                    onChoose={() => chooseAlternative(alt.id)}
+                  />
+                ))}
+              </Stack>
+            )}
+
+            {/* Salidas secundarias: ya come otra marca · seguir en la tienda. Apiladas
+                en móvil, en dos columnas desde sm — nunca se cortan. */}
+            <div className="grid gap-2 sm:grid-cols-2">
               <Button
                 variant="ghost"
                 block
@@ -445,28 +488,9 @@ export function RecommendationView({ products }: { products: Product[] }) {
                 </Link>
               </Button>
             </div>
-
-            {/* Cierre: "¿por qué?" como acordeón, al final (el onboarding ya convenció;
-                aquí solo respalda la confianza para quien la busca). */}
-            {!isOwned && whyReasons.length > 0 && (
-              <div className="mx-auto w-full max-w-md">
-                <WhyDisclosure reasons={whyReasons} />
-              </div>
-            )}
           </Stack>
         </motion.div>
       </Section>
-
-      {/* Sheet "no me convence": alternativas igual de válidas, bajo demanda */}
-      <AlternativesSheet
-        open={altOpen}
-        onOpenChange={setAltOpen}
-        petName={activePet.name}
-        alternatives={alternatives}
-        chosen={food}
-        pet={activePet}
-        onChoose={chooseAlternative}
-      />
 
       {/* Sheet "ya come otra marca": buscador inteligente — su marca rearma y guarda el plan */}
       <BrandFoodSheet
@@ -513,50 +537,12 @@ function WhyDisclosure({ reasons }: { reasons: string[] }) {
 }
 
 /**
- * Sheet "no me convence" (salida 2): alternativas igual de válidas (no de segunda).
- * Elegir una rearma el plan y cierra. Bajo demanda: no infla el scroll de la pantalla.
+ * Alternativa igual de válida EN LÍNEA (diseño Cristóbal): marca + nombre + "mejor si…"
+ * + precio. Elegirla promueve esa comida a destacada y rearma el plan completo. Layout
+ * de una fila que apila la imagen shrink-0 · info min-w-0 · precio shrink-0 → nunca se
+ * corta en móvil; el "Ver detalle" vive en el buscador y en "Seguir en la tienda".
  */
-function AlternativesSheet({
-  open,
-  onOpenChange,
-  petName,
-  alternatives,
-  chosen,
-  pet,
-  onChoose,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  petName: string;
-  alternatives: Product[];
-  chosen: Product;
-  pet: Pet;
-  onChoose: (id: string) => void;
-}) {
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        title={`Otras opciones para ${petName}`}
-        description="Igual de válidas — elige la que prefieras y rearmamos su plan."
-      >
-        <Stack gap={3}>
-          {alternatives.map((alt) => (
-            <AltRow
-              key={alt.id}
-              product={alt}
-              angle={alternativeAngle(alt, chosen, pet)}
-              petName={petName}
-              onChoose={() => onChoose(alt.id)}
-            />
-          ))}
-        </Stack>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-/** Alternativa "igual de válida": marca + nombre + "mejor si…" + precio; elegirla rearma el plan. */
-function AltRow({
+function AltCard({
   product,
   angle,
   petName,
@@ -567,32 +553,32 @@ function AltRow({
   petName: string;
   onChoose: () => void;
 }) {
-  const perKg = pricePerKg(product);
+  const compareAt = product.price.compareAt;
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border-default bg-surface p-4 sm:flex-row sm:items-center">
-      <span
-        className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-md)] bg-white text-3xl"
-        aria-hidden
-      >
-        <ProductImage image={product.imageUrl} alt={product.name} sizes="56px" />
-      </span>
+    <div className="flex gap-4 rounded-[var(--radius-xl)] border border-border-default bg-surface p-4">
+      <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+        <ProductImage image={product.imageUrl} alt={product.name} className="p-1.5" sizes="80px" emojiClassName="text-3xl" />
+      </div>
+
       <div className="min-w-0 flex-1">
         <span className="overline text-text-secondary">{product.brand.name}</span>
-        <p className="font-semibold text-text-primary">{product.name}</p>
+        <p className="font-semibold leading-snug text-text-primary">{product.name}</p>
         <p className="mt-0.5 text-[13px] text-text-brand">{angle}</p>
-        <div className="mt-1 flex items-baseline gap-2">
-          <Price now={product.price.current} size="sm" />
-          {perKg && <span className="text-[13px] text-text-secondary">· {formatCLP(perKg)}/kg</span>}
-        </div>
-      </div>
-      <Stack gap={2} className="shrink-0">
-        <Button size="sm" variant="secondary" onClick={onChoose}>
+        <button
+          type="button"
+          onClick={onChoose}
+          className="mt-2 text-[13px] font-semibold text-text-secondary underline-offset-4 hover:text-text-brand hover:underline"
+        >
           Elegir para {petName}
-        </Button>
-        <Button size="sm" variant="link" asChild>
-          <Link href={`/producto/${product.slug}`}>Ver detalle</Link>
-        </Button>
-      </Stack>
+        </button>
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end justify-center gap-0.5">
+        {compareAt && compareAt > product.price.current && (
+          <span className="text-sm text-text-muted line-through">{formatCLP(compareAt)}</span>
+        )}
+        <span className="price text-xl font-bold text-terracota-500">{formatCLP(product.price.current)}</span>
+      </div>
     </div>
   );
 }

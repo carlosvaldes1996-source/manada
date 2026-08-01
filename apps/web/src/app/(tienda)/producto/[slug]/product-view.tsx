@@ -22,7 +22,6 @@ import {
   PlanManadaCard,
 } from "@/components/commerce";
 import { usePet, useCart } from "@/components/providers";
-import { naturalFrequencyWeeks } from "@/hooks/use-subscription";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
 import { categoryLabel } from "@/lib/catalog";
@@ -121,18 +120,12 @@ export function ProductView({
   // La compra única cotiza siempre al precio de la variante. La suscripción vive
   // en su propia card (Plan Manada), con su precio y CTA separados (D55).
   const unitPrice = selected.price.current;
-  const naturalFreq = naturalFrequencyWeeks(duration);
 
-  // Fuente ÚNICA de la frecuencia de suscripción (misma lógica que la compra
-  // única): vive en la PDP, no dentro de la card. Al cambiar de formato se
-  // re-deriva la frecuencia natural —el saco nuevo dura distinto— con el patrón
-  // de "reset de estado al cambiar una prop" (sin efecto, en render).
-  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(naturalFreq);
-  const [freqAnchor, setFreqAnchor] = useState(selectedVariantId);
-  if (freqAnchor !== selectedVariantId) {
-    setFreqAnchor(selectedVariantId);
-    setFrequency(naturalFreq);
-  }
+  // Frecuencia de suscripción: por defecto 4 semanas en TODOS los flujos (decisión
+  // de producto 2026-07). Fuente única con la compra única: vive en la PDP, no
+  // dentro de la card. El usuario puede cambiarla y su elección se conserva al
+  // cambiar de formato.
+  const [frequency, setFrequency] = useState<SubscriptionFrequencyWeeks>(4);
 
   // Cross-sell único y RELEVANTE: comparte especie con el producto y es de otra
   // categoría (complemento, no otro saco igual) → "completar su rutina".
