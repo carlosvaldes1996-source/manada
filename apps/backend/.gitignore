@@ -14,6 +14,10 @@ coverage
 
 !src/**
 
+# El !src/** de arriba re-incluye todo bajo src/, y eso "des-ignoraba" la basura
+# de macOS ahí dentro. La volvemos a ignorar (en .gitignore gana la última regla).
+**/.DS_Store
+
 ./tsconfig.tsbuildinfo
 medusa-db.sql
 build
