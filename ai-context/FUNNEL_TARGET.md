@@ -134,7 +134,9 @@ Desde que se creó a Toby, Manada la conoce y **su plan vive en su perfil**. **S
 
 > **🔭 Hipótesis futura (post-validación · NO MVP) — "delegar desde el primer flujo":** un gran win potencial sería permitir que, ya en el primer flujo, alguien **deje su tarjeta y quede como usuario recurrente**, delegando de verdad la responsabilidad de no quedarse sin stock. **No se fuerza ahora** ni se construye la suscripción completa antes de tener señales: romper el journey por adelantar el cobro recurrente sería un error. Si los usuarios confirman, vuelven y aceptan una relación recurrente, se evoluciona **naturalmente** hacia cobro automático + auto-envío como moat. Interactúa con **F5** (momento de cuenta/tarjeta) y con el encendido de `SUBSCRIPTIONS_ENABLED`.
 
-## 1.6 Momento de correo/contraseña (O4 · abierto, se decide en su bloque)
+## 1.6 Momento de correo/contraseña (O4 · RESUELTO por D65)
+
+> **✅ Cerrado (2026-07-31, D65).** Carlos eligió la alternativa **3 (valor-primero post-compra)**: la compra de invitado no encuentra muros; tras pagar, se **auto-crea una cuenta** con el correo del checkout y se envía un email **"Define tu contraseña"** para reclamarla. El email va **diferido ~2 h** (job programado) para no competir con la confirmación del pedido. Implementado **aislado, idempotente y GATEADO** (`AUTO_ACCOUNT_ENABLED=false`) hasta validar E2E en staging. Detalle y rationale: `DECISIONS.md · D65`. El resto de esta sección queda como registro histórico de las alternativas evaluadas.
 
 **Estado: hipótesis a evaluar, NO decisión cerrada.** El *problema* sí está claro: hoy hay un **muro de registro** entre recomendación y carrito (el invitado es enviado a `/crear-cuenta` antes de ver el carrito), lo que contradice la compra de invitado ya tomada (D17/D26) y es causa #1 de abandono de checkout (~24% Baymard, citado en DECISIONS). Lo que queda **abierto** es *dónde* reubicar la captura de credenciales.
 

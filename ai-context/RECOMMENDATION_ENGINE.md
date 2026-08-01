@@ -29,6 +29,9 @@ Ubicación del código (puro, en `apps/web`, sin fuente de datos propia — corr
 | Esterilización | perfil | modificador MER (−0.2 en adulto/senior) |
 | Condiciones de salud | perfil (chips curados, D38) | puerta de contraindicación + score + razón |
 | Objetivo de peso | **aún no capturado** (default `mantener`) | modificador MER — soportado, pendiente de UI (§6) |
+| Raza | onboarding / perfil (catálogo oficial, D63) | **NO entra al motor.** Solo alimenta la estimación de peso del onboarding (F3) vía `pesoRangoAdulto`, y el aviso de sobrepeso (abajo). El catálogo se puede reemplazar sin alterar recomendación ni ración (verificado: 4 razas → misma ración). |
+
+> **Aviso de sobrepeso (advisory, D63).** `overweightSignal(especie, raza, peso)` en `lib/breeds.ts` levanta una advertencia informativa cuando el peso supera el **máximo típico de la raza en >15%** (guía ±15%); **exime** razas robustas/esbeltas (mastines, dogos, presas, lebreles) donde el peso solo no basta. Es **puramente informativo**: NO modifica el cálculo RER/MER ni la ración —solo invita a revisar con el veterinario—. Se muestra en el onboarding (paso de peso) y en la recomendación (F4).
 
 ## 2. Cálculo nutricional (RER/MER — NRC 2006 / WSAVA)
 
