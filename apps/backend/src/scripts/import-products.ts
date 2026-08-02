@@ -33,12 +33,13 @@ import {
  *   Handle                → slug base; se limpia a URL-safe (quita &, comas, espacios)
  *   formato               → título de la variante (p. ej. "18.3 KG"); deriva el peso
  *   precio_pvp_sugerido   → precio en CLP (entero, sin decimales)
- *   species               → "perro" | "gato" | "otro" (coma-separado) → metadata
- *   stage                 → "cachorro" | "adulto" | "senior" (coma-separado) → metadata
+ *   species               → "perro" | "gato" | "otro" (coma-separado) → metadata (array)
+ *   stage                 → "cachorro" | "adulto" | "senior" (coma-separado) → metadata (array)
  *   brand                 → marca visible → metadata
  *   subscribable          → TRUE/FALSE → metadata
  *   SKU                   → SKU de la variante (único global en Medusa)
- *   Categories            → nombre de categoría de Medusa (p. ej. "Alimento")
+ *   Categories            → categoría(s) de Medusa; coma-separado admite varias
+ *                           (p. ej. "Alimento" o "Alimento,Farmacia"). Quotear si lleva coma.
  *
  * Columnas OPCIONALES que el script respeta si existen (para lotes futuros):
  *   description, kcal_per_kg, rating, review_count,
@@ -167,6 +168,25 @@ function parseNumber(raw: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * Valor coma-separado → array limpio (trim, sin vacíos, sin duplicados, preserva
+ * orden). Un solo valor ("adulto") devuelve `["adulto"]`; una lista quoteada en el
+ * CSV ("cachorro,adulto") devuelve `["cachorro","adulto"]`. Base de los atributos
+ * multi-valor de metadata (species/stage) y de las categorías múltiples.
+ */
+function parseList(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(",")) {
+    const v = part.trim();
+    if (v && !seen.has(v.toLowerCase())) {
+      seen.add(v.toLowerCase());
+      out.push(v);
+    }
+  }
+  return out;
+}
+
 /* ------------------------------- tipos ------------------------------------- */
 
 type VariantPlan = {
@@ -180,9 +200,9 @@ type ProductPlan = {
   handle: string;
   title: string;
   brand: string;
-  species: string;
-  stage: string;
-  category: string;
+  species: string[];
+  stage: string[];
+  categories: string[];
   subscribable: boolean;
   description?: string;
   kcalPerKg?: number;
@@ -255,13 +275,14 @@ export default async function importProducts({ container }: ExecArgs) {
 
     let plan = plans.get(handle);
     if (!plan) {
+      const categories = parseList(col(row, "Categories"));
       plan = {
         handle,
         title,
         brand: col(row, "brand") || "Manada",
-        species: col(row, "species"),
-        stage: col(row, "stage"),
-        category: col(row, "Categories") || "Alimento",
+        species: parseList(col(row, "species")),
+        stage: parseList(col(row, "stage")),
+        categories: categories.length ? categories : ["Alimento"],
         subscribable: parseBool(col(row, "subscribable")),
         description: col(row, "description") || undefined,
         kcalPerKg: parseNumber(col(row, "kcal_per_kg")),
@@ -346,7 +367,7 @@ export default async function importProducts({ container }: ExecArgs) {
   }
 
   // Mapa de categorías: reutiliza las existentes; crea las que falten.
-  const wantedCats = [...new Set(toCreate.map((p) => p.category).filter(Boolean))];
+  const wantedCats = [...new Set(toCreate.flatMap((p) => p.categories).filter(Boolean))];
   const { data: existingCats } = await query.graph({
     entity: "product_category",
     fields: ["id", "name"],
@@ -371,7 +392,9 @@ export default async function importProducts({ container }: ExecArgs) {
   let ok = 0;
   const failed: string[] = [];
   for (const p of toCreate) {
-    const categoryId = catByName.get(p.category.toLowerCase());
+    const categoryIds = p.categories
+      .map((name) => catByName.get(name.toLowerCase()))
+      .filter((id): id is string => Boolean(id));
     const metadata: Record<string, unknown> = {
       brand: p.brand,
       species: p.species,
@@ -396,7 +419,7 @@ export default async function importProducts({ container }: ExecArgs) {
               handle: p.handle,
               description: p.description,
               status,
-              category_ids: categoryId ? [categoryId] : [],
+              category_ids: categoryIds,
               shipping_profile_id: shippingProfile.id,
               metadata,
               options: [

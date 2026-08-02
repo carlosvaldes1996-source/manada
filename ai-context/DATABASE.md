@@ -29,7 +29,7 @@ agregar productos = crearlos en el Admin, sin tocar código ni el frontend.
 | formato / peso | `variant.title` (opción "Formato"/"Talla") + `product.weight` | ej. "3 kg" |
 | SKU | `variant.sku` | |
 | stock | `inventory_item` + `inventory_level.stocked_quantity` | por bodega |
-| categoría (departamento) | `product.categories` | Alimento · Accesorios · Farmacia · Higiene · Snacks |
+| categoría (departamento) | `product.categories` (N:M) | Alimento · Accesorios · Farmacia · Higiene · Snacks. Un producto admite **varias** (el importador acepta coma-separado en la columna `Categories`); el storefront usa la 1ª como primaria (`Product.category` es singular) |
 | imágenes | `product.thumbnail` / `product.images` | hoy vacío → placeholder emoji (U090); al subir fotos en el Admin se muestran solas |
 | nombre / descripción | `product.title` / `product.description` | título con patrón "Marca — Nombre" |
 
@@ -40,8 +40,8 @@ del producto (editable en el Admin, sección *Metadata*). **Convención de clave
 | Clave | Tipo | Ejemplo | Uso |
 |---|---|---|---|
 | `brand` | string | `"Royal Canin"` | marca visible (overline, filtro de marca) |
-| `species` | string (coma) | `"perro,gato"` | valores: `perro` \| `gato` \| `otro` |
-| `stage` | string (coma) | `"adulto,senior"` | valores: `cachorro` \| `adulto` \| `senior` |
+| `species` | array o string (coma) | `["perro","gato"]` o `"perro,gato"` | valores: `perro` \| `gato` \| `otro` |
+| `stage` | array o string (coma) | `["adulto","senior"]` o `"adulto,senior"` | valores: `cachorro` \| `adulto` \| `senior` |
 | `subscribable` | boolean | `true` | ¿admite suscripción? |
 | `subscription_discount_percentage` | number | `15` | % de ahorro; **el precio de suscripción lo calcula el backend** (no se almacena) |
 | `rating` | number | `4.8` | 0–5 |
@@ -58,6 +58,12 @@ del producto (editable en el Admin, sección *Metadata*). **Convención de clave
 - Semilla: `apps/backend/src/scripts/seed.ts` (comentario con la convención).
 - El Admin guarda metadata como **strings**; el backend y el mapper aceptan string
   o valor nativo (boolean/number). No requiere código por producto.
+- **Multi-valor (`species` / `stage`):** el importador masivo escribe **arrays**
+  (`apps/backend/src/scripts/import-products.ts`: coma-separado en el CSV → array
+  limpio, sin duplicados). El Admin admite el mismo atributo como string coma-separada
+  (`"cachorro,adulto"`). El mapper (`metaEnumList`) acepta ambas formas y el catálogo
+  filtra con `includes()`, de modo que un producto con varias etapas aparece bajo
+  cada una. Un solo valor (`"adulto"`) sigue siendo válido (compat hacia atrás).
 - **Escalabilidad:** una marca nueva escrita en `brand` aparece sola como faceta en
   la PLP (las facetas de marca se derivan de los productos reales).
 
