@@ -9,6 +9,12 @@ export interface ProductGridProps {
   /** Estado de carga: muestra skeletons en la misma grilla (2→3→4). */
   loading?: boolean;
   skeletonCount?: number;
+  /**
+   * Cuántas tarjetas iniciales cargan su packshot con prioridad (candidatas a LCP,
+   * §9.4 la primera fila es de 4 en desktop). Solo la primera página real de un
+   * listado debería pedirlo; el default 0 deja todo en lazy (rieles, páginas 2+).
+   */
+  priorityCount?: number;
   emptyState?: React.ReactNode;
   className?: string;
 }
@@ -21,6 +27,7 @@ export function ProductGrid({
   products,
   loading = false,
   skeletonCount = 8,
+  priorityCount = 0,
   emptyState,
   className,
 }: ProductGridProps) {
@@ -55,8 +62,8 @@ export function ProductGrid({
 
   return (
     <Grid cols={2} md={3} lg={4} gap={6} className={className}>
-      {products.map((p) => (
-        <ProductCard key={p.id} product={p} />
+      {products.map((p, i) => (
+        <ProductCard key={p.id} product={p} priority={i < priorityCount} />
       ))}
     </Grid>
   );

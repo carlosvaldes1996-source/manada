@@ -17,6 +17,12 @@ export interface ProductCardProps {
   product: Product;
   /** Muestra el CTA de suscripción junto a "Agregar" (si el producto la admite). */
   showSubscribe?: boolean;
+  /**
+   * Carga prioritaria del packshot (eager + `fetchpriority=high`, sin lazy). Solo
+   * para las tarjetas de la primera fila visible del listado —candidatas a LCP—;
+   * el resto se queda en lazy. Lo decide el contenedor (`ProductGrid`).
+   */
+  priority?: boolean;
   className?: string;
 }
 
@@ -30,7 +36,7 @@ export interface ProductCardProps {
  * sin fecha por comuna todavía; la política honesta ("gratis sobre $X") vive en
  * la PDP y el carrito. Rating oculto hasta tener reseñas reales.
  */
-export function ProductCard({ product, showSubscribe = true, className }: ProductCardProps) {
+export function ProductCard({ product, showSubscribe = true, priority = false, className }: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
   const subscribeFlow = useSubscribeFlow();
@@ -82,6 +88,7 @@ export function ProductCard({ product, showSubscribe = true, className }: Produc
         <ProductImage
           image={product.imageUrl}
           alt={`${product.brand.name} ${product.name}`}
+          priority={priority}
           sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
           className="transition-transform duration-[var(--duration-standard)] group-hover:scale-105"
           emojiClassName="text-[5.5rem] drop-shadow-[0_12px_16px_rgba(42,39,34,0.12)] transition-transform duration-[var(--duration-standard)] group-hover:scale-105"

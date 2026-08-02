@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { isImageUrl, packshotLoader } from "@/lib/media/packshot";
+import { isImageUrl, packshotSrc } from "@/lib/media/packshot";
 
 /**
  * Packshot de producto — decide entre FOTO REAL y emoji placeholder.
@@ -12,11 +12,12 @@ import { isImageUrl, packshotLoader } from "@/lib/media/packshot";
  * mientras no exista fotografía (U090). Este componente es el ÚNICO punto que
  * conoce esa dualidad.
  *
- * Foto real → `next/image` con `fill` + `object-contain`, servida por el loader
- * de packshots (`/api/packshot`): fondo aplanado a blanco, recorte del borde y
- * encuadre uniforme, para que TODO producto se vea al mismo tamaño y escala sin
- * editar el asset (ver `@/lib/media/packshot`). El contenedor padre debe ser
- * `relative` (lo exige `fill`) y define el aspect-ratio (evita CLS).
+ * Foto real → `next/image` con `fill` + `object-contain`. El `src` apunta a
+ * `/api/packshot` (fondo aplanado a blanco, recorte del borde y encuadre uniforme,
+ * para que TODO producto se vea al mismo tamaño y escala sin editar el asset), y el
+ * optimizer nativo de Next reescala esa base y la sirve en AVIF/WebP (ver
+ * `@/lib/media/packshot`). El contenedor padre debe ser `relative` (lo exige
+ * `fill`) y define el aspect-ratio (evita CLS).
  * Cualquier otro valor → emoji decorativo, centrado por el padre.
  */
 
@@ -46,11 +47,10 @@ export function ProductImage({
   if (image && isImageUrl(image)) {
     return (
       <Image
-        src={image}
+        src={packshotSrc(image)}
         alt={alt}
         fill
         sizes={sizes}
-        loader={packshotLoader}
         priority={priority}
         className={cn("object-contain", className)}
       />

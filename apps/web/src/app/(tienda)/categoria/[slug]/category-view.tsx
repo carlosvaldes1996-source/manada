@@ -301,6 +301,10 @@ export function CategoryView({ slug, products }: { slug: string; products: Produ
           <Stack gap={6}>
             <ProductGrid
               products={visible}
+              // Primera fila (4 en desktop) de la 1ª página: candidatas a LCP →
+              // packshot eager. En páginas 2+ no hay scroll-to-top, así que
+              // priorizar sería pedir imágenes fuera de viewport (todo lazy).
+              priorityCount={safePage === 1 ? 4 : 0}
               emptyState={
                 <EmptyState
                   icon={<span className="text-5xl">🔍</span>}

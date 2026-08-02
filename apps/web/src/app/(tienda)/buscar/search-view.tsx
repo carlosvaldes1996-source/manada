@@ -52,7 +52,7 @@ export function SearchView({ query, products }: { query: string; products: Produ
               {products.length} {pluralize(products.length, "resultado")} para{" "}
               <strong className="text-text-primary">“{query}”</strong>
             </p>
-            <ProductGrid products={products} />
+            <ProductGrid products={products} priorityCount={4} />
           </Stack>
         )}
       </Stack>
