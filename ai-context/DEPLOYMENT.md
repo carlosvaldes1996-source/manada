@@ -165,6 +165,24 @@ El MVP ya está cerrado (D28/D29), así que el mandato "no desplegar hasta cerra
      -d '{"email":"<email>","password":"<nueva-clave>"}'   # → 200 (+ token en el body)
    ```
 
+### 4.3 · Runbook — Build de Railway sin segundo `pnpm install` (fix definitivo del 429)
+
+> **✅ EJECUTADO — reemplaza los parches previos (`eb84535`, `04c0fdd`).** El build fallaba de forma intermitente con `ERR_PNPM_FETCH_429` (registry npm) al desplegar; los mitigadores de reintentos/`--prefer-offline` no lo resolvían.
+
+**Causa raíz.** El `buildCommand` corría **dos** installs. El primero (`pnpm install --frozen-lockfile`, raíz) instala todo el workspace desde el lockfile + store → sin resolución, sin registry. El problema era el **segundo**: `cd apps/backend/.medusa/server && pnpm install --ignore-workspace --prod`. Ese directorio lo genera `medusa build` con **una copia idéntica de `apps/backend/package.json` pero SIN lockfile al lado**. Sin lockfile, pnpm no puede hacer un install "frozen": tiene que **resolver los rangos de versión** (`^0.0.41`, `^18.3.1`, …) → descarga el *packument* (metadata) de cada paquete del árbol transitivo de `@medusajs/*` (cientos) desde el registry → npm responde **429**. Los tarballs ya estaban en el store (por eso `--prefer-offline` mostraba "downloaded 0"), pero **resolver ≠ descargar tarballs**: la resolución necesita la metadata, y un `--frozen-lockfile` **no** calienta la caché de packuments. Por eso fallaba en Railway (builder frío) pero "funcionaba" en local (caché de metadata tibia de installs previos) — falso positivo.
+
+**Por qué los cambios de ayer no sirvieron.** `eb84535` solo subió `fetch-retries` (reintenta el 429, no lo elimina). `04c0fdd` reusó el store para los tarballs, pero la **resolución de metadata seguía ocurriendo** por la falta de lockfile → seguía golpeando el registry.
+
+**Fix definitivo — eliminar el segundo install.** En el monorepo, `.medusa/server` **no necesita su propio `node_modules`**: la resolución de Node sube desde `apps/backend/.medusa/server` → `apps/backend/node_modules` (deps directas) → raíz `node_modules` (los `@medusajs/*` están *hoisted* por `.npmrc`). El `buildCommand` ahora es:
+
+```
+pnpm install --frozen-lockfile
+  && pnpm --filter @manada/backend build
+  && ln -sfn ../../node_modules apps/backend/.medusa/server/node_modules
+```
+
+El symlink relativo apunta `.medusa/server/node_modules` → `apps/backend/node_modules` (ya construido en el paso 1). **Cero acceso al registry en todo el build → el 429 es imposible, no improbable.** Verificado local: las 9 deps de producción resuelven vía el symlink, `medusa --version`/`start` arrancan desde `.medusa/server`, y `npx medusa db:migrate` (preDeploy) encuentra el binario en el `.bin` del árbol enlazado. Nota: el symlink expone también las devDeps (imagen algo mayor que el viejo `--prod`), lo cual además deja disponible `@swc/core` para `medusa exec` (carga masiva de catálogo). Requisito permanente: mantener los `public-hoist-pattern[]=*@medusajs/*` del `.npmrc` (dan robustez a la resolución ascendente).
+
 ---
 
 ## 5 · Checklist — "Primer deploy de producción funcional"

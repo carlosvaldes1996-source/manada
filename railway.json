@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "RAILPACK",
-    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @manada/backend build && cd apps/backend/.medusa/server && CI=true pnpm install --ignore-workspace --prod --config.node-linker=hoisted --prefer-offline --config.dangerouslyAllowAllBuilds=true"
+    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @manada/backend build && ln -sfn ../../node_modules apps/backend/.medusa/server/node_modules"
   },
   "deploy": {
     "startCommand": "cd apps/backend/.medusa/server && npm run start",
