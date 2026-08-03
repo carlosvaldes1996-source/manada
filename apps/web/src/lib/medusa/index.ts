@@ -8,7 +8,7 @@
 export { medusa, MEDUSA_BACKEND_URL } from "./client";
 export { getRegionId } from "./region";
 export { mapProduct, PRODUCT_FIELDS } from "./map-product";
-export { listProducts, getProductByHandle, searchProducts } from "./products";
+export { listProducts, getProductByHandle } from "./products";
 export type { ListProductsParams } from "./products";
 export { getShippingPolicy, type ShippingPolicy } from "./shipping";
 export {

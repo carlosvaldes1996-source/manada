@@ -1,21 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { SearchBar, type SearchBarProps } from "@/components/ui/search-bar";
+import { SearchSuggest, type SearchSuggestProps } from "@/components/commerce/search-suggest";
 
 /**
- * Buscador del header cableado a la búsqueda real (Fase 5 · Etapa B): al enviar,
- * navega a `/buscar?q=…` (que consume el `q` nativo de la Store API de Medusa).
+ * Buscador del header. Delega en `SearchSuggest`: sugiere productos mientras se
+ * escribe y, al enviar, navega a `/buscar?q=…`. La misma pieza se usa en la
+ * página de resultados, para que buscar se sienta igual en toda la tienda.
  */
-export function HeaderSearch(props: SearchBarProps) {
-  const router = useRouter();
-  return (
-    <SearchBar
-      {...props}
-      onSubmit={(query) => {
-        const q = query.trim();
-        if (q) router.push(`/buscar?q=${encodeURIComponent(q)}`);
-      }}
-    />
-  );
+export function HeaderSearch(props: SearchSuggestProps) {
+  return <SearchSuggest {...props} />;
 }

@@ -166,15 +166,62 @@ selección de dirección guardada dentro del checkout.
 
 ---
 
-## 8. Buscador + política de envío — IMPLEMENTADO (Fase 5 · Etapa B, D28)
+## 8. Buscador + política de envío — IMPLEMENTADO (Fase 5 · Etapa B, D28 · buscador reescrito 2026-08-03)
 
-### 8.1 Buscador (`q` nativo)
-- **`GET /store/products?q=<texto>&region_id=<clp>&fields=<PRODUCT_FIELDS>`** — búsqueda
-  de texto libre nativa de Medusa (título, descripción, etc.). Encapsulado en
-  `apps/web/src/lib/medusa/products.ts` → `searchProducts(query)` / `listProducts({ q })`.
-- La página `/buscar?q=` (server, `force-dynamic`) consume `searchProducts` y renderiza
-  la grilla real; el `SearchBar` del header (`HeaderSearch`) navega ahí. Sin índice
-  externo (Meilisearch/Algolia = escala, diferido).
+### 8.1 Buscador — relevancia propia sobre el catálogo cacheado
+
+> **Reemplaza al `q` nativo de Medusa** (implementación original de D28). El contrato
+> con el backend no cambió: sigue siendo `GET /store/products` sin `q`. Lo que cambió
+> es **dónde se decide la relevancia**.
+
+**Dueño único: `apps/web/src/lib/search/`** (`normalize` · `lexicon` · `engine`).
+Todo lo que busque productos entra por ahí: la página `/buscar`, el autocompletado del
+header y el endpoint de sugerencias. `searchProducts()` fue eliminado de `lib/medusa`.
+
+**Por qué el `q` nativo no daba el ancho** (verificado contra el código de
+`@medusajs/utils` y el catálogo real):
+1. Solo mira columnas de texto marcadas `searchable` (`title`, `subtitle`,
+   `description`, título/SKU de variante). **La marca de Manada vive en
+   `product.metadata` → es invisible para `q`**, y 32 de 153 productos (21 %) no
+   llevan la marca en el título ("Pacific Stream Salmón Ahumado" es Taste of the Wild).
+2. Exige **todos** los términos (AND de `ilike`): "acana cachorro" devolvía cero,
+   porque el producto se llama "Acana Puppy".
+3. `ilike` **no ignora tildes**: "salmon" no encontraba "Salmón".
+4. Sin ranking: el orden lo ponía la base de datos.
+5. `description` está vacía en todo el catálogo → la superficie buscable real era
+   el título y poco más.
+
+**Cómo funciona ahora.** El catálogo entero ya se lee en una sola llamada cacheada
+(`getCachedCatalog`, Data Cache 300s, D68). Sobre esa lista, el motor:
+- pliega texto (minúsculas, sin tildes ni apóstrofes) en un solo lugar, para índice y
+  consulta por igual;
+- indexa nombre, **marca**, formatos de variante y **conceptos** — los del léxico
+  (nombre) más los estructurales que ya da el backend (`species`, `stage`, `category`);
+- traduce cómo habla el cliente a cómo se llaman los productos con un **léxico de
+  conceptos** ES↔EN con jerarquía (`cachorro`≡`puppy`≡`kitten`; `salmón`⊂`pescado`),
+  de modo que buscar *pescado* alcanza al salmón pero *salmón* no arrastra a todo el mar;
+- puntúa por **cobertura** (cuántos términos cubre) y literalidad, y **degrada** en vez
+  de vaciar la pantalla: exacto → marca → concepto → parecidos → destacados;
+- corrige tipeos contra el vocabulario real con Damerau-Levenshtein (transposición =
+  1 error, "orijne" → "orijen"), y solo adopta la corrección si mejora el resultado.
+
+Coste: ~0,05–0,13 ms por búsqueda con 153 productos y **cero** llamadas nuevas al backend.
+
+**Sugerencias mientras se escribe:**
+- **`GET /api/buscar?q=<texto>`** (route handler de `apps/web`, no del backend) →
+  `{ total, terms: string[], products: [{ slug, name, brand, image, price }] }`.
+  Mínimo 2 caracteres; respuesta < 2 KB con `Cache-Control: s-maxage=300`.
+- Cliente: `SearchSuggest` (`components/commerce/search-suggest.tsx`) con debounce de
+  140 ms, `AbortController` contra respuestas fuera de orden, caché por consulta en la
+  sesión y patrón ARIA combobox/listbox. Lo usan el header y la página `/buscar`.
+
+**Límite conocido:** la degradación es tan buena como los datos. Consultas de atributos
+que el backend no expone (p. ej. "sin granos") no tienen con qué resolverse y caen a
+destacados; se arreglan agregando metadata, no tocando el motor.
+
+Sigue **sin índice externo** (Meilisearch/Algolia = escala, diferido). El motor se
+reemplaza cuando el catálogo deje de caber en una lectura; el contrato (`searchCatalog`)
+no cambia.
 
 ### 8.2 Política de envío — FUENTE ÚNICA en el backend
 Manada tiene **una sola regla de envío**, definida en el backend y **nunca duplicada

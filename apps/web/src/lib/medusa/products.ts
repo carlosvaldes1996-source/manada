@@ -17,7 +17,13 @@ export interface ListProductsParams {
   offset?: number;
   /** Filtra por id(s) de categoría de Medusa (para la PLP por categoría en Etapa 2). */
   category_id?: string | string[];
-  /** Búsqueda de texto libre (Store API `q`) — nombre, descripción, etc. */
+  /**
+   * Búsqueda de texto libre (Store API `q`). **La búsqueda de la tienda ya NO
+   * pasa por acá**: el `q` nativo no ve la marca (vive en `metadata`), exige
+   * todos los términos y no ignora tildes, así que la relevancia se resuelve en
+   * `lib/search` sobre el catálogo cacheado. Se mantiene el parámetro porque el
+   * contrato de la Store API lo tiene y sirve para consultas puntuales.
+   */
   q?: string;
 }
 
@@ -60,17 +66,6 @@ export async function listProducts(params: ListProductsParams = {}): Promise<Pro
   }
 
   return products.map(mapProduct);
-}
-
-/**
- * Búsqueda real de catálogo (Fase 5 · Etapa B) — usa el `q` nativo de la Store
- * API de Medusa (busca en título, descripción, etc.). Devuelve `Product[]` ya
- * mapeado. El filtrado fino (marca/especie) lo hace la UI sobre estos resultados.
- */
-export async function searchProducts(query: string, limit = 24): Promise<Product[]> {
-  const q = query.trim();
-  if (!q) return [];
-  return listProducts({ q, limit });
 }
 
 /**
