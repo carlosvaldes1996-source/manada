@@ -21,17 +21,43 @@ export interface ListProductsParams {
   q?: string;
 }
 
+/** Tope por página de la Store API de Medusa; el catálogo completo se pagina. */
+const PAGE_SIZE = 100;
+
 export async function listProducts(params: ListProductsParams = {}): Promise<Product[]> {
   const region_id = await getRegionId();
-  const { products } = await medusa.store.product.list({
+  const base = {
     region_id,
     fields: PRODUCT_FIELDS,
-    limit: params.limit ?? 100,
-    offset: params.offset,
     ...(params.category_id ? { category_id: params.category_id } : {}),
     ...(params.q ? { q: params.q } : {}),
-  });
-  return products.map(mapProduct);
+  };
+
+  // Con `limit` explícito → una sola página (búsqueda, cross-sell del carrito).
+  if (params.limit !== undefined) {
+    const { products } = await medusa.store.product.list({
+      ...base,
+      limit: params.limit,
+      offset: params.offset,
+    });
+    return products.map(mapProduct);
+  }
+
+  // Sin `limit` → catálogo COMPLETO. La Store API topea la página (~100), así que
+  // se pagina con `count` hasta traerlos todos: subir el `limit` no basta porque el
+  // backend lo capa. El resultado se cachea (catalog-cache.ts), no es 1 fetch/visita.
+  const all: Product[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { products, count } = await medusa.store.product.list({
+      ...base,
+      limit: PAGE_SIZE,
+      offset,
+    });
+    all.push(...products.map(mapProduct));
+    if (products.length === 0 || offset + products.length >= count) break;
+    if (offset >= PAGE_SIZE * 100) break; // guardarraíl anti-bucle (máx 10k productos)
+  }
+  return all;
 }
 
 /**
