@@ -328,7 +328,7 @@ export function RecommendationView({ products }: { products: Product[] }) {
 
               <div className="p-5 sm:p-6">
                 <Row gap={4} align="start">
-                  <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle sm:size-28">
+                  <div className="relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle sm:size-28">
                     <ProductImage
                       image={food.imageUrl}
                       alt={`${food.brand.name} ${food.name}`}
@@ -556,7 +556,7 @@ function AltCard({
   const compareAt = product.price.compareAt;
   return (
     <div className="flex gap-4 rounded-[var(--radius-xl)] border border-border-default bg-surface p-4">
-      <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
+      <div className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-lg)] border border-border-default bg-gradient-to-b from-canvas to-subtle">
         <ProductImage image={product.imageUrl} alt={product.name} className="p-1.5" sizes="80px" emojiClassName="text-3xl" />
       </div>
 
