@@ -39,6 +39,7 @@
 - [ ] **Pet Experience B4 — foto de la mascota:** directivas vinculantes de Carlos en `PET_EXPERIENCE_TARGET.md` B4 (foto faltante obvia · sin storage temporal · consistencia ante todo).
 - [ ] **Pet Experience B7 — restyle `/cuenta` + estados vacíos** (después de B4).
 - [ ] Menor diferido: multi-selección "mismo alimento para dos mascotas" (`PET_EXPERIENCE_TARGET.md §1.3`).
+- [ ] **PLP con paginación real en servidor** (dispara la deuda consciente de **D68**). Detonantes, en orden de llegada: (a) catálogo > ~1.500 productos → la entrada de `unstable_cache` supera el **límite de 2 MB por item del Data Cache de Vercel** y deja de cachear *en silencio*; (b) catálogo > 1.000 → `CATALOG_LIMIT` truncaría (hoy hay `console.error` que avisa); (c) orden/filtros sobre el catálogo real (hoy `CategoryView` ordena solo lo que ya bajó) o SEO de páginas de categoría. Alcance del refactor: `searchParams` (`page`/`sort`/filtros) → una página por request con `category_id`/`q`/`order`/`offset`; `<Pagination>` navegando por URL; `fields` livianos para listado vs. completos para PDP; y revisar los consumidores que hoy bajan todo sin necesitarlo (sitemap solo necesita `handle`; PDP, bienvenida, recomendación y `/cuenta/mascotas` necesitan subconjuntos acotados).
 
 ## ⏸ En pausa — Polish 3.4 (se retoma cuando existan fotos)
 

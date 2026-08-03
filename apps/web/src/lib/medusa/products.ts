@@ -21,43 +21,45 @@ export interface ListProductsParams {
   q?: string;
 }
 
-/** Tope por página de la Store API de Medusa; el catálogo completo se pagina. */
-const PAGE_SIZE = 100;
+/**
+ * Límite por defecto = catálogo completo en UNA sola llamada.
+ *
+ * La Store API de Medusa v2 **no capa el tamaño de página**: `createFindParams`
+ * define `limit` sin `.max()` y la ruta de productos solo fija `defaultLimit: 50`.
+ * Verificado contra el backend de producción (2026-08-02, Medusa 2.16.0):
+ * `limit=1000` → HTTP 200 con los 158 productos y `count: 158` en una request.
+ *
+ * **Decisión TEMPORAL y consciente (D68):** con ~158 productos —y hasta 300-500—
+ * una request única es la solución más simple y estable. NO es la arquitectura
+ * final: cuando la PLP necesite paginación real en servidor (miles de productos,
+ * filtros/orden/SEO por página), este valor desaparece junto con el patrón de
+ * "bajar el catálogo entero". Ver D68 para los techos conocidos.
+ */
+const CATALOG_LIMIT = 1000;
 
 export async function listProducts(params: ListProductsParams = {}): Promise<Product[]> {
   const region_id = await getRegionId();
-  const base = {
+  const { products, count } = await medusa.store.product.list({
     region_id,
     fields: PRODUCT_FIELDS,
+    limit: params.limit ?? CATALOG_LIMIT,
+    offset: params.offset,
     ...(params.category_id ? { category_id: params.category_id } : {}),
     ...(params.q ? { q: params.q } : {}),
-  };
+  });
 
-  // Con `limit` explícito → una sola página (búsqueda, cross-sell del carrito).
-  if (params.limit !== undefined) {
-    const { products } = await medusa.store.product.list({
-      ...base,
-      limit: params.limit,
-      offset: params.offset,
-    });
-    return products.map(mapProduct);
+  // El bug que originó D68 fue un truncado SILENCIOSO (el catálogo pasó de 100 y
+  // nadie se enteró). Si el catálogo vuelve a superar el límite, que se vea en los
+  // logs en vez de descubrirse en la tienda. No aplica cuando el llamador pidió una
+  // página acotada a propósito (búsqueda, cross-sell).
+  if (params.limit === undefined && params.offset === undefined && count > products.length) {
+    console.error(
+      `[medusa] Catálogo truncado: ${count} productos, se recibieron ${products.length} ` +
+        `(limit ${CATALOG_LIMIT}). Toca implementar paginación en servidor (D68).`,
+    );
   }
 
-  // Sin `limit` → catálogo COMPLETO. La Store API topea la página (~100), así que
-  // se pagina con `count` hasta traerlos todos: subir el `limit` no basta porque el
-  // backend lo capa. El resultado se cachea (catalog-cache.ts), no es 1 fetch/visita.
-  const all: Product[] = [];
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { products, count } = await medusa.store.product.list({
-      ...base,
-      limit: PAGE_SIZE,
-      offset,
-    });
-    all.push(...products.map(mapProduct));
-    if (products.length === 0 || offset + products.length >= count) break;
-    if (offset >= PAGE_SIZE * 100) break; // guardarraíl anti-bucle (máx 10k productos)
-  }
-  return all;
+  return products.map(mapProduct);
 }
 
 /**
