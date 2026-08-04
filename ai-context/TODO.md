@@ -6,7 +6,7 @@
 > | **Purpose** | Detalle táctico de pendientes, por frente. Lo hecho no se re-narra aquí: vive en `DECISIONS.md` (D#). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-07-11 |
+> | **Last Updated** | 2026-08-04 |
 > | **Depends On** | CURRENT_STATE.md (frentes), ROADMAP.md (fases), AUDIT_UI_UX.md (backlog fino de FE) |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ del *detalle táctico de pendientes*. El backlog UI/UX fino vive en AUDIT_UI_UX.md. |
@@ -27,6 +27,41 @@
 - [ ] Smoke punta a punta en la URL de Vercel (catálogo · carrito · checkout → orden real).
 - [ ] Decidir rama `production` dedicada vs `main`=prod (D27 §3) → conectar dominio `tumanada.cl`.
 - [ ] Al validar cada etapa: **documentar D30 + actualizar `DEPLOYMENT.md` + commit/push** (mandato del WIP).
+
+## 🔴 Frente 1b — Flow · Etapa 3: endurecer el motor de cobro (D72)
+
+> **Punto exacto de continuación tras D70/D71/D72.** Contexto completo: `DECISIONS.md` D72 ·
+> contratos `API.md §14` (pago), `§15` (customers), `§16` (nativo, **dormido**).
+> Rama: `flow/customers-etapa1`. Modelo elegido: **Medusa dueño de la cadencia** (Modelo A).
+> El cobro sigue **APAGADO** (`SUBSCRIPTION_CHARGES_ENABLED=false`) — no encender hasta cerrar 1–3.
+
+- [ ] **(1) Cerrar el doble cobro — riesgo de dinero real, máxima prioridad.**
+      Camino concreto verificado en el código (`src/lib/subscription-charge.ts`):
+      `chargeFlowCustomer` cobra OK → `getFlowStatusByCommerceId` falla de forma transitoria y
+      **devuelve `null`** (hoy no distingue "Flow no conoce este pago" de "no pude preguntarle")
+      → `paid = false` → `finalizeFailure` → `past_due` y `attempt++` → el siguiente barrido arma
+      un **`commerceOrder` NUEVO** (lleva sufijo `-a${attempt}`, línea ~320) → **Flow no lo
+      deduplica** → *cobra otra vez*.
+      Dos piezas a corregir juntas:
+      - `getFlowStatusByCommerceId` debe distinguir *no existe* de *no disponible*
+        (deuda declarada en D70, hoy en el camino crítico).
+      - Un fallo de verificación **después** de cobrar no puede finalizarse como fracaso: debe
+        quedar pendiente de conciliar **contra el mismo `commerceOrder`** → replantear el sufijo
+        `-a${attempt}`, que hoy anula la deduplicación de Flow entre intentos.
+- [ ] **(2) Medir producción ANTES de desplegar — lo corre Carlos** (no hay acceso a la BD de prod
+      desde el entorno de desarrollo):
+      `select status, count(*), count(*) filter (where payment_method_id is null) from subscription group by status;`
+      En local hay **4 `active` sin tarjeta**. Si prod tiene lo mismo, encender D59 las manda a
+      `past_due` → **correos de dunning a clientes reales**. Decidir qué hacer con ellas antes.
+- [ ] **(3) Unificar `saved_card.gateway_customer_id` ↔ `flow_customer`** (D70 lo dejó como copia
+      denormalizada declarada). El cobro lee la referencia desde `saved_card` vía
+      `subscription.payment_method_id`; `flow_customer` es el dueño desde D70.
+- [ ] **(4) E2E en sandbox** con `FLOW_API_KEY`/`FLOW_SECRET_KEY` + ngrok en `MEDUSA_BACKEND_URL`
+      (`apps/backend/DEV.md`). Validar de paso los 2 puntos abiertos de `API.md §16.13`
+      (`changePlan` entre cadencias distintas · omitir `startDateOfNewPlan`) **solo si** alguna vez
+      se despierta la capa nativa.
+- [ ] **(5) Consultar a soporte de Flow** los límites no documentados (`API.md §16.9`): cuotas de
+      planes, tope de suscriptores por plan, rate limits. No bloqueante hoy.
 
 ## 🟠 Frente 2 — Terceros (post-infra, pre/post-lanzamiento)
 

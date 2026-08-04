@@ -553,3 +553,324 @@ En dev, Flow no alcanza `localhost` → usar una URL pública (ngrok) en `MEDUSA
 `{ id, cart_id, commerce_order, token, flow_order, redirect_url, amount, currency_code,
 status: "pending"|"paid"|"rejected"|"canceled", raw_status: number|null, order_id: string|null,
 payment_collection_id: string|null, error: string|null, created_at, updated_at }`.
+
+---
+
+## 15. Contrato de clientes de Flow (Customers) — módulo custom `flow-customer` (D70)
+
+Etapa 1 de la integración de suscripción con Flow. Un **Customer de Flow** es la *bóveda* de
+la tarjeta de un cliente: Flow lo identifica con un hash `cus_…` y guarda contra él, como
+máximo, **una** tarjeta. Es el prerequisito común a los dos modelos de cobro posibles
+(`customer/charge` server-to-server, y `plans`/`subscription` nativos de Flow), por eso se
+construye primero y por separado del cobro.
+
+**Owner del código:** `apps/backend/src/modules/flow-customer/` (persistencia) ·
+`src/lib/flow/customers.ts` (API de Flow) · `src/lib/flow-customer.ts` (orquestación) ·
+`src/subscribers/flow-customer-sync.ts`. Fuente: spec oficial `developers.flow.cl/es-openApiFlow.yaml`.
+
+### 15.1 El objeto Customer (según el spec oficial)
+| Campo | Tipo | Significado |
+|---|---|---|
+| `customerId` | string | Hash de Flow (`cus_onoolldvec`). La referencia cobrable. |
+| `externalId` | string | **Nuestro** id (`customer.id` de Medusa). Requerido al crear. |
+| `name` · `email` | string | Datos del cliente en Flow (el `email` recibe los comprobantes). |
+| `pay_mode` | string | **`auto`** = tiene tarjeta, se le puede cobrar · **`manual`** = sin tarjeta utilizable (Flow cobraría por email). |
+| `status` | string | **`'1'`** activo · **`'0'`** eliminado. Es *string*, no número. |
+| `creditCardType` · `last4CardDigits` | string | Presentación de **la** tarjeta registrada (singular). |
+| `created` · `registerDate` | `yyyy-mm-dd hh:mm:ss` | Alta del cliente · registro de su tarjeta. |
+
+> ⚠️ **Flow NO devuelve fecha de vencimiento** de la tarjeta en ningún servicio (ni el objeto
+> Customer ni `RegisterResult`). Cualquier `exp_month`/`exp_year` local es un dato inventado.
+
+### 15.2 Restricción estructural — no se puede buscar por `externalId`
+`customer/get` exige el `customerId`; `customer/list` **solo filtra por nombre** y estado. No
+existe lookup por `externalId` ni por email, y el spec **no declara** que `externalId` sea único.
+**Consecuencia de diseño:** la idempotencia "un cliente de Flow por cliente de Manada" *no puede*
+delegarse en Flow — se garantiza en nuestra BD con el **UNIQUE** sobre `flow_customer.customer_id`.
+Si se pierde el vínculo local, el `cus_…` **no es recuperable por API** (solo desde el panel).
+
+### 15.3 Llamadas a Flow (REST) — servicio `customer`
+Todas firmadas igual que §14.2. Reintentos **solo** donde repetir es inocuo:
+
+| Endpoint | Método | Reintento | Nota |
+|---|---|---|---|
+| `customer/create` | POST | **No** | Repetir crearía un `cus_…` huérfano. |
+| `customer/edit` | POST | Sí | Converge al mismo estado. |
+| `customer/get` | GET | Sí | Lectura. |
+| `customer/list` | GET | Sí | Paginado (`limit` máx 100). |
+| `customer/delete` | POST | No | Exige sin suscripciones activas ni importes pendientes. |
+| `customer/register` | POST | No | Abre una transacción de registro nueva. |
+| `customer/getRegisterStatus` | GET | Sí | Fuente de verdad del registro. |
+| `customer/unRegister` | POST | No | Deja `pay_mode` en `manual`. |
+| `customer/charge` | POST | **Nunca** | Repetir puede **cobrar dos veces**; un timeout se resuelve *consultando*. |
+
+`customer/register` responde `{url, token}` → redirigir a `url?token=token`; Flow devuelve el
+navegador por **POST** a `url_return` con `token`. `getRegisterStatus` responde
+`{status, customerId, creditCardType, last4CardDigits, cardNumber, issuerBank}` —
+`cardNumber` es BIN + últimos 4 enmascarados; `cardNumber`/`issuerBank` pueden venir `null`.
+
+⚠️ Nombres que se prestan a confusión: en `payment/create` el extra es `optional` (singular);
+en `customer/charge` es `optionals` (plural).
+
+### 15.4 Cuándo se crea el cliente en Flow
+**Perezosamente, al primer intento de suscripción** — no al registrar la cuenta. Crear un
+cliente en Flow por cada cuenta nueva metería en la pasarela a la mayoría, que nunca se
+suscribe, y ataría el alta de Manada a la disponibilidad de Flow. Lo que **sí** cambió (D70):
+el vínculo se persiste **al crear el cliente**, antes de redirigir a la tokenización — no
+después de que el usuario complete la tarjeta.
+
+### 15.5 Idempotencia
+1. **UNIQUE `flow_customer.customer_id`** (índice parcial `WHERE deleted_at IS NULL`) — la
+   garantía dura. Verificado: un segundo insert para el mismo cliente es rechazado por la BD.
+2. `ensureFlowCustomer` lee el vínculo antes de tocar la red; si existe, no llama a Flow.
+3. **Carrera:** dos peticiones simultáneas pueden crear dos `cus_…` en Flow (inevitable, no hay
+   create-if-not-exists), pero solo una gana el UNIQUE. La perdedora **descarta el suyo y reusa
+   el ganador**, así que nunca se cobra contra el huérfano; el huérfano se loguea con su id.
+4. **Auto-sanación:** si Flow reporta `status='0'`, se crea uno nuevo y se repunta el vínculo.
+
+### 15.6 `flow_customer` (shape del backend)
+`{ id, customer_id (UNIQUE), flow_customer_id (UNIQUE), status: "0"|"1",
+pay_mode: "auto"|"manual"|null, register_date: Date|null, last_synced_at: Date|null,
+created_at, updated_at, deleted_at }`.
+
+**Qué NO se guarda aquí:** marca y últimos 4 de la tarjeta — ese hecho es de `saved_card`
+(§10) y no se duplica. Tampoco nombre/correo: su dueño es el `customer` de Medusa.
+**Nunca** PAN ni CVV: la tarjeta jamás toca nuestros servidores.
+
+### 15.7 Sincronización
+- `customer.updated` (evento nativo) → `syncFlowCustomerProfile` → `customer/edit`.
+  **Best-effort**: no-op si el cliente no tiene vínculo (la mayoría), y un fallo de Flow
+  **nunca** rompe la edición de perfil — se loguea y el próximo cambio reintenta.
+- `syncFlowCustomer(customerId)` re-lee con `customer/get` y refresca el espejo local cuando
+  hace falta la verdad más reciente.
+- `canChargeFlowCustomer(customerId)` responde "¿puedo cobrarle?" con el estado local
+  (`status='1'` + `pay_mode='auto'`), sin ir a la red.
+
+### 15.8 Verificación
+`npx medusa exec ./src/scripts/verify-flow-customer.ts` — 11 comprobaciones sin red: firma HMAC
+contra el ejemplo trabajado de la doc, UNIQUE efectivo, y el orquestador (lectura, registro de
+tarjeta, `status='0'`/`pay_mode='manual'` ⇒ no cobrable). El E2E real con Flow exige llaves +
+ngrok (`apps/backend/DEV.md`).
+
+---
+
+## 16. Contrato de suscripciones nativas de Flow — módulo `flow-subscription` (D71) · 💤 DORMIDO
+
+Etapa 2. Capa de integración con el modelo de suscripción **nativo** de Flow (`plans/*`,
+`subscription/*`, `subscription_item/*`). Terminada y testeada (22/22).
+
+> 💤 **NO ESTÁ EN USO (D72).** Carlos decidió que **Medusa mantiene la propiedad de la cadencia**
+> (Modelo A: Flow = bóveda de tarjeta + `customer/charge`), porque Flow **no modela pausar ni
+> saltar** y Manada ya los tiene desplegados (D56/D57). Esta capa se conserva como **camino de
+> migración** si algún día conviene ceder la cadencia a Flow, y porque fue lo que permitió decidir
+> con evidencia. **Nada la llama hoy** — no la leas como código vivo. El cobro recurrente real se
+> documenta en §14 (Flow) y D59.
+
+**Fuente de verdad:** `ai-context/assets/flow-openapi-3.0.1.yaml` (spec oficial versionado en el
+repo; sha256 `2ea10638…`). **Owner del código:** `src/lib/flow/{plans,subscriptions}.ts` (API) ·
+`src/modules/flow-subscription/` (persistencia) · `src/lib/flow-{plan,subscription}.ts` (orquestación).
+
+### 16.1 El modelo de Flow, con evidencia
+| Pregunta | Respuesta | Endpoint / schema |
+|---|---|---|
+| ¿Qué es una Subscription? | La unión de un **cliente** y un **plan**, más su reloj (`period_start`/`period_end`/`next_invoice_date`). | schema `Subscription` |
+| ¿Qué requiere para crearse? | Solo `apiKey`, **`planId`**, **`customerId`**, `s`. Opcionales: `subscription_start`, `couponId`, `trial_period_days`, `periods_number`, `planAdditionalList`. | `subscription/create` |
+| ¿Existe el concepto de Plan? | Sí, y es una entidad **previa e independiente**. | `plans/create` |
+| ¿Cómo se referencia? | Por `planId`, **string elegido por el comercio** ("sin espacios, ejemplo: PlanMensual"). | `plans/create` |
+| ¿Quién es dueño del precio? | **El Plan** (`amount` + `currency`). La suscripción no lleva precio. | schema `Plan` |
+| ¿Quién es dueño de la frecuencia? | **El Plan** (`interval` 1 diario/2 semanal/3 mensual/4 anual × `interval_count`). | schema `Plan` |
+| ¿Cómo se representan los productos? | **No se representan.** No hay producto, SKU ni cantidad en ningún schema. Lo más cercano son los `subscription_item` (monto plano con nombre). | schemas `Plan`, `ItemAdditional` |
+| ¿Se puede modificar una suscripción viva? | Parcialmente: trial, cupones, items y **cambio de plan**. El precio/cadencia **no** se editan en el plan. | `plans/edit`, `subscription/*` |
+| ¿Cómo se cancela? | `at_period_end`: **0** inmediata · **1** al terminar el período vigente. | `subscription/cancel` |
+
+**La restricción que manda sobre todo el diseño** — textual de `plans/edit`:
+> "Si el plan tiene clientes suscritos sólo se puede modificar el campo **trial_period_days**."
+
+Es decir: **el precio de un plan con suscriptores es inmutable**. Cambiar el precio de una
+suscripción viva NO es editar el plan, sino crear otro y mover la suscripción con `changePlan`.
+
+### 16.2 `changePlan`, `changePlanPreview`, `changePlanCancel`
+- **`changePlan`** (`subscriptionId`, `newPlanId`, `startDateOfNewPlan?`) mueve la suscripción a
+  otro plan. Flow prorratea y devuelve `balance` (negativo = a favor · positivo = cargo). La
+  fecha debe caer dentro del ciclo de facturación actual y puede ser futura → cambio **programado**.
+- **`changePlanPreview`** calcula lo mismo **sin aplicarlo** (incluye `credit_expiration_*` y
+  advertencias si el saldo a favor no alcanzará a consumirse). Es lo que permite mostrarle al
+  cliente qué le van a cobrar antes de confirmar.
+- **`changePlanCancel`** anula un cambio **programado** pendiente.
+
+### 16.3 `addItem` / `deleteItem`
+Asocian y desasocian un `subscription_item` (entidad aparte, `subscription_item/create`:
+`name` + `amount` + `currency`). `amount` **positivo = recargo, negativo = descuento**. Son
+**ajustes monetarios planos**, no productos: no tienen cantidad ni SKU. `changeType` (`to_future`
+\| `all`) es obligatorio al editar/eliminar y define si el cambio alcanza a las suscripciones vivas.
+
+### 16.4 Estados
+`Subscription.status`: **0** no iniciada · **1** activa · **2** en trial · **4** cancelada.
+`morose`: **0** al día · **1** vencido · **2** pendiente no vencido.
+`Plan.status`: **1** activo · **0** eliminado (eliminar impide nuevas suscripciones, pero
+"las suscripciones activas continuarán su ciclo de vida").
+
+> ⚠️ **Flow no tiene "pausada" ni "saltar un período".** Se verificó por ausencia en el spec:
+> no existen esos estados ni esas operaciones. Manada sí los ofrece hoy (D56/D57) — es la
+> brecha funcional principal si se adopta el modelo nativo.
+
+### 16.5 Mapeo Manada → Flow
+| Manada | Flow | Mapeo |
+|---|---|---|
+| `customer` | `Customer` (`cus_…`) | **Directo** (1:1, resuelto en D70). |
+| `subscription` | `Subscription` (`sus_…`) | **Directo** en identidad; **con brecha** en estados (`paused`/`skipped` no existen). |
+| `product` / `variant` | — | **Sin equivalente.** Flow no modela productos: la identidad de qué se despacha se queda en Manada. |
+| `frequency_weeks` | `interval=2` + `interval_count=N` | **Directo y sin pérdida** (Flow tiene intervalo semanal). Se usa semanal incluso para múltiplos de 4: "cada 4 semanas" son 13 cobros/año, "mensual" 12. |
+| `agreed_unit_price` | `Plan.amount` | **Requiere transformación**: el precio deja de vivir en la suscripción y pasa a una entidad previa compartida. |
+| — | `Plan` | **Entidad nueva sin contraparte** en Manada. |
+
+### 16.6 Arquitectura — planes por ECONOMÍA, no por producto
+Como el Plan solo codifica (monto, moneda, cadencia), **no se crea un plan por variante** sino
+**uno por punto de precio × cadencia**, compartido entre productos y clientes. Modelarlo por
+variante exigiría cientos de planes (~172 variantes × 4 frecuencias); por economía, el número
+crece con los precios realmente suscritos y se reutiliza.
+
+El `planId` se deriva determinísticamente del contenido: `MANADA-CLP-29990-W4`
+(= $29.990 cada 4 semanas). Como el id lo elige el comercio, **la idempotencia sale gratis**:
+el mismo precio+cadencia produce siempre el mismo id y no puede duplicarse, ni en una carrera.
+`ensureFlowPlan` resuelve local → `plans/get` → `plans/create` (adoptar un plan preexistente es
+un desenlace esperado, no un error).
+
+### 16.7 Persistencia
+`flow_plan`: `{ id, plan_id (UNIQUE), amount, currency_code, interval, interval_count, status, last_synced_at }`.
+`flow_subscription`: `{ id, flow_subscription_id (UNIQUE), flow_plan_id, flow_customer_id,
+subscription_id (UNIQUE, nullable), status, morose, cancel_at_period_end, period_start,
+period_end, next_invoice_date, last_synced_at }`.
+
+`subscription_id` nullable **a propósito**: la capa está terminada pero sin conectar, así que
+enlazar después es un `update`, no una migración. El UNIQUE sobre columna nullable permite N
+suscripciones sin enlazar (Postgres admite múltiples NULL) y a lo sumo una por cada suscripción
+de Manada — evita el doble cobro. Los campos de reloj son **espejo**: manda Flow.
+
+### 16.8 Verificación
+`npx medusa exec ./src/scripts/verify-flow-subscription.ts` — **22 comprobaciones** sin red:
+determinismo del `planId`, mapeo de cadencia, validaciones, los tres UNIQUE (incluida la
+convivencia de NULLs), la **carrera real** sobre un mismo plan y el enlace tardío con Manada.
+
+### 16.9 Reutilización de un Plan por N suscriptores — evidencia
+**Confirmado.** El Plan es un molde compartido, no una instancia por cliente:
+- Guía oficial (`/docs/suscripciones/create-plan`): *"el comercio debe crear uno o varios planes
+  que desee **poner a disposición de sus clientes**"* — plural, y el plan precede a los clientes.
+- Guía oficial (`/docs/suscripciones/integration-flow`): *"Finalmente, **el cliente se asocia a un
+  plan**"*.
+- `subscription/list` **pagina las suscripciones DE UN plan** (`start`, `limit` máx 100): un
+  modelo 1:1 no necesitaría paginación.
+- `plans/edit`: *"Si el plan tiene clientes **suscritos**…"* · `plans/delete`: *"las
+  **suscripciones activas** continuarán su ciclo de vida"* — ambos en plural.
+- `trial_period_days` y `periods_number` se pueden **sobrescribir por suscripción** en
+  `subscription/create` ("Si null, entonces tomará el `periods_number` del plan") — la marca
+  inconfundible de un molde con overrides.
+- El schema `Plan` no tiene ningún campo de cupo, tope ni contador de suscriptores.
+
+> ⚠️ **Lo que NO se puede afirmar.** "No existe ninguna limitación relevante" **no es
+> demostrable desde un spec**: solo consta que **ninguna está documentada**. El OpenAPI no
+> declara cuotas de planes por comercio, tope de suscriptores ni límites de tasa (`rate limit`).
+> Ausencia de documentación ≠ ausencia de límite. **Pendiente de confirmar con Flow** antes de
+> operar a volumen.
+
+### 16.10 Ciclo de vida de un Plan
+| Etapa | Qué ocurre | Evidencia |
+|---|---|---|
+| **Creación** | `plans/create` (o el portal de Flow). El `planId` lo elige el comercio. | `plans/create` · guía `create-plan` |
+| **Reutilización** | N suscripciones apuntan al mismo `planId`. Por suscripción se pueden variar **solo** `trial_period_days` y `periods_number`. | `subscription/create` |
+| **Cambio de precio** | **Imposible con suscriptores**: *"sólo se puede modificar `trial_period_days`"*. Se crea un plan nuevo y se mueve la suscripción. | `plans/edit` |
+| **Eliminación** | `status → 0`. *"ya no podrá suscribir nuevos clientes… las suscripciones activas continuarán su ciclo de vida"*. No es destructivo. | `plans/delete` |
+| **Sin suscriptores** | **NO DOCUMENTADO.** El spec y la guía no describen borrado automático ni caducidad. Se asume que persiste con `status = 1`. | — (ausencia) |
+
+**Consecuencia operativa del compartir:** `days_until_due` y `charges_retries_number` son
+**del plan** y **no** admiten override por suscripción. Mientras Manada use la misma política de
+mora para todos, compartir es correcto; el día que se quiera una política distinta por cliente,
+el plan deja de poder compartirse y habría que particionarlo también por esos campos.
+
+**Política de Manada:** los planes **no se borran**. Como se reutilizan por (precio × cadencia) y
+`plans/delete` solo bloquea altas nuevas, borrar no aporta y sí puede romper una reutilización
+futura. Se acumulan; el crecimiento es el histórico de puntos de precio, no el catálogo.
+
+### 16.11 Algoritmo de creación de una suscripción
+```
+ensureFlowCustomer(customer)                  → cus_…            (D70)
+        ↓
+planId = MANADA-{CUR}-{AMOUNT}-{W}{N}         (determinista, sin red)
+        ↓
+¿flow_plan local con ese planId y status≠0?
+   sí → reutilizar ─────────────────────────────────────┐
+   no ↓                                                 │
+¿plans/get(planId) existe y está activo?                │
+   sí → adoptar + anotar en flow_plan ──────────────────┤
+   no ↓                                                 │
+plans/create(planId, amount, interval, count)           │
+   ├─ éxito       → anotar en flow_plan ────────────────┤
+   └─ falla       → REPREGUNTAR plans/get               │
+         ├─ ahora existe → adoptar (carrera benigna) ───┤
+         └─ no existe    → propagar el error real       │
+        ↓                                               │
+subscription/create(planId, customerId)  ←──────────────┘
+        ↓
+anotar en flow_subscription (UNIQUE subscription_id)
+```
+
+**Idempotencia en tres capas, y una asimetría importante:**
+1. **El `planId` es determinista.** Dos procesos concurrentes no pueden crear *planes distintos*:
+   calculan el mismo id, que codifica el mismo precio y cadencia. La carrera es **benigna** —a
+   diferencia de la de clientes (D70), que sí deja un `cus_…` huérfano, y la de suscripciones,
+   que dejaría una cobrando.
+2. **`plans/create` que falla se REPREGUNTA, no se interpreta.** El spec no documenta qué error
+   devuelve Flow ante un `planId` duplicado, así que no se adivina por código: se vuelve a
+   consultar `plans/get` y, si el plan ya está ahí, se adopta. Si no está, el fallo era real y se
+   propaga.
+3. **UNIQUE en la BD** sobre `flow_plan.plan_id` — la red de seguridad final.
+
+**Probado, no afirmado:** 8 registros simultáneos del mismo plan dejan **exactamente 1 fila**
+(1 éxito, 7 rechazos del UNIQUE) — `verify-flow-subscription.ts`.
+
+### 16.12 Traducción de frecuencias
+Flow tiene intervalo **semanal** (`interval = 2`) y un multiplicador `interval_count`, así que el
+mapeo es directo y exacto:
+
+| Manada (`frequency_weeks`) | `interval` | `interval_count` | `planId` (ej. $29.990) |
+|---|---|---|---|
+| 2 semanas | 2 (semanal) | 2 | `MANADA-CLP-29990-W2` |
+| 4 semanas | 2 (semanal) | 4 | `MANADA-CLP-29990-W4` |
+| 6 semanas | 2 (semanal) | 6 | `MANADA-CLP-29990-W6` |
+| 8 semanas | 2 (semanal) | 8 | `MANADA-CLP-29990-W8` |
+
+**Por qué semanal y no mensual para 4 semanas:** no son lo mismo. *Cada 4 semanas* = **13 cobros
+al año**; *mensual* (`interval = 3`) = **12**. La cadencia de Manada la fija el consumo del saco,
+que se mide en semanas (D64), así que usar el intervalo mensual introduciría una deriva real
+contra la fecha en que la mascota se queda sin comida.
+
+### 16.13 Cambio de frecuencia y cambio de precio
+Ambos son el **mismo caso**: cambia la tarifa ⇒ cambia el `planId` ⇒ hay que **mover** la
+suscripción. Nunca se edita el plan (`plans/edit` no lo permite con suscriptores).
+
+```
+nueva tarifa (precio y/o frecuencia)
+        ↓
+ensureFlowPlan(nuevo spec)                        → nuevo planId  (§16.11)
+        ↓
+[opcional] subscription/changePlanPreview         → mostrar el prorrateo al cliente
+        ↓
+subscription/changePlan(subscriptionId, newPlanId[, startDateOfNewPlan])
+        ↓
+subscription/get → refrescar el espejo local
+```
+
+- **`changePlan`** devuelve `balance`: **negativo = saldo a favor**, **positivo = cargo** al
+  cambiar. Flow prorratea; Manada no calcula nada.
+- **`changePlanPreview`** entrega lo mismo **sin aplicar**, más `credit_expiration_*` y una
+  advertencia si el saldo a favor no alcanzará a consumirse. Es lo que permite mostrar "esto es
+  lo que te vamos a cobrar" antes de confirmar.
+- **`startDateOfNewPlan`** (opcional, `yyyy-mm-dd`) debe caer **dentro del ciclo de facturación
+  vigente** y puede ser futura → el cambio queda **programado** (`newPlanId` /
+  `new_plan_scheduled_change_date` en la suscripción). **`changePlanCancel`** lo anula.
+- **El plan viejo NO se toca**: probablemente lo sigan usando otras suscripciones.
+
+> ⚠️ **Dos puntos a confirmar en sandbox antes de conectar** (el spec no los resuelve):
+> 1. `changePlan` entre planes de **distinta cadencia** (4 → 2 semanas) no está prohibido en el
+>    spec, pero tampoco descrito: hay que verificar cómo reprograma `next_invoice_date`.
+> 2. Omitir `startDateOfNewPlan` debería significar "inmediato", pero **no está documentado**.

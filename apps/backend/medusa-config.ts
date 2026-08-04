@@ -46,12 +46,24 @@ module.exports = defineConfig({
     // guardadas (solo brand/last4/vencimiento + punteros a la pasarela).
     { resolve: './src/modules/payment-method' },
     // Módulo custom `subscription` (D55, API.md §13): el moat de recurrencia,
-    // construido por capas. Punto 1 = creación al checkout con pago manual.
+    // construido por capas. Punto 1 = creación al checkout; D59 = cobro recurrente real.
     { resolve: './src/modules/subscription' },
+    // Módulo custom `subscription-charge` (D59): ledger de cobros recurrentes
+    // (una fila por período), eje de la idempotencia del scheduler de renovaciones.
+    { resolve: './src/modules/subscription-charge' },
     // Módulo custom `flow-payment` (D58, API.md §14): la pasarela de pago real
     // (Flow). Persiste el ciclo de cada intento de pago y es el eje de la
     // idempotencia (la orden solo se crea cuando Flow confirma vía getStatus).
     { resolve: './src/modules/flow-payment' },
+    // Módulo custom `flow-customer` (D70, API.md §15): vínculo 1:1 entre el
+    // `customer` de Medusa y su cliente (`cus_…`) en Flow. Es la ÚNICA fuente de
+    // verdad del vínculo — Flow no permite buscar un cliente por `externalId`.
+    { resolve: './src/modules/flow-customer' },
+    // Módulo custom `flow-subscription` (D71, API.md §16): espejo del modelo de
+    // suscripción NATIVO de Flow — planes (tarifa recurrente) y suscripciones.
+    // Capa de integración terminada, aún SIN conectar al checkout ni al módulo
+    // `subscription` de Manada.
+    { resolve: './src/modules/flow-subscription' },
     // Almacenamiento de archivos (packshots subidos desde el Admin). Provider
     // local: guarda en `<cwd>/static` (= el dir que Medusa expone en `/static`,
     // hardcodeado) y devuelve URLs bajo `backend_url`. Por defecto ese URL sería
