@@ -35,19 +35,12 @@
 > Rama: `flow/customers-etapa1`. Modelo elegido: **Medusa dueño de la cadencia** (Modelo A).
 > El cobro sigue **APAGADO** (`SUBSCRIPTION_CHARGES_ENABLED=false`) — no encender hasta cerrar 1–3.
 
-- [ ] **(1) Cerrar el doble cobro — riesgo de dinero real, máxima prioridad.**
-      Camino concreto verificado en el código (`src/lib/subscription-charge.ts`):
-      `chargeFlowCustomer` cobra OK → `getFlowStatusByCommerceId` falla de forma transitoria y
-      **devuelve `null`** (hoy no distingue "Flow no conoce este pago" de "no pude preguntarle")
-      → `paid = false` → `finalizeFailure` → `past_due` y `attempt++` → el siguiente barrido arma
-      un **`commerceOrder` NUEVO** (lleva sufijo `-a${attempt}`, línea ~320) → **Flow no lo
-      deduplica** → *cobra otra vez*.
-      Dos piezas a corregir juntas:
-      - `getFlowStatusByCommerceId` debe distinguir *no existe* de *no disponible*
-        (deuda declarada en D70, hoy en el camino crítico).
-      - Un fallo de verificación **después** de cobrar no puede finalizarse como fracaso: debe
-        quedar pendiente de conciliar **contra el mismo `commerceOrder`** → replantear el sufijo
-        `-a${attempt}`, que hoy anula la deduplicación de Flow entre intentos.
+- [x] ~~**(1) Cerrar el doble cobro**~~ → **HECHO en D73** (F6+F9): `lookupFlowStatusByCommerceId`
+      con resultado discriminado, `failureKind` en el cobro, desenlaces `deferred`/`unverified`
+      y `commerceOrder` **estable por período**. ⚠️ Ojo al leer el planteamiento original de este
+      punto: daba por hecho que Flow deduplica cargos con el mismo `commerceOrder`. **Se midió y
+      es falso** — por eso quitar el sufijo no era la corrección, sino un efecto lateral de ella.
+      **Falta revalidarlo E2E** (la corrida se topó con la cuota diaria de Sandbox).
 - [ ] **(2) Medir producción ANTES de desplegar — lo corre Carlos** (no hay acceso a la BD de prod
       desde el entorno de desarrollo):
       `select status, count(*), count(*) filter (where payment_method_id is null) from subscription group by status;`
@@ -62,6 +55,48 @@
       se despierta la capa nativa.
 - [ ] **(5) Consultar a soporte de Flow** los límites no documentados (`API.md §16.9`): cuotas de
       planes, tope de suscriptores por plan, rate limits. No bloqueante hoy.
+
+### Abierto por la validación E2E en Sandbox (2026-08-04)
+
+> Los defectos ya corregidos **no se re-narran aquí** (commits `3c1ba8e` y `845b74d`; la
+> entrada `DECISIONS.md` **D73 está pendiente de escribir** al cerrar la etapa).
+> Hallazgo que cambia el análisis del punto (1): **Flow NO deduplica `customer/charge`
+> por `commerceOrder`** — medido, dos cargos aceptados con el mismo id. D72 asumía lo
+> contrario. Quitar el sufijo `-a${attempt}` no basta: la única protección es la nuestra.
+
+- [ ] **Revalidar el escenario de RENOVACIÓN en Sandbox** — es lo único de los tres escenarios
+      que quedó a medias. F7 (orden impaga) y F8 (sin reservar stock) están corregidos y
+      desplegados **pero sin verificar**: la corrida se topó con la **cuota diaria de Flow
+      Sandbox**. Debe verse la orden en **Paid** y **Allocated**, y un solo cargo.
+      La suscripción usada quedó en `past_due` con `failed_charge_count=1` por F9 (antes de
+      corregirlo) → resetear `status`, `failed_charge_count` y `next_charge_attempt_at` antes
+      de reintentar, o usar otra.
+- [ ] **Preguntar a Flow por la cuota diaria de transacciones** (`400 has exceeded the daily
+      transaction quota`, medido en Sandbox tras 6 cargos al mismo cliente): ¿rige en
+      Producción, con qué número, y es por cliente o por comercio? Sustituye a la parte (a) del
+      punto (5) —ahora la pregunta es concreta—. **Con volumen real esto puede frenar un
+      barrido completo de renovaciones**, así que deja de ser "no bloqueante".
+- [ ] **Despacho gratis para suscriptores — decisión de producto tomada, falta implementar.**
+      Hoy la incoherencia es un efecto secundario, no una regla: la 1ª compra cobra
+      **$3.990** de despacho (el suscrito no alcanza el umbral de envío gratis de $30.000)
+      y las renovaciones no cobran nada, simplemente porque `createRenewalOrder` **no le
+      pone método de envío** a la orden. Implementar en **las dos puntas**:
+      (a) la 1ª compra suscrita no cobra despacho; (b) la orden de renovación lleva un
+      método de envío **en $0** —no "sin método"— para que el despacho opere normal y
+      quien prepara el pedido vea transportista y servicio.
+- [ ] **Entregabilidad del correo de renovación:** llegó a **spam en Hotmail/Outlook**
+      (verificado E2E). El de cobro es justo el que el cliente debe ver. Revisar
+      DMARC/alineación y reputación del remitente antes de Producción.
+- [ ] **Copy del correo de renovación:** afirma *"Tu pedido ya está en camino 🚚"* cuando la
+      orden aún está sin despachar. Contradice el principio de correos honestos (D45/D57).
+      Debe decir que **se está preparando**. Copy validado por Carlos → cambiarlo con su OK.
+- [ ] **Purgar los datos de prueba ANTES de volver a credenciales de Producción.**
+      Obligatorio, no cosmético: los `cus_…` creados en Sandbox quedan en `flow_customer` y
+      `saved_card`, y **no existen** en el Flow real. `ensureFlowCustomer` solo se auto-sana
+      ante `status='0'` — **no detecta que un id es de otro ambiente**, así que el cliente
+      afectado queda con la suscripción rota de forma permanente. Cuentas de prueba:
+      `carlosvaldescarmona@hotmail.com` y `carlosvaldescarmona+victima@hotmail.com`
+      (+ `sandbox+preflight-…@tumanada.cl`). Guion de consultas y purga preparado en la sesión.
 
 ## 🟠 Frente 2 — Terceros (post-infra, pre/post-lanzamiento)
 

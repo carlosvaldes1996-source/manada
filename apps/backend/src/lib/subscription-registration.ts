@@ -15,7 +15,7 @@ import {
   getFlowConfig,
   getFlowRegisterStatus,
   chargeFlowCustomer,
-  getFlowStatusByCommerceId,
+  lookupFlowStatusByCommerceId,
   FLOW_STATUS,
 } from "./flow";
 import { markFlowCardRegistered, getFlowCustomerRecord } from "./flow-customer";
@@ -56,7 +56,8 @@ type QueryFn = {
 export type RegistrationOutcome =
   | "paid" // tarjeta registrada + cobro OK + orden creada
   | "register_failed" // el usuario no completó/registró la tarjeta
-  | "charge_failed" // tarjeta OK pero el cobro fue rechazado
+  | "charge_failed" // tarjeta OK pero el cobro fue RECHAZADO por Flow
+  | "unverified" // no se obtuvo veredicto del cobro → no se cobra ni se crea orden
   | "not_found" // carrito desconocido
   | "invalid"; // carrito sin datos suficientes (sin cuenta/total)
 
@@ -221,22 +222,66 @@ async function settleRegistrationUnlocked(
   // (3) Cobro del total + verificación. `commerceOrder` determinista por carrito
   //     (un doble callback reusa el mismo id → Flow no recobra; además verificamos).
   const commerceOrder = `MANADA-SUBFIRST-${cartId.replace(/^cart_/, "")}`;
-  const alreadyPaid = await getFlowStatusByCommerceId(commerceOrder, config);
-  let paid = alreadyPaid?.status === FLOW_STATUS.PAID;
-  let flowOrder = alreadyPaid?.flowOrder;
-  let rawStatus = alreadyPaid?.status ?? null;
-  let chargedAmount = alreadyPaid?.amount;
+  // Solo se pregunta por un cobro previo si CONSTA que hubo uno: el spec no documenta
+  // qué devuelve Flow ante un `commerceId` desconocido, así que preguntar "a ciegas"
+  // en el primer intento obligaría a interpretar un error como "no existe" — que es
+  // justamente la ambigüedad que causa doble cobro. Sin intentos previos no hay nada
+  // que verificar.
+  const priorAttempts = await flowService.listFlowPayments({ cart_id: cartId });
+  let paid = false;
+  let flowOrder: number | undefined;
+  let rawStatus: number | null = null;
+  let chargedAmount: number | undefined;
+
+  if (priorAttempts.length > 0) {
+    const previous = await lookupFlowStatusByCommerceId(commerceOrder, config);
+    if (previous.outcome === "unavailable") {
+      // Hubo un intento y no sabemos cómo terminó. Cobrar aquí puede duplicar: Flow
+      // acepta cargos repetidos con el mismo `commerceOrder` (medido en la Etapa 3).
+      console.error(
+        `[flow] No se pudo verificar el intento previo del carrito ${cartId} ` +
+          `(${commerceOrder}): ${previous.message}. No se cobra; el cliente reintenta.`,
+      );
+      return { outcome: "unverified" };
+    }
+    paid = previous.status.status === FLOW_STATUS.PAID;
+    flowOrder = previous.status.flowOrder;
+    rawStatus = previous.status.status;
+    chargedAmount = previous.status.amount;
+  }
 
   if (!paid) {
     const charge = await chargeFlowCustomer(
       { customerId: reg.customerId, amount, subject: "Compra Plan Manada", commerceOrder },
       config,
     );
-    const verify = await getFlowStatusByCommerceId(commerceOrder, config);
+    const lookup = await lookupFlowStatusByCommerceId(commerceOrder, config);
+    const verify = lookup.outcome === "found" ? lookup.status : undefined;
     paid = verify?.status === FLOW_STATUS.PAID || (charge.ok && charge.status === FLOW_STATUS.PAID);
     flowOrder = verify?.flowOrder ?? charge.flowOrder;
     rawStatus = verify?.status ?? charge.status ?? null;
     chargedAmount = verify?.amount ?? chargedAmount;
+
+    // Ni pagado ni rechazado: no obtuvimos veredicto. Registrarlo como "cobro
+    // rechazado" mandaría al comprador a reintentar un pago que quizá YA se hizo.
+    if (!paid && charge.failureKind !== "rejected" && verify === undefined) {
+      await flowService.createFlowPayments({
+        cart_id: cartId,
+        commerce_order: commerceOrder,
+        token,
+        flow_order: flowOrder ? String(flowOrder) : null,
+        amount,
+        currency_code: (cart.currency_code ?? "clp").toLowerCase(),
+        status: "pending",
+        raw_status: rawStatus,
+        error: charge.message ?? "Sin veredicto de Flow; pendiente de conciliar.",
+      });
+      console.error(
+        `[flow] Cobro de la 1ª compra suscrita SIN VEREDICTO (${commerceOrder}): ` +
+          `${charge.message ?? "verificación no disponible"}. Queda pendiente de conciliar.`,
+      );
+      return { outcome: "unverified" };
+    }
 
     if (!paid) {
       await flowService.createFlowPayments({

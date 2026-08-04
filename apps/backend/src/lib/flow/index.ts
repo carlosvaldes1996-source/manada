@@ -34,11 +34,12 @@ export {
 export {
   createFlowPayment,
   getFlowStatus,
-  getFlowStatusByCommerceId,
+  lookupFlowStatusByCommerceId,
   FLOW_STATUS,
   type CreatePaymentInput,
   type CreatePaymentResult,
   type FlowStatusResult,
+  type FlowStatusLookup,
 } from "./payments";
 
 export {
@@ -66,6 +67,7 @@ export {
   type RegisterStatusResult,
   type ChargeCustomerInput,
   type ChargeCustomerResult,
+  type ChargeFailureKind,
 } from "./customers";
 
 export {

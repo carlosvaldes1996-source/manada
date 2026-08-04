@@ -14,7 +14,7 @@ import type PaymentMethodModuleService from "../modules/payment-method/service";
 import {
   getFlowConfig,
   chargeFlowCustomer,
-  getFlowStatusByCommerceId,
+  lookupFlowStatusByCommerceId,
   FLOW_STATUS,
 } from "./flow";
 
@@ -26,17 +26,20 @@ import {
  *
  * La renovación = cobrar `agreed_unit_price × quantity` con `customer/charge` → si
  * paga, crear una orden real desde el SNAPSHOT y emitir `order.placed` para reusar
- * TODO el pipeline existente (correo, reanclado del reloj de comida, reserva de stock
- * que hace `createOrderWorkflow`). Las líneas van SIN `is_subscription` (líneas
+ * TODO el pipeline existente (correo y reanclado del reloj de comida). El pago se
+ * registra y el stock se reserva explícitamente: `createOrderWorkflow` NO hace ninguna
+ * de las dos cosas. Las líneas van SIN `is_subscription` (líneas
  * "planas") para que `subscription-created.ts` haga no-op y NO duplique la suscripción.
  *
  * Idempotencia en capas (nunca doble cobro ni doble orden):
  *  1) LEDGER por período (`subscription_charge`, una fila por `subscription_id`+`period_key`):
  *     si el período ya está `paid`, no se vuelve a cobrar. `paid` sin `order_id` =
  *     cobrado pero la orden falló → el siguiente barrido crea SOLO la orden (auto-sanación).
- *  2) Referencia `commerceOrder` única por intento + verificación con
- *     `getFlowStatusByCommerceId` ANTES de crear la orden (nunca se confía en la
- *     respuesta síncrona de `customer/charge`).
+ *  2) Referencia `commerceOrder` ESTABLE por período + verificación con
+ *     `lookupFlowStatusByCommerceId` ANTES de crear la orden (nunca se confía en la
+ *     respuesta síncrona de `customer/charge`). Estable y no por intento porque Flow
+ *     NO deduplica cargos repetidos (medido): la referencia estable es lo que permite
+ *     preguntar "¿este período ya se cobró?" y que la respuesta cubra todos los intentos.
  *  3) Recuperación ante crash: si el ledger quedó `pending` con un `commerce_order`,
  *     se consulta a Flow por si el cobro sí ocurrió antes de caerse (evita recobrar).
  *  4) `createOrderWorkflow` compensa (rollback) si falla → nunca deja una orden a medias.
@@ -54,6 +57,7 @@ export type ChargeOutcome =
   | "already_done" // período ya cerrado (cobrado + orden) → no-op
   | "failed" // cobro rechazado/fallido → dunning
   | "paid_order_pending" // cobrado, pero la orden falló → se reintenta la orden luego
+  | "deferred" // no se pudo cobrar NI saber si se cobró → se reintenta sin dunning
   | "skipped"; // estado cambió / sin datos → no-op
 
 export interface ChargeResult {
@@ -296,9 +300,30 @@ export async function chargeDueSubscription(
 
   // (3) Recuperación ante crash: un ledger `pending` con referencia previa podría
   // haberse cobrado antes de caerse. Confirmamos con Flow para NO recobrar.
+  //
+  // Solo se pregunta cuando CONSTA un intento previo. Es lo que permite no tener que
+  // distinguir "Flow no conoce este pago" de "Flow no me respondió" —distinción que el
+  // spec no documenta y que adivinar costaría dinero—: si nunca enviamos este
+  // `commerceOrder`, no hay nada que preguntar; si lo enviamos y Flow no responde, no
+  // se cobra.
   if (ledger?.status === "pending" && ledger.commerce_order) {
-    const prior = await getFlowStatusByCommerceId(ledger.commerce_order, config);
-    if (prior?.status === FLOW_STATUS.PAID) {
+    const lookup = await lookupFlowStatusByCommerceId(ledger.commerce_order, config);
+
+    if (lookup.outcome === "unavailable") {
+      // Hubo un intento previo y Flow no nos dice cómo terminó. Cobrar aquí es
+      // exactamente el camino de doble cobro de D72, agravado porque Flow acepta
+      // cargos repetidos bajo el mismo `commerceOrder` (medido en la Etapa 3).
+      return deferCharge(
+        subs,
+        charges,
+        sub,
+        ledger.id,
+        `No se pudo verificar el intento previo (${ledger.commerce_order}): ${lookup.message}`,
+      );
+    }
+
+    const prior = lookup.status;
+    if (prior.status === FLOW_STATUS.PAID) {
       await charges.updateSubscriptionCharges({
         id: ledger.id,
         status: "paid",
@@ -319,9 +344,17 @@ export async function chargeDueSubscription(
     }
   }
 
-  // Nuevo intento de cobro. `commerceOrder` ÚNICO por intento (Flow rechaza repetidos).
+  // Referencia ESTABLE por período — sin sufijo por intento.
+  //
+  // Antes llevaba `-a${attempt}`, con el argumento de que "Flow rechaza commerceOrder
+  // repetidos". Medido en la Etapa 3: **es falso para `customer/charge`** (dos cargos
+  // aceptados con el mismo id y dos `flowOrder` distintos). El sufijo por tanto no
+  // evitaba nada y sí rompía lo único que nos protege: poder preguntarle a Flow "¿este
+  // período ya se cobró?" y obtener una respuesta que cubra TODOS los intentos. Con la
+  // referencia estable, si cualquier intento del período resultó pagado, la consulta lo
+  // encuentra y no se recobra. D72 razonaba sobre la premisa contraria.
   const attempt = ledger ? (ledger.attempt ?? 1) + 1 : 1;
-  const commerceOrder = `MANADA-SUB-${subscriptionId.replace(/^sub_/, "")}-${periodKey.replace(/-/g, "")}-a${attempt}`;
+  const commerceOrder = `MANADA-SUB-${subscriptionId.replace(/^sub_/, "")}-${periodKey.replace(/-/g, "")}`;
 
   let ledgerId: string;
   if (ledger) {
@@ -354,13 +387,39 @@ export async function chargeDueSubscription(
     { customerId: card.gateway_customer_id, amount, subject, commerceOrder },
     config,
   );
-  const verify = await getFlowStatusByCommerceId(commerceOrder, config);
+  const lookup = await lookupFlowStatusByCommerceId(commerceOrder, config);
+  const verify = lookup.outcome === "found" ? lookup.status : undefined;
   const paid =
     verify?.status === FLOW_STATUS.PAID || (charge.ok && charge.status === FLOW_STATUS.PAID);
   const rawStatus = verify?.status ?? charge.status ?? null;
   const flowOrder = verify?.flowOrder ?? charge.flowOrder;
 
   if (!paid) {
+    // ¿Rechazo de tarjeta o imposibilidad de cobrar? Es la pregunta que decide si el
+    // cliente recibe un correo de "no pudimos cobrarte" o si el problema es nuestro.
+    //
+    // Solo hay veredicto negativo cuando Flow lo dio: un estado 3/4 verificado, o un
+    // `failureKind: "rejected"` de la respuesta síncrona. Todo lo demás —cuota agotada,
+    // 401 por llaves, 5xx, timeout, o una verificación que no respondió— significa que
+    // NO SABEMOS, y sobre "no sabemos" no se castiga a nadie.
+    const flowSaidRejected =
+      rawStatus === FLOW_STATUS.REJECTED ||
+      rawStatus === FLOW_STATUS.CANCELED ||
+      charge.failureKind === "rejected";
+
+    if (!flowSaidRejected) {
+      return deferCharge(
+        subs,
+        charges,
+        sub,
+        ledgerId,
+        charge.message ??
+          (lookup.outcome === "unavailable"
+            ? `No se pudo verificar el cobro: ${lookup.message}`
+            : "Flow no entregó un veredicto del cobro."),
+      );
+    }
+
     const msg = charge.message || (verify ? `Flow devolvió estado ${verify.status}` : "Cobro rechazado por Flow.");
     return finalizeFailure(
       subs,
@@ -372,7 +431,7 @@ export async function chargeDueSubscription(
       amount,
       rawStatus,
       msg,
-      rawStatus === FLOW_STATUS.REJECTED || rawStatus === FLOW_STATUS.CANCELED ? "rejected" : "failed",
+      "rejected",
       flowOrder,
     );
   }
@@ -419,6 +478,38 @@ async function advanceOnSuccess(
     last_charge_error: null,
     next_charge_attempt_at: null,
   });
+}
+
+/**
+ * Aplaza el cobro SIN castigar al cliente: no toca `failed_charge_count`, no pasa a
+ * `past_due` y no emite `subscription.payment_failed` (o sea, no manda el correo de
+ * cobro fallido). La suscripción sigue `active` y vencida, así que el próximo barrido
+ * la vuelve a tomar por sí solo.
+ *
+ * Es la respuesta a "no sabemos si se cobró o no pudimos cobrar". El ledger se queda
+ * `pending` con su `commerce_order` intacto, que es justo lo que la recuperación ante
+ * crash necesita para preguntarle a Flow por ese período antes de reintentar.
+ *
+ * ⚠️ Un aplazamiento repetido es invisible en el listado del Admin (la suscripción se
+ * ve normal). Por eso se escribe el motivo en `last_charge_error` y se loguea como
+ * error: es la única señal de que algo lleva días sin poder cobrarse.
+ */
+async function deferCharge(
+  subs: SubscriptionModuleService,
+  charges: SubscriptionChargeModuleService,
+  sub: SubscriptionShape,
+  ledgerId: string | undefined,
+  message: string,
+): Promise<ChargeResult> {
+  if (ledgerId) {
+    await charges.updateSubscriptionCharges({ id: ledgerId, status: "pending", error: message });
+  }
+  await subs.updateSubscriptions({ id: sub.id, last_charge_error: message });
+  console.error(
+    `[cobro] ${sub.id}: cobro APLAZADO sin penalizar al cliente (no es un rechazo de ` +
+      `tarjeta). Se reintentará en el próximo barrido. Motivo: ${message}`,
+  );
+  return { outcome: "deferred", message };
 }
 
 /** Registra un cobro fallido: ledger + dunning (past_due/unpaid) + evento de dominio. */

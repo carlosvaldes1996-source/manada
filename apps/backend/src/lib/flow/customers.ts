@@ -423,6 +423,26 @@ export interface ChargeCustomerInput {
   optionals?: Record<string, string>;
 }
 
+/**
+ * Por qué NO alcanza con `ok: true | false`.
+ *
+ * "La tarjeta fue rechazada" y "no pude ni intentar el cobro" son hechos distintos
+ * con consecuencias opuestas: el primero es un problema del cliente y debe disparar
+ * el dunning (correo, reintentos, baja); el segundo es un problema NUESTRO o de Flow
+ * y jamás debe tocar al cliente. Confundirlos manda a un suscriptor sano a `past_due`
+ * y le avisa que su tarjeta falló cuando nunca se le cobró.
+ *
+ * Medido en la Etapa 3: al agotarse la cuota diaria de Sandbox, Flow respondió
+ * `400 "has exceeded the daily transaction quota"` y una suscripción sana quedó en
+ * `past_due` con su correo de cobro fallido. Lo mismo ocurriría con llaves mal
+ * puestas, una caída de Flow o un timeout.
+ */
+export type ChargeFailureKind =
+  /** Flow procesó el cobro y la tarjeta NO pagó. Es el único caso que justifica dunning. */
+  | "rejected"
+  /** No se pudo obtener un veredicto (red, timeout, 429, 5xx, 400/401 del API). */
+  | "unavailable";
+
 export interface ChargeCustomerResult {
   /** HTTP 2xx: Flow procesó la petición (puede ser pago o rechazo controlado). */
   ok: boolean;
@@ -432,6 +452,11 @@ export interface ChargeCustomerResult {
   commerceOrder: string;
   /** Mensaje de Flow ante un rechazo/negativa (tarjeta sin fondos, etc.). */
   message?: string;
+  /**
+   * Presente solo si NO se cobró. Distingue el rechazo real (dunning) de la
+   * imposibilidad de cobrar (reintentar sin castigar al cliente).
+   */
+  failureKind?: ChargeFailureKind;
   raw: Record<string, unknown>;
 }
 
@@ -443,7 +468,7 @@ export interface ChargeCustomerResult {
  * NO lanza ante un rechazo de negocio (tarjeta sin fondos): eso es un desenlace
  * esperado que el dunning debe registrar, no una excepción. Devuelve `ok=false` +
  * `message`. La verdad del cobro NUNCA se asume de aquí: el orquestador confirma
- * con `getFlowStatusByCommerceId` antes de crear la orden.
+ * con `lookupFlowStatusByCommerceId` antes de crear la orden.
  *
  * ⚠️ SIN REINTENTO, y así debe quedarse: repetir un cobro cuyo resultado se
  * desconoce puede cobrar dos veces. Un timeout se resuelve CONSULTANDO.
@@ -467,20 +492,33 @@ export async function chargeFlowCustomer(
       Record<string, unknown> & { status?: number; flowOrder?: number; commerceOrder?: string }
     >("customer/charge", params, config);
 
+    // Escala de pago de Flow: 2 pagada · 3 rechazada · 4 anulada · 1 pendiente.
+    // Solo 3 y 4 son un veredicto NEGATIVO de la tarjeta; un 1 (o un status ausente)
+    // no dice que no pagó, dice que todavía no se sabe.
+    const status = typeof data.status === "number" ? data.status : undefined;
+    const failureKind: ChargeFailureKind | undefined =
+      status === 2 ? undefined : status === 3 || status === 4 ? "rejected" : "unavailable";
+
     return {
       ok: true,
-      status: typeof data.status === "number" ? data.status : undefined,
+      status,
       flowOrder: data.flowOrder,
       commerceOrder: data.commerceOrder ? String(data.commerceOrder) : input.commerceOrder,
       message: typeof data.message === "string" ? data.message : undefined,
+      failureKind,
       raw: data,
     };
   } catch (e) {
     if (e instanceof FlowApiError) {
+      // Un error HTTP de Flow (red, timeout, 429, 5xx, y también 400/401 del API)
+      // NUNCA es un rechazo de tarjeta: es que no obtuvimos veredicto. Clasificarlo
+      // como rechazo castigaría al cliente por un problema nuestro o de Flow — que
+      // es exactamente lo que ocurrió con la cuota diaria de Sandbox (400).
       return {
         ok: false,
         commerceOrder: input.commerceOrder,
         message: e.message,
+        failureKind: "unavailable",
         raw: {},
       };
     }

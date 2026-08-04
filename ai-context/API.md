@@ -536,12 +536,66 @@ El hash hex viaja como parámetro `s`. Implementado en `signParams` (`src/lib/fl
 - **`GET payment/getStatus`** (`?apiKey&token&s`): fuente de verdad. `status` → **1** pendiente ·
   **2** pagada · **3** rechazada · **4** anulada.
 
+### 14.4b Cobro de suscripción — "no pude" ≠ "no pagó" (D73)
+
+Validado E2E contra Sandbox. Tres reglas que gobiernan todo cobro con `customer/charge`:
+
+**(1) `commerceOrder` ESTABLE por período**, sin sufijo por intento.
+> ⚠️ **Flow NO deduplica `customer/charge` por `commerceOrder`** — medido: dos cargos
+> aceptados con el mismo id y `flowOrder` distintos. Es trazabilidad, **no un candado**.
+> La única protección contra el doble cobro es la nuestra: **lock + ledger + verificación**.
+
+La referencia estable es lo que permite preguntar *"¿este período ya se cobró?"* y que la
+respuesta cubra **todos** los intentos.
+
+**(2) `lookupFlowStatusByCommerceId` devuelve un resultado discriminado** —
+`{ outcome: "found", status } | { outcome: "unavailable", message }`. Nunca `null` ambiguo.
+**No se distingue "no existe" de "error", a propósito:** el spec no documenta qué devuelve
+Flow ante un `commerceId` desconocido. La ambigüedad la resuelve **el ledger**: solo se
+pregunta si consta un intento previo; sin intento previo no hay nada que preguntar.
+
+**(3) `chargeFlowCustomer` clasifica el fallo** con `failureKind`:
+
+| `failureKind` | Cuándo | Qué hace el motor |
+|---|---|---|
+| `rejected` | Flow dio veredicto: estado **3** (rechazada) o **4** (anulada) | **Dunning**: `past_due`, `failed_charge_count++`, correo al cliente, baja a los 3 intentos |
+| `unavailable` | Cualquier error HTTP (red, timeout, 429, 5xx, **400**, 401) o estado 1/ausente | **`deferred`**: no toca contadores, no cambia estado, **no manda correo**. Sigue `active` y vencida → el próximo barrido la retoma |
+
+Motivo medido: al agotarse la cuota diaria de Sandbox, Flow respondió `400 "has exceeded the
+daily transaction quota"` y una suscripción sana acabó en `past_due` con su correo de cobro
+fallido. Un problema de Flow o nuestro **nunca** debe castigar al cliente.
+
+En el alta (`/flow/register-return`) el equivalente es **`unverified`** → la confirmación
+muestra **"pendiente"**, jamás "rechazado": decirle al comprador que falló lo invitaría a
+reintentar un pago que quizá ya se hizo.
+
+> ⚠️ **`deferred` es invisible en el listado del Admin** (la suscripción se ve normal). El
+> motivo queda en `last_charge_error` y en los logs — es la única señal de que algo lleva
+> días sin poder cobrarse.
+
 ### 14.5 Idempotencia (sin duplicados)
 Dos capas: (1) el registro `flow_payment` como mutex — si ya está `paid`, no-op; (2)
 `completeCartWorkflow` es idempotente y **toma un lock** sobre el `cart_id` (consulta el link
 `order_cart`: si la orden ya existe la devuelve **sin re-emitir** `order.placed`). Aunque Flow
 reintente el callback o `urlReturn`/`urlConfirmation` lleguen a la vez, la orden y sus efectos
 ocurren **exactamente una vez**.
+
+**Tercera capa, añadida en D73: lock por carrito en la conciliación.** Las dos anteriores
+protegían la ORDEN, no el COBRO. Medido en Sandbox: dos callbacks simultáneos sobre un carrito
+sin conciliar ejecutaron **ambos** `customer/charge` — una sola orden, **dos cargos**. Ahora
+`settleSubscriptionRegistration` corre dentro de `locking.execute("subscription-registration:<cartId>")`,
+espejo de `chargeSubscriptionLocked` en el cobro recurrente.
+
+**Cuarta capa: conciliación de monto.** Si lo que Flow reporta haber cobrado no coincide con el
+total del carrito, se registra un `¡ATENCIÓN!` con ambas cifras. No bloquea la orden (el cliente
+ya pagó), pero deja rastro: el descuadre de D73 —cobrar $3.990 de un carrito de $29.500— vivió
+sin detectarse porque **nadie comparaba lo cobrado contra lo facturado**.
+
+> ⚠️ **Al leer el monto del carrito**: Medusa calcula `cart.total` sobre las relaciones
+> **cargadas**. Pedir solo `items.id` deja el subtotal en 0 y el total colapsa al envío. Hay que
+> cargar `items.*`, sus `adjustments`/`tax_lines` y `shipping_methods.*`. Este bug apareció dos
+> veces —en el pago único (D58) y otra vez en la ruta de suscripción (D59), que no heredó la
+> corrección—, así que **cualquier ruta nueva que lea un total debe copiar ese juego de campos**.
 
 ### 14.6 Configuración (env, nunca hardcodeada)
 `FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_API_URL` (`https://sandbox.flow.cl/api` ↔

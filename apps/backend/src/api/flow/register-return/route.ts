@@ -25,6 +25,9 @@ const CONFIRM_ESTADO: Record<RegistrationOutcome, string> = {
   paid: "exito",
   register_failed: "tarjeta_rechazada",
   charge_failed: "cobro_rechazado",
+  // Sin veredicto de Flow: el cobro pudo ocurrir. Decirle "rechazado" invitaría a
+  // reintentar un pago quizá ya hecho; "pendiente" es lo único honesto.
+  unverified: "pendiente",
   not_found: "error",
   invalid: "error",
 };

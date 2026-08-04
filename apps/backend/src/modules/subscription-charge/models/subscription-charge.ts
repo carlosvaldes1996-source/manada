@@ -16,9 +16,11 @@ import { model } from "@medusajs/framework/utils";
  *   quedó completa. `paid` sin `order_id` = cobrado pero la orden aún no se creó
  *   (fallo transitorio) → el siguiente barrido reintenta SOLO la creación de la
  *   orden, sin volver a cobrar (auto-sanación).
- * - `commerce_order` es la referencia del ÚLTIMO intento enviada a Flow (única por
- *   intento: Flow rechaza `commerceOrder` repetidos). `attempt` cuenta los intentos
- *   del período (dunning); `raw_status` guarda el entero de Flow (1..4).
+ * - `commerce_order` es la referencia del período enviada a Flow, ESTABLE entre
+ *   intentos. (Antes llevaba un sufijo por intento, justificado en que "Flow rechaza
+ *   `commerceOrder` repetidos"; se midió en la Etapa 3 que `customer/charge` SÍ los
+ *   acepta, y el sufijo solo impedía verificar el período completo.) `attempt` cuenta
+ *   los intentos del período (dunning); `raw_status` guarda el entero de Flow (1..4).
  */
 const SubscriptionCharge = model.define("subscription_charge", {
   id: model.id({ prefix: "subchg" }).primaryKey(),

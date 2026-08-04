@@ -145,28 +145,37 @@ export async function getFlowStatus(token: string, config: FlowConfig): Promise<
 }
 
 /**
+ * Resultado de consultar un pago por `commerceOrder`. La distinción entre
+ * "Flow respondió" y "Flow no me respondió" es la pieza que evita el doble cobro:
+ * quien pregunta NUNCA debe interpretar un fallo de red como "no está pagado".
+ */
+export type FlowStatusLookup =
+  /** Flow respondió con un estado. Es la única respuesta sobre la que se decide. */
+  | { outcome: "found"; status: FlowStatusResult }
+  /** No se pudo obtener respuesta (red, timeout, 4xx, 5xx). NO significa "no pagado". */
+  | { outcome: "unavailable"; message: string };
+
+/**
  * `GET payment/getStatusByCommerceId` — FUENTE DE VERDAD del cobro recurrente:
  * confirma el estado del pago por nuestra referencia (`commerceOrder`), sin depender
- * de la respuesta síncrona de `customer/charge`. Devuelve `null` si Flow no encontró
- * pago para ese id (p. ej. rechazo duro que no generó transacción) → el orquestador
- * lo trata como cobro fallido.
+ * de la respuesta síncrona de `customer/charge`. Lectura idempotente → con reintento.
  *
- * Lectura idempotente → con reintento. Es la consulta que desambigua un timeout de
- * `customer/charge`, así que su fiabilidad importa más que la de ninguna otra.
+ * Devuelve un resultado DISCRIMINADO a propósito. La versión anterior devolvía `null`
+ * tanto ante "Flow no conoce este pago" como ante "no pude preguntarle", y quien
+ * llamaba interpretaba ambos como *no pagado* y cobraba: con Flow aceptando cargos
+ * repetidos bajo el mismo `commerceOrder` (medido en la Etapa 3), eso es doble cobro
+ * real. Era la deuda declarada en D70 y el punto 1 del Frente 1b.
  *
- * ⚠️ DEUDA CONOCIDA (D70, fuera del alcance de la Etapa 1): devuelve `null` tanto
- * ante "Flow no conoce este pago" como ante "no pude preguntarle a Flow". Quien
- * llama (`subscription-registration` / `subscription-charge`) interpreta ambos como
- * "no está pagado" y COBRA — así que una caída transitoria de Flow justo después de
- * un cobro exitoso podría recobrar. Se conserva la semántica original a propósito
- * (el cobro recurrente está apagado y no se valida en esta etapa); el reintento de
- * `./http` ya reduce la ventana. Distinguir ambos casos es trabajo de la etapa de
- * cobros, junto con el ledger por período.
+ * ⚠️ **No se intenta distinguir "no existe" de "error"**, y es deliberado: el spec
+ * oficial no documenta qué código devuelve Flow ante un `commerceId` desconocido, así
+ * que cualquier clasificación sería adivinada — y adivinar de menos aquí cuesta dinero.
+ * Quien llama resuelve la ambigüedad con su propio ledger: si no consta que se haya
+ * enviado nunca ese `commerceOrder`, no hay nada que preguntar y no se pregunta.
  */
-export async function getFlowStatusByCommerceId(
+export async function lookupFlowStatusByCommerceId(
   commerceId: string,
   config: FlowConfig,
-): Promise<FlowStatusResult | null> {
+): Promise<FlowStatusLookup> {
   try {
     const data = await flowGet<RawPaymentStatus>(
       "payment/getStatusByCommerceId",
@@ -174,9 +183,14 @@ export async function getFlowStatusByCommerceId(
       config,
       { retry: true },
     );
-    if (typeof data.status !== "number") return null;
-    return toStatusResult(data, commerceId);
-  } catch {
-    return null;
+    if (typeof data.status !== "number") {
+      return { outcome: "unavailable", message: "Respuesta de Flow sin `status`." };
+    }
+    return { outcome: "found", status: toStatusResult(data, commerceId) };
+  } catch (e) {
+    return {
+      outcome: "unavailable",
+      message: e instanceof Error ? e.message : String(e),
+    };
   }
 }

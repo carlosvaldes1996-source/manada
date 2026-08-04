@@ -114,6 +114,13 @@ const OUTCOME_MESSAGE: Record<string, { title: string; description: string; ok: 
     description: "Se cobró pero la orden falló. Se reintentará sin volver a cobrar.",
     ok: false,
   },
+  deferred: {
+    title: "Aplazado",
+    description:
+      "No se pudo cobrar ni confirmar si se cobró (problema de Flow, no de la tarjeta). " +
+      "No se penalizó al cliente: se reintenta en el próximo barrido.",
+    ok: false,
+  },
   skipped: {
     title: "Omitida",
     description: "El estado cambió o faltan datos; no se cobró.",
