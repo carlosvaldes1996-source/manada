@@ -42,6 +42,31 @@ import { REGIONS, getComunas } from "@/lib/chile-regions";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
+ * Traduce el fallo al pagar en algo que el usuario pueda accionar.
+ *
+ * El backend ya devuelve mensajes en español para lo que el comprador puede
+ * corregir (correo rechazado por la pasarela, etc.) → esos se muestran tal cual.
+ * Lo que NO hay que mostrar en crudo es el fallo de red: `fetch` rechaza con
+ * `TypeError: Failed to fetch` cuando la petición ni siquiera llega (backend caído,
+ * endpoint inexistente, CORS, sin conexión). Ese texto no le dice nada a nadie y
+ * hace pasar por error del usuario lo que es un problema nuestro.
+ */
+function toPaymentErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  const isNetworkFailure =
+    err instanceof TypeError ||
+    /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
+
+  if (isNetworkFailure) {
+    return (
+      "No pudimos conectarnos para procesar el pago. Revisa tu conexión e inténtalo " +
+      "de nuevo; si sigue pasando, escríbenos y lo resolvemos."
+    );
+  }
+  return raw || "No se pudo iniciar el pago. Intenta de nuevo.";
+}
+
+/**
  * Medio de pago: Flow (D58). Flow agrupa varios medios (tarjeta de crédito/débito
  * y otros); el usuario elige en el checkout de Flow tras la redirección.
  */
@@ -248,9 +273,7 @@ export default function CheckoutPage() {
       window.location.href = url;
       // No reseteamos `submitting`: dejamos la página. Si algo falla, el catch lo hace.
     } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "No se pudo iniciar el pago. Intenta de nuevo.",
-      );
+      setSubmitError(toPaymentErrorMessage(err));
       setSubmitting(false);
     }
   }

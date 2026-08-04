@@ -7,7 +7,7 @@ import {
 } from "@medusajs/core-flows";
 import { FLOW_PAYMENT_MODULE } from "../../../../../modules/flow-payment";
 import type FlowPaymentModuleService from "../../../../../modules/flow-payment/service";
-import { createFlowPayment, getFlowConfig } from "../../../../../lib/flow";
+import { createFlowPayment, getFlowConfig, flowErrorMessage } from "../../../../../lib/flow";
 
 /**
  * `POST /store/carts/:id/flow-payment` (API.md §14, D58) — crea la orden de pago
@@ -139,20 +139,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const backendUrl = (process.env.MEDUSA_BACKEND_URL || "http://localhost:9000").replace(/\/+$/, "");
   const rut = typeof cart.metadata?.rut === "string" ? (cart.metadata.rut as string) : undefined;
 
-  const flow = await createFlowPayment(
-    {
-      commerceOrder,
-      subject: "Compra en Manada",
-      amount,
-      email: cart.email,
-      urlConfirmation: `${backendUrl}/flow/confirmation`,
-      urlReturn: `${backendUrl}/flow/return`,
-      currency: "CLP",
-      paymentMethod: 9, // el usuario elige el medio en el checkout de Flow
-      optional: rut ? { rut } : undefined,
-    },
-    config,
-  );
+  // Un rechazo de Flow (p. ej. correo inválido) es un dato que el comprador puede
+  // corregir, no una caída: se traduce a un mensaje accionable (400) en vez de
+  // dejar escapar un 500 opaco. El detalle técnico queda solo en los logs.
+  let flow: Awaited<ReturnType<typeof createFlowPayment>>;
+  try {
+    flow = await createFlowPayment(
+      {
+        commerceOrder,
+        subject: "Compra en Manada",
+        amount,
+        email: cart.email,
+        urlConfirmation: `${backendUrl}/flow/confirmation`,
+        urlReturn: `${backendUrl}/flow/return`,
+        currency: "CLP",
+        paymentMethod: 9, // el usuario elige el medio en el checkout de Flow
+        optional: rut ? { rut } : undefined,
+      },
+      config,
+    );
+  } catch (e) {
+    console.error(`[flow] No se pudo crear el pago del carrito ${cartId}:`, e);
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, flowErrorMessage(e));
+  }
 
   // (3) Persiste el intento (eje de la idempotencia; el settle lo busca por token).
   await flowService.createFlowPayments({

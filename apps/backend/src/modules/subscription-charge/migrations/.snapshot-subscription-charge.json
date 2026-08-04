@@ -22,8 +22,8 @@
           "enumItems": [],
           "mappedType": "text"
         },
-        "variant_id": {
-          "name": "variant_id",
+        "subscription_id": {
+          "name": "subscription_id",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -38,8 +38,8 @@
           "enumItems": [],
           "mappedType": "text"
         },
-        "product_id": {
-          "name": "product_id",
+        "period_key": {
+          "name": "period_key",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -54,56 +54,8 @@
           "enumItems": [],
           "mappedType": "text"
         },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": "1",
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "integer"
-        },
-        "frequency_weeks": {
-          "name": "frequency_weeks",
-          "type": "integer",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "integer"
-        },
-        "next_delivery_date": {
-          "name": "next_delivery_date",
-          "type": "timestamptz",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "status": {
-          "name": "status",
+        "commerce_order": {
+          "name": "commerce_order",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -113,19 +65,29 @@
           "length": null,
           "precision": null,
           "scale": null,
-          "default": "'active'",
+          "default": null,
           "comment": null,
-          "enumItems": [
-            "active",
-            "paused",
-            "cancelled",
-            "past_due",
-            "unpaid"
-          ],
-          "mappedType": "enum"
+          "enumItems": [],
+          "mappedType": "text"
         },
-        "agreed_unit_price": {
-          "name": "agreed_unit_price",
+        "flow_order": {
+          "name": "flow_order",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "amount": {
+          "name": "amount",
           "type": "integer",
           "unsigned": false,
           "autoincrement": false,
@@ -156,9 +118,30 @@
           "enumItems": [],
           "mappedType": "text"
         },
-        "shipping_address": {
-          "name": "shipping_address",
-          "type": "jsonb",
+        "status": {
+          "name": "status",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'pending'",
+          "comment": null,
+          "enumItems": [
+            "pending",
+            "paid",
+            "rejected",
+            "failed"
+          ],
+          "mappedType": "enum"
+        },
+        "raw_status": {
+          "name": "raw_status",
+          "type": "integer",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -170,10 +153,10 @@
           "default": null,
           "comment": null,
           "enumItems": [],
-          "mappedType": "json"
+          "mappedType": "integer"
         },
-        "payment_method_id": {
-          "name": "payment_method_id",
+        "order_id": {
+          "name": "order_id",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -188,40 +171,8 @@
           "enumItems": [],
           "mappedType": "text"
         },
-        "source_order_id": {
-          "name": "source_order_id",
-          "type": "text",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "unique": false,
-          "length": null,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "text"
-        },
-        "last_charged_at": {
-          "name": "last_charged_at",
-          "type": "timestamptz",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
-        },
-        "failed_charge_count": {
-          "name": "failed_charge_count",
+        "attempt": {
+          "name": "attempt",
           "type": "integer",
           "unsigned": false,
           "autoincrement": false,
@@ -231,13 +182,13 @@
           "length": null,
           "precision": null,
           "scale": null,
-          "default": "0",
+          "default": "1",
           "comment": null,
           "enumItems": [],
           "mappedType": "integer"
         },
-        "last_charge_error": {
-          "name": "last_charge_error",
+        "error": {
+          "name": "error",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -251,22 +202,6 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "text"
-        },
-        "next_charge_attempt_at": {
-          "name": "next_charge_attempt_at",
-          "type": "timestamptz",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "unique": false,
-          "length": 6,
-          "precision": null,
-          "scale": null,
-          "default": null,
-          "comment": null,
-          "enumItems": [],
-          "mappedType": "datetime"
         },
         "created_at": {
           "name": "created_at",
@@ -317,20 +252,47 @@
           "mappedType": "datetime"
         }
       },
-      "name": "subscription",
+      "name": "subscription_charge",
       "schema": "public",
       "indexes": [
         {
-          "keyName": "IDX_subscription_deleted_at",
+          "keyName": "IDX_subscription_charge_subscription_id",
           "columnNames": [],
           "composite": false,
           "constraint": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_deleted_at\" ON \"subscription\" (\"deleted_at\") WHERE deleted_at IS NULL"
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_charge_subscription_id\" ON \"subscription_charge\" (\"subscription_id\") WHERE deleted_at IS NULL"
         },
         {
-          "keyName": "subscription_pkey",
+          "keyName": "IDX_subscription_charge_period_key",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_charge_period_key\" ON \"subscription_charge\" (\"period_key\") WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_subscription_charge_commerce_order",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_charge_commerce_order\" ON \"subscription_charge\" (\"commerce_order\") WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_subscription_charge_deleted_at",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_charge_deleted_at\" ON \"subscription_charge\" (\"deleted_at\") WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "subscription_charge_pkey",
           "columnNames": [
             "id"
           ],

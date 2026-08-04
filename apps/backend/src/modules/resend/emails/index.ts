@@ -17,6 +17,9 @@ import SubscriptionPausedEmail, { subject as subPausedSubject } from "./subscrip
 import SubscriptionResumedEmail, { subject as subResumedSubject } from "./subscription-resumed"
 import SubscriptionCancelledEmail, { subject as subCancelledSubject } from "./subscription-cancelled"
 import SubscriptionSkippedEmail, { subject as subSkippedSubject } from "./subscription-skipped"
+import SubscriptionRenewedEmail, { subject as subRenewedSubject } from "./subscription-renewed"
+import SubscriptionPaymentFailedEmail, { subject as subFailedSubject } from "./subscription-payment-failed"
+import SubscriptionEndedUnpaidEmail, { subject as subUnpaidSubject } from "./subscription-ended-unpaid"
 
 /** IDs estables de plantilla (contrato entre subscribers y provider). */
 export const EmailTemplate = {
@@ -30,6 +33,9 @@ export const EmailTemplate = {
   SubscriptionResumed: "subscription-resumed",
   SubscriptionCancelled: "subscription-cancelled",
   SubscriptionSkipped: "subscription-skipped",
+  SubscriptionRenewed: "subscription-renewed",
+  SubscriptionPaymentFailed: "subscription-payment-failed",
+  SubscriptionEndedUnpaid: "subscription-ended-unpaid",
 } as const
 
 export type EmailTemplateId = (typeof EmailTemplate)[keyof typeof EmailTemplate]
@@ -79,5 +85,17 @@ export const emailTemplates: Record<EmailTemplateId, TemplateEntry> = {
   [EmailTemplate.SubscriptionSkipped]: {
     subject: subSkippedSubject,
     render: (data) => React.createElement(SubscriptionSkippedEmail, data),
+  },
+  [EmailTemplate.SubscriptionRenewed]: {
+    subject: subRenewedSubject,
+    render: (data) => React.createElement(SubscriptionRenewedEmail, data),
+  },
+  [EmailTemplate.SubscriptionPaymentFailed]: {
+    subject: subFailedSubject,
+    render: (data) => React.createElement(SubscriptionPaymentFailedEmail, data),
+  },
+  [EmailTemplate.SubscriptionEndedUnpaid]: {
+    subject: subUnpaidSubject,
+    render: (data) => React.createElement(SubscriptionEndedUnpaidEmail, data),
   },
 }

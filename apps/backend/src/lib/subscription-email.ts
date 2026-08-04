@@ -19,6 +19,9 @@ export type SubscriptionEmailData = {
   frequency_weeks: number;
   next_delivery_date: string | null;
   agreed_unit_price: number | null;
+  quantity: number;
+  /** Últimos 4 de la tarjeta enlazada (D59), para correos de renovación/fallo. */
+  card_last4: string | null;
 };
 
 /** Los links `isList` pueden devolver el lado "uno" como objeto o arreglo; normaliza. */
@@ -39,9 +42,11 @@ export async function loadSubscriptionEmailData(
     fields: [
       "id",
       "product_id",
+      "quantity",
       "frequency_weeks",
       "next_delivery_date",
       "agreed_unit_price",
+      "payment_method_id",
       "customer.email",
       "customer.first_name",
       "pet.name",
@@ -56,6 +61,19 @@ export async function loadSubscriptionEmailData(
   if (!email) return null;
 
   const pet = one(sub.pet as { name?: string | null } | undefined);
+
+  // Últimos 4 de la tarjeta enlazada (si hay), para "cobrado a tu tarjeta ····1234".
+  let cardLast4: string | null = null;
+  if (sub.payment_method_id) {
+    const {
+      data: [card],
+    } = await query.graph({
+      entity: "saved_card",
+      fields: ["last4"],
+      filters: { id: sub.payment_method_id as string },
+    });
+    if (card?.last4) cardLast4 = String(card.last4);
+  }
 
   let productTitle = "tu suscripción";
   if (sub.product_id) {
@@ -79,5 +97,7 @@ export async function loadSubscriptionEmailData(
       ? new Date(sub.next_delivery_date as string).toISOString()
       : null,
     agreed_unit_price: (sub.agreed_unit_price as number | null) ?? null,
+    quantity: (sub.quantity as number) ?? 1,
+    card_last4: cardLast4,
   };
 }

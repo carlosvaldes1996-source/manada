@@ -176,12 +176,26 @@ export default defineMiddlewares({
       middlewares: [subscriptionsAuth, validateAndTransformBody(StoreUpdateSubscription)],
     },
     {
+      // Actualizar la tarjeta de una suscripción (D59, dunning): tokeniza una tarjeta
+      // nueva en Flow. Requiere cuenta (la propiedad se impone en la ruta).
+      matcher: "/store/subscriptions/:id/payment-method",
+      method: ["POST"],
+      middlewares: [subscriptionsAuth],
+    },
+    {
       // Alta de línea de SUSCRIPCIÓN al carrito con precio suscrito (D55). Sin auth
       // de cliente (carritos de invitado permitidos, como la ruta core de line-items);
       // la publishable key la impone el middleware global de /store.
       matcher: "/store/carts/:id/subscription-items",
       method: ["POST"],
       middlewares: [validateAndTransformBody(StoreAddSubscriptionItem)],
+    },
+    {
+      // 1ª compra de una SUSCRIPCIÓN (D59): tokeniza la tarjeta en Flow. REQUIERE
+      // cuenta (no se puede tokenizar a un invitado) → auth de cliente.
+      matcher: "/store/carts/:id/subscription-payment",
+      method: ["POST"],
+      middlewares: [subscriptionsAuth],
     },
   ],
 });

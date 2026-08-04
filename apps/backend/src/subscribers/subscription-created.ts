@@ -3,6 +3,8 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import { SUBSCRIPTION_MODULE } from "../modules/subscription";
 import SubscriptionModuleService from "../modules/subscription/service";
 import { PET_MODULE } from "../modules/pet";
+import { PAYMENT_METHOD_MODULE } from "../modules/payment-method";
+import type PaymentMethodModuleService from "../modules/payment-method/service";
 
 /**
  * Creación de la suscripción al CHECKOUT (D55 · Punto 1) — evento nativo `order.placed`.
@@ -13,12 +15,13 @@ import { PET_MODULE } from "../modules/pet";
  * una fila `subscription` con el SNAPSHOT (variante/producto/cantidad/precio pactado/
  * dirección/`source_order_id`) + `next_delivery_date` derivada de la frecuencia.
  *
- * - **Pago manual (D24) en el Punto 1:** no se tokeniza ni se cobra (`payment_method_id`
- *   = null). El cobro recurrente real es un bloque posterior (D55).
  * - **Precio pactado = precio de la línea:** la línea de suscripción ya entra al
  *   carrito con el precio suscrito (custom price, ruta `subscription-items`), así que
  *   `agreed_unit_price = item.unit_price` — sin re-descontar (evita doble descuento).
- * - **Pago manual (D24) en el Punto 1:** no se tokeniza ni se cobra (`payment_method_id` = null).
+ * - **Tarjeta enlazada (D59):** la 1ª compra suscrita tokeniza la tarjeta ANTES de
+ *   completar el carrito, así que aquí ya existe un `saved_card` del cliente. Se enlaza
+ *   la MÁS RECIENTE como `payment_method_id` (la recién registrada) → el scheduler
+ *   cobra contra ella. Sin tarjeta (suscripción legada/manual) queda `null`, honesto.
  * - **Requiere cuenta:** una suscripción sin dueño sería ingestionable; las de invitado
  *   se omiten (no-op honesto), como en `food-purchased.ts`.
  * - Convive con `food-purchased.ts` y `order-placed-email.ts` (varios handlers por evento).
@@ -57,6 +60,7 @@ export default async function subscriptionCreatedHandler({
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const subs = container.resolve<SubscriptionModuleService>(SUBSCRIPTION_MODULE);
+  const cards = container.resolve<PaymentMethodModuleService>(PAYMENT_METHOD_MODULE);
   const eventBus = container.resolve(Modules.EVENT_BUS);
 
   const {
@@ -130,6 +134,14 @@ export default async function subscriptionCreatedHandler({
   });
   const ownPets = (customer?.pets ?? []) as { id: string; current_food_id: string | null }[];
 
+  // Tarjeta tokenizada más reciente del cliente (la registrada en esta misma compra,
+  // D59): contra ella cobrará el scheduler. Sin tarjeta → null (suscripción manual/legada).
+  const [newestCard] = await cards.listSavedCards(
+    { customer_id: order.customer_id },
+    { order: { created_at: "DESC" }, take: 1 },
+  );
+  const paymentMethodId = newestCard?.id ?? null;
+
   for (const it of subItems) {
     const weeks = metaNumber(it.metadata?.frequency_weeks) || 4;
     // La línea ya trae el precio suscrito (custom price) → ese es el pactado.
@@ -146,7 +158,7 @@ export default async function subscriptionCreatedHandler({
       agreed_unit_price: agreed,
       currency_code: order.currency_code ?? "clp",
       shipping_address: shippingSnapshot,
-      payment_method_id: null,
+      payment_method_id: paymentMethodId,
       source_order_id: order.id,
     });
 

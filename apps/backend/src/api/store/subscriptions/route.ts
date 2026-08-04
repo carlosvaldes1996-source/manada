@@ -1,5 +1,7 @@
 import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import { PAYMENT_METHOD_MODULE } from "../../../modules/payment-method";
+import type PaymentMethodModuleService from "../../../modules/payment-method/service";
 
 /**
  * `GET /store/subscriptions` (API.md §13) — suscripciones del cliente autenticado.
@@ -21,10 +23,12 @@ interface SubRow {
   id: string;
   product_id: string;
   created_at: string;
+  payment_method_id?: string | null;
 }
 
 export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const cards = req.scope.resolve<PaymentMethodModuleService>(PAYMENT_METHOD_MODULE);
 
   const { data } = await query.graph({
     entity: "customer",
@@ -50,10 +54,20 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     }
   }
 
+  // Augment de la tarjeta enlazada (marca/últimos 4, D59): la propiedad ya está
+  // garantizada (son las suscripciones del cliente autenticado).
+  const cardIds = [...new Set(subscriptions.map((s) => s.payment_method_id).filter(Boolean))] as string[];
+  const cardById = new Map<string, { brand: string; last4: string }>();
+  if (cardIds.length > 0) {
+    const list = await cards.listSavedCards({ id: cardIds });
+    for (const c of list) cardById.set(c.id, { brand: c.brand, last4: c.last4 });
+  }
+
   const enriched = subscriptions.map((s) => ({
     ...s,
     product_title: infoById.get(s.product_id)?.title ?? null,
     thumbnail: infoById.get(s.product_id)?.thumbnail ?? null,
+    card: s.payment_method_id ? cardById.get(s.payment_method_id) ?? null : null,
   }));
 
   res.json({ subscriptions: enriched });
