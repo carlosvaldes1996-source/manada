@@ -64,6 +64,25 @@
 > por `commerceOrder`** — medido, dos cargos aceptados con el mismo id. D72 asumía lo
 > contrario. Quitar el sufijo `-a${attempt}` no basta: la única protección es la nuestra.
 
+- [ ] **Arnés E2E de Flow — existe, está SIN COMMITEAR y necesita curación.**
+      Ubicación provisional: **`tools/flow-e2e/`** (untracked; ver su `README.md`). Conduce el
+      flujo real contra el backend desplegado y encierra conocimiento caro de re-derivar: la
+      secuencia exacta del checkout, que los rails se distinguen por la URL de Flow
+      (`/app/customer/disclaimer.php` = suscripción · `/app/web/pay.php` = compra única), la
+      tarjeta de prueba de Transbank y la cuota diaria. **`sandbox-limpieza.sql` es lo más
+      valioso del conjunto** y ni siquiera es un script de prueba: es la purga obligatoria.
+      Antes de commitearlo hay que resolver tres cosas:
+      - **Ubicación:** `tools/` en la raíz sería un paquete nuevo → lo prohíbe
+        `ARCHITECTURE.md §2` regla 5 sin aprobación explícita. Alternativa que **no** necesita
+        excepción: **`apps/backend/e2e/`** (backend verificando backend, fuera de `src/`).
+      - **Curación:** `carrera.mjs`, `guardia.mjs`, `callbacks.mjs` y `compra-unica.mjs` tienen
+        ids de carrito y tokens de la sesión **hardcodeados**. Commitearlos así sería guardar
+        código muerto que además miente. Deben volverse escenarios parametrizados dentro de
+        `flow-e2e.mjs`; `verificar.mjs` + `ordenes.mjs` se fusionan en un `estado.mjs`.
+      - **Guard de seguridad (lo importante):** hoy el arnés **cobra de verdad** y escribe en la
+        BD de producción. Cuando las credenciales vuelvan a Producción, correrlo por inercia
+        **cobraría una tarjeta real**. Debe negarse a ejecutar si el backend no apunta a
+        Sandbox, salvo bandera explícita. Es la diferencia entre una herramienta y un arma.
 - [ ] **Revalidar el escenario de RENOVACIÓN en Sandbox** — es lo único de los tres escenarios
       que quedó a medias. F7 (orden impaga) y F8 (sin reservar stock) están corregidos y
       desplegados **pero sin verificar**: la corrida se topó con la **cuota diaria de Flow
