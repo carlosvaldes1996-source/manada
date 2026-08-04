@@ -1,5 +1,5 @@
 import type { MedusaContainer } from "@medusajs/framework/types";
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import {
   completeCartWorkflow,
   capturePaymentWorkflow,
@@ -18,10 +18,10 @@ import {
   getFlowStatusByCommerceId,
   FLOW_STATUS,
 } from "./flow";
-import { markFlowCardRegistered } from "./flow-customer";
+import { markFlowCardRegistered, getFlowCustomerRecord } from "./flow-customer";
 import { SUBSCRIPTION_MODULE } from "../modules/subscription";
 import type SubscriptionModuleService from "../modules/subscription/service";
-import { chargeDueSubscription } from "./subscription-charge";
+import { chargeSubscriptionLocked } from "./subscription-charge";
 
 /**
  * Conciliación IDEMPOTENTE de la 1ª COMPRA SUSCRITA (D59 · Modelo A de Flow) —
@@ -84,7 +84,31 @@ type CartGraph = {
   payment_collection?: { id: string } | null;
 };
 
+/**
+ * Punto de entrada ÚNICO de la conciliación. Corre bajo un lock por carrito, igual
+ * que el cobro recurrente (`chargeSubscriptionLocked`): a esta ruta la puede
+ * golpear el retorno del navegador, un refresh y un reintento de Flow a la vez, y
+ * sin lock los tres entran juntos al camino de cobro.
+ *
+ * Verificado en sandbox (Etapa 3): dos callbacks simultáneos sobre un carrito sin
+ * conciliar ejecutaban AMBOS `customer/charge`. La orden no se duplicaba —el lock
+ * de `completeCartWorkflow` aguantaba— pero el perdedor lanzaba excepción y el
+ * comprador veía "pendiente" tras una compra exitosa.
+ */
 export async function settleSubscriptionRegistration(
+  container: MedusaContainer,
+  cartId: string,
+  token: string,
+): Promise<RegistrationResult> {
+  const locking = container.resolve(Modules.LOCKING);
+  return locking.execute(
+    `subscription-registration:${cartId}`,
+    () => settleRegistrationUnlocked(container, cartId, token),
+    { timeout: 60 },
+  );
+}
+
+async function settleRegistrationUnlocked(
   container: MedusaContainer,
   cartId: string,
   token: string,
@@ -95,6 +119,13 @@ export async function settleSubscriptionRegistration(
   const config = getFlowConfig();
 
   // Carrito primero: si ya se completó, es un callback repetido → idempotente OK.
+  //
+  // ⚠️ Medusa calcula `total` a partir de las relaciones CARGADAS (ver
+  // `cartFieldsForRefreshSteps` de core-flows). Pedir solo `items.id` deja el
+  // subtotal de productos en 0 y `total` colapsa al costo de envío — se cobraba
+  // $3.990 por un carrito de $29.500 mientras la orden nacía marcada como pagada
+  // por el total completo. El pago único (D58) ya cargaba estos campos; esta ruta
+  // no heredó la corrección. Verificado contra Flow Sandbox en la Etapa 3.
   const { data: carts } = await query.graph({
     entity: "cart",
     fields: [
@@ -104,7 +135,12 @@ export async function settleSubscriptionRegistration(
       "currency_code",
       "completed_at",
       "total",
-      "items.id",
+      "items.*",
+      "items.adjustments.*",
+      "items.tax_lines.*",
+      "shipping_methods.*",
+      "shipping_methods.adjustments.*",
+      "shipping_methods.tax_lines.*",
       "payment_collection.id",
     ],
     filters: { id: cartId },
@@ -136,6 +172,22 @@ export async function settleSubscriptionRegistration(
     customerId = (cs?.[0]?.id as string | undefined) ?? undefined;
   }
   if (!customerId) return { outcome: "invalid" }; // suscribir requiere cuenta
+
+  // El token debe pertenecer al dueño del carrito. `/flow/register-return` es
+  // pública (Flow no manda publishable key) y recibe el par `(cart, token)` sin
+  // más: sin esta comprobación, un token válido de OTRO cliente conciliaría este
+  // carrito, guardando la tarjeta del cliente A bajo el cliente B y cobrándosela.
+  // Verificado en sandbox (Etapa 3): un token ya usado servía para conciliar y
+  // cobrar un carrito distinto.
+  const link = await getFlowCustomerRecord(container, customerId);
+  if (!link || link.flow_customer_id !== reg.customerId) {
+    console.error(
+      `[flow] Token de registro ajeno al carrito ${cartId}: el token pertenece a ` +
+        `${reg.customerId} y el cliente del carrito tiene ${link?.flow_customer_id ?? "(sin vínculo)"}. ` +
+        `No se cobra.`,
+    );
+    return { outcome: "invalid" };
+  }
 
   const amount = Math.round(Number(cart.total ?? 0));
   if (!cart.items?.length || !cart.email || !Number.isFinite(amount) || amount <= 0) {
@@ -173,6 +225,7 @@ export async function settleSubscriptionRegistration(
   let paid = alreadyPaid?.status === FLOW_STATUS.PAID;
   let flowOrder = alreadyPaid?.flowOrder;
   let rawStatus = alreadyPaid?.status ?? null;
+  let chargedAmount = alreadyPaid?.amount;
 
   if (!paid) {
     const charge = await chargeFlowCustomer(
@@ -183,6 +236,7 @@ export async function settleSubscriptionRegistration(
     paid = verify?.status === FLOW_STATUS.PAID || (charge.ok && charge.status === FLOW_STATUS.PAID);
     flowOrder = verify?.flowOrder ?? charge.flowOrder;
     rawStatus = verify?.status ?? charge.status ?? null;
+    chargedAmount = verify?.amount ?? chargedAmount;
 
     if (!paid) {
       await flowService.createFlowPayments({
@@ -198,6 +252,19 @@ export async function settleSubscriptionRegistration(
       });
       return { outcome: "charge_failed" };
     }
+  }
+
+  // Conciliación de monto: la orden va a nacer marcada como pagada por el total del
+  // carrito, así que si Flow cobró OTRA cifra hay que dejarlo gritando en los logs.
+  // Es exactamente el defecto que se escapó hasta la Etapa 3 (se cobraba solo el
+  // envío y nadie se enteraba). No bloquea —el cliente ya pagó y merece su orden—,
+  // pero deja rastro accionable. Mismo criterio que `flow-settle.ts` (pago único).
+  if (chargedAmount != null && Math.round(Number(chargedAmount)) !== amount) {
+    console.error(
+      `[flow] ¡ATENCIÓN! Descuadre de monto en ${commerceOrder}: Flow cobró ` +
+        `${chargedAmount} y el carrito suma ${amount}. La orden se creará por ${amount}. ` +
+        `Revisar manualmente.`,
+    );
   }
 
   // (4) Pagado → asegurar sesión de pago interna + completar el carrito (crea la orden
@@ -294,6 +361,19 @@ export async function settleSubscriptionCardUpdate(
   const reg = await getFlowRegisterStatus(token, config);
   if (!reg.registered || !reg.customerId) return { outcome: "register_failed" };
 
+  // Mismo control de pertenencia que en el alta: sin él, un token de otro cliente
+  // engancharía SU tarjeta a esta suscripción — y el cobro recurrente le cargaría
+  // a un tercero mes a mes. Aquí el daño es peor que en el alta, porque persiste.
+  const link = await getFlowCustomerRecord(container, customerId);
+  if (!link || link.flow_customer_id !== reg.customerId) {
+    console.error(
+      `[flow] Token de registro ajeno a la suscripción ${subscriptionId}: el token pertenece ` +
+        `a ${reg.customerId} y el cliente tiene ${link?.flow_customer_id ?? "(sin vínculo)"}. ` +
+        `No se engancha la tarjeta.`,
+    );
+    return { outcome: "register_failed" };
+  }
+
   // Upsert de la tarjeta (por gateway_customer_id: Flow mantiene UNA tarjeta por
   // cliente → registrar reemplaza; refrescamos marca/últimos 4).
   const existingCard = (
@@ -331,9 +411,14 @@ export async function settleSubscriptionCardUpdate(
   });
 
   // Reintento inmediato (best-effort): si la suscripción estaba vencida, cobra ya.
+  // OBLIGATORIAMENTE por la variante con lock: `chargeDueSubscription` a secas
+  // corría fuera del candado y podía solaparse con el barrido del scheduler o con
+  // el botón del Admin sobre la misma suscripción. Con Flow sin deduplicar
+  // `customer/charge` por `commerceOrder` (medido en la Etapa 3), eso era doble
+  // cobro directo. `chargeSubscriptionLocked` es el único punto de entrada válido.
   let charged = false;
   try {
-    const result = await chargeDueSubscription(container, subscriptionId);
+    const result = await chargeSubscriptionLocked(container, subscriptionId);
     charged = result.outcome === "renewed" || result.outcome === "recovered" || result.outcome === "order_resumed";
   } catch (e) {
     console.warn(`[flow] Reintento inmediato tras actualizar tarjeta falló para ${subscriptionId}:`, e);
