@@ -1,6 +1,10 @@
 import type { MedusaContainer } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
-import { createOrderWorkflow } from "@medusajs/core-flows";
+import {
+  createOrderWorkflow,
+  createOrderPaymentCollectionWorkflow,
+  markPaymentCollectionAsPaid,
+} from "@medusajs/core-flows";
 import { SUBSCRIPTION_MODULE } from "../modules/subscription";
 import type SubscriptionModuleService from "../modules/subscription/service";
 import { SUBSCRIPTION_CHARGE_MODULE } from "../modules/subscription-charge";
@@ -562,8 +566,136 @@ async function createRenewalOrder(
     },
   });
 
-  // Reusa el pipeline: correo de renovación (guard en order-placed-email), reanclado
-  // del reloj de comida (food-purchased) y la reserva de stock la hace el workflow.
+  const total = Math.round((sub.agreed_unit_price ?? 0) * (sub.quantity ?? 1));
+
+  // El dinero YA lo cobró Flow con `customer/charge` antes de llegar aquí, pero
+  // `createOrderWorkflow` no crea ninguna colección de pago: la orden nacía
+  // `not_paid` con el total entero como saldo pendiente. Las renovaciones se veían
+  // impagas para siempre en el Admin —contabilidad equivocada y confusión para
+  // quien despacha— mientras Flow tenía el dinero. Se registra el pago aquí para
+  // que la orden refleje la realidad, igual que la primera compra (que sí queda
+  // capturada al pasar por `completeCartWorkflow`). Detectado en la Etapa 3.
+  try {
+    const { result: collections } = await createOrderPaymentCollectionWorkflow(container).run({
+      input: { order_id: order.id, amount: total },
+    });
+    const collectionId = collections?.[0]?.id;
+    if (collectionId) {
+      await markPaymentCollectionAsPaid(container).run({
+        input: { payment_collection_id: collectionId, order_id: order.id },
+      });
+    }
+  } catch (e) {
+    // Best-effort: la orden y el cobro son válidos aunque el registro contable
+    // falle. Se avisa fuerte porque deja la orden aparentando estar impaga.
+    console.error(
+      `[cobro] ${sub.id}: la orden ${order.id} se creó y Flow cobró, pero no se pudo ` +
+        `registrar el pago en Medusa (quedará como "no pagada"):`,
+      e,
+    );
+  }
+
+  // Reserva de inventario. `createOrderWorkflow` NO la hace —a diferencia de
+  // `completeCartWorkflow`, que reserva lo confirmado en el carrito—: la orden
+  // quedaba "Not allocated" y el stock nunca se descontaba, así que cada renovación
+  // despachaba producto sin bajar existencias. Verificado en el Admin (Etapa 3).
+  await reserveRenewalInventory(container, order, sub, salesChannelId);
+
+  // Reusa el pipeline: correo de renovación (guard en order-placed-email) y
+  // reanclado del reloj de comida (food-purchased).
   await eventBus.emit({ name: "order.placed", data: { id: order.id } });
   return order.id;
+}
+
+/**
+ * Reserva el stock de la línea de una renovación. Best-effort a propósito: si la
+ * reserva falla (variante sin gestión de inventario, sin ubicación asociada al
+ * sales channel, stock insuficiente), la orden y el cobro siguen siendo válidos —
+ * el operador puede asignar a mano desde el Admin. Lo que no puede pasar es que
+ * falle en silencio, así que todo desenlace no feliz queda logueado.
+ */
+async function reserveRenewalInventory(
+  container: MedusaContainer,
+  order: { id: string; items?: { id: string; variant_id?: string | null }[] },
+  sub: SubscriptionShape,
+  salesChannelId?: string,
+): Promise<void> {
+  try {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY);
+    const inventory = container.resolve(Modules.INVENTORY);
+
+    // El resultado del workflow puede no traer las líneas hidratadas; si no vienen,
+    // se releen. Sin línea no hay reserva posible, y un `return` mudo aquí dejaría
+    // el bug de stock vivo sin dejar rastro.
+    let items = order.items ?? [];
+    if (items.length === 0) {
+      const {
+        data: [fresh],
+      } = await query.graph({
+        entity: "order",
+        fields: ["id", "items.id", "items.variant_id"],
+        filters: { id: order.id },
+      });
+      items = ((fresh?.items ?? []) as { id: string; variant_id?: string | null }[]) ?? [];
+    }
+    const lineItem = items.find((i) => i.variant_id === sub.variant_id) ?? items[0];
+    if (!lineItem) {
+      console.warn(`[cobro] ${sub.id}: la orden ${order.id} no tiene líneas; no se reserva stock.`);
+      return;
+    }
+
+    // La variante puede no gestionar inventario (servicios, productos sin stock).
+    const {
+      data: [variant],
+    } = await query.graph({
+      entity: "product_variant",
+      fields: [
+        "id",
+        "manage_inventory",
+        "inventory_items.inventory_item_id",
+        "inventory_items.required_quantity",
+      ],
+      filters: { id: sub.variant_id },
+    });
+    if (!variant?.manage_inventory) return;
+
+    const inventoryItems = (variant.inventory_items ?? []) as {
+      inventory_item_id: string;
+      required_quantity?: number | null;
+    }[];
+    if (inventoryItems.length === 0) return;
+
+    // Ubicación de stock: la que sirve al sales channel de la orden.
+    const {
+      data: [channel],
+    } = await query.graph({
+      entity: "sales_channel",
+      fields: ["id", "stock_locations.id"],
+      filters: salesChannelId ? { id: salesChannelId } : {},
+    });
+    const locationId = ((channel?.stock_locations ?? []) as { id: string }[])[0]?.id;
+    if (!locationId) {
+      console.warn(
+        `[cobro] ${sub.id}: sin ubicación de stock para el sales channel; la orden ` +
+          `${order.id} queda sin reservar (asignar a mano en el Admin).`,
+      );
+      return;
+    }
+
+    await inventory.createReservationItems(
+      inventoryItems.map((item) => ({
+        line_item_id: lineItem.id,
+        inventory_item_id: item.inventory_item_id,
+        location_id: locationId,
+        quantity: (sub.quantity ?? 1) * (item.required_quantity ?? 1),
+        description: `Renovación de la suscripción ${sub.id}`,
+      })),
+    );
+  } catch (e) {
+    console.error(
+      `[cobro] ${sub.id}: no se pudo reservar el inventario de la orden ${order.id} ` +
+        `(queda "no asignada"; asignar a mano en el Admin):`,
+      e,
+    );
+  }
 }
