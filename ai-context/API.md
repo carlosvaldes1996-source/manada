@@ -548,11 +548,29 @@ Validado E2E contra Sandbox. Tres reglas que gobiernan todo cobro con `customer/
 La referencia estable es lo que permite preguntar *"¿este período ya se cobró?"* y que la
 respuesta cubra **todos** los intentos.
 
-**(2) `lookupFlowStatusByCommerceId` devuelve un resultado discriminado** —
-`{ outcome: "found", status } | { outcome: "unavailable", message }`. Nunca `null` ambiguo.
-**No se distingue "no existe" de "error", a propósito:** el spec no documenta qué devuelve
-Flow ante un `commerceId` desconocido. La ambigüedad la resuelve **el ledger**: solo se
-pregunta si consta un intento previo; sin intento previo no hay nada que preguntar.
+**(2) `lookupFlowStatusByCommerceId` devuelve un resultado discriminado de TRES variantes** —
+`{ outcome: "found", status } | { outcome: "not_found", message } | { outcome: "unavailable", message }`.
+Nunca `null` ambiguo.
+
+| Desenlace | Cuándo | Qué significa para quien pregunta |
+|---|---|---|
+| `found` | Flow devolvió un estado | Único caso sobre el que se decide si está pagado |
+| `not_found` | **400** con `"Transaction not found"` | **Veredicto:** Flow no tiene esa transacción ⇒ no la cobró. Se puede cobrar |
+| `unavailable` | Red, timeout, 5xx, 429, respuesta sin `status` | **No sabemos.** Se aplaza; jamás se cobra sobre esto |
+
+> ⚠️ **Corrige lo que decía esta sección hasta el 2026-08-05** ("no se distingue «no existe»
+> de «error», a propósito, porque el spec no lo documenta"). El spec sigue sin documentarlo,
+> pero **está medido**: Flow responde `400 "Transaction not found"`. Unificarlos tenía un
+> costo real — un cargo que moría antes de llegar a Flow dejaba el ledger `pending` con una
+> referencia que Flow nunca registró, y desde ahí **la suscripción se aplazaba para siempre**,
+> activa e invisible en el Admin (defecto #10 de D73).
+>
+> **Deuda declarada:** la clasificación compara hoy el **texto** del error, no el `code` de
+> Flow, porque ese número aún no se conoce. Es **transitorio**; falla hacia el lado seguro (si
+> el texto cambia, vuelve a `unavailable`).
+
+El ledger sigue siendo la otra mitad: solo se pregunta si consta un intento previo; sin
+intento previo no hay nada que preguntar.
 
 **(3) `chargeFlowCustomer` clasifica el fallo** con `failureKind`:
 

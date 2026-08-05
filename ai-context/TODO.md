@@ -6,7 +6,7 @@
 > | **Purpose** | Detalle táctico de pendientes, por frente. Lo hecho no se re-narra aquí: vive en `DECISIONS.md` (D#). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-08-04 |
+> | **Last Updated** | 2026-08-05 |
 > | **Depends On** | CURRENT_STATE.md (frentes), ROADMAP.md (fases), AUDIT_UI_UX.md (backlog fino de FE) |
 > | **Supersedes** | — |
 > | **Source of Truth** | ✅ del *detalle táctico de pendientes*. El backlog UI/UX fino vive en AUDIT_UI_UX.md. |
@@ -41,11 +41,12 @@
       punto: daba por hecho que Flow deduplica cargos con el mismo `commerceOrder`. **Se midió y
       es falso** — por eso quitar el sufijo no era la corrección, sino un efecto lateral de ella.
       **Falta revalidarlo E2E** (la corrida se topó con la cuota diaria de Sandbox).
-- [ ] **(2) Medir producción ANTES de desplegar — lo corre Carlos** (no hay acceso a la BD de prod
-      desde el entorno de desarrollo):
-      `select status, count(*), count(*) filter (where payment_method_id is null) from subscription group by status;`
-      En local hay **4 `active` sin tarjeta**. Si prod tiene lo mismo, encender D59 las manda a
-      `past_due` → **correos de dunning a clientes reales**. Decidir qué hacer con ellas antes.
+- [x] ~~**(2) Medir producción ANTES de desplegar**~~ → **RESUELTO por la purga del 2026-08-05.**
+      El riesgo era que hubiera suscripciones `active` sin tarjeta que el cobro mandaría a
+      `past_due` con correos de dunning a clientes reales. Tras la purga **no queda ninguna
+      suscripción en producción**, así que encender el cobro no puede dañar a nadie. Vuelve a
+      ser un riesgo el día que existan suscripciones reales: si alguna vez se crean sin
+      `payment_method_id`, hay que medirlo antes de encender el barrido.
 - [ ] **(3) Unificar `saved_card.gateway_customer_id` ↔ `flow_customer`** (D70 lo dejó como copia
       denormalizada declarada). El cobro lee la referencia desde `saved_card` vía
       `subscription.payment_method_id`; `flow_customer` es el dueño desde D70.
@@ -58,8 +59,8 @@
 
 ### Abierto por la validación E2E en Sandbox (2026-08-04)
 
-> Los defectos ya corregidos **no se re-narran aquí** (commits `3c1ba8e` y `845b74d`; la
-> entrada `DECISIONS.md` **D73 está pendiente de escribir** al cerrar la etapa).
+> Los defectos ya corregidos **no se re-narran aquí**: viven en **D73** (cerrada el
+> 2026-08-05) y **D74**. Commits: `3c1ba8e`, `845b74d`, `0db8cce`, `2ac8d4e`.
 > Hallazgo que cambia el análisis del punto (1): **Flow NO deduplica `customer/charge`
 > por `commerceOrder`** — medido, dos cargos aceptados con el mismo id. D72 asumía lo
 > contrario. Quitar el sufijo `-a${attempt}` no basta: la única protección es la nuestra.
@@ -69,8 +70,11 @@
       flujo real contra el backend desplegado y encierra conocimiento caro de re-derivar: la
       secuencia exacta del checkout, que los rails se distinguen por la URL de Flow
       (`/app/customer/disclaimer.php` = suscripción · `/app/web/pay.php` = compra única), la
-      tarjeta de prueba de Transbank y la cuota diaria. **`sandbox-limpieza.sql` es lo más
-      valioso del conjunto** y ni siquiera es un script de prueba: es la purga obligatoria.
+      tarjeta de prueba de Transbank y la cuota diaria. **Lo más valioso del conjunto es
+      `purga-total.sql`**, que ni siquiera es un script de prueba: es la purga, ya ejecutada
+      con éxito el 2026-08-05, con guarda automática de catálogo y el tratamiento correcto de
+      `auth_identity`. ⚠️ **`sandbox-limpieza.sql` queda ANULADO** — purgaba por ventana de
+      fechas y sobre una tienda en vivo habría alcanzado a clientes reales.
       Antes de commitearlo hay que resolver tres cosas:
       - **Ubicación:** `tools/` en la raíz sería un paquete nuevo → lo prohíbe
         `ARCHITECTURE.md §2` regla 5 sin aprobación explícita. Alternativa que **no** necesita
@@ -90,7 +94,10 @@
       2026-07-20 → 2026-08-17, correo de renovación entregado y sin duplicar el de compra.
       **F7 y F8 verificados por primera vez.** Con esto los **tres escenarios** de la Etapa 3
       quedan aprobados. (La corrida destapó los defectos **#10** y **#11** de abajo.)
-- [ ] **🔴 Defecto #10 — un `deferred` deja la suscripción TRABADA para siempre.**
+- [x] ~~**🔴 Defecto #10 — un `deferred` deja la suscripción TRABADA para siempre.**~~ →
+      **CORREGIDO y VERIFICADO el 2026-08-05** (commit `2ac8d4e`; cierre en D73). La
+      suscripción trabada volvió a cobrar: `outcome=renewed`, `attempt=2` con el
+      `commerce_order` sin cambiar. El diagnóstico se conserva por su valor:
       **Medido** el 2026-08-04 contra Sandbox. Cuando un cargo muere **antes de llegar a
       Flow** (400 de cuota, 401, 5xx, red), `deferCharge` deja el ledger en `pending` con un
       `commerce_order` que Flow nunca registró. Cada intento posterior pregunta por él, recibe
@@ -106,9 +113,10 @@
       desconocido"*. El spec sigue sin documentarlo, pero **ya está medido**. Gana lo medido.
       **Corrección propuesta:** tercer desenlace `not_found` → cobrar fresco (Flow es
       autoritativo: si no tiene la transacción, no la cobró).
-      **Caso de reproducción VIVO — NO PURGAR hasta verificar la corrección:**
-      `sub_01KZ5CYDBAR3RSG3E0K3Q3HET2` (`active`, vencida desde 2026-07-15, ledger `pending`
-      en `…-20260715`). Recrearlo cuesta agotar a propósito una cuota de ~6 cargos.
+      El caso de reproducción (`sub_01KZ5CYDBAR3RSG3E0K3Q3HET2`) cumplió su función el
+      2026-08-05 y se fue en la purga. **Lección de método:** se conservó a propósito hasta
+      después de verificar la corrección — purgar antes habría costado agotar otra cuota de
+      ~6 cargos para recrearlo.
 - [ ] **🟡 Reemplazar la comparación por TEXTO de `not_found` por el `code` de Flow.**
       `isTransactionNotFound` (`src/lib/flow/payments.ts`) reconoce hoy el `400` por el texto
       `"Transaction not found"` porque **todavía no sabemos qué `code` manda Flow**.
@@ -117,7 +125,11 @@
       logs → **la primera ocurrencia registrada da el número** y con eso se cierra.
       Falla hacia el lado seguro mientras tanto: si el texto cambia, vuelve a `unavailable`
       (se aplaza, nunca se cobra de más).
-- [ ] **🟠 Defecto #11 — la cadencia avanza desde la fecha programada, no desde hoy.**
+- [x] ~~**🟠 Defecto #11 — la cadencia avanza desde la fecha programada, no desde hoy.**~~ →
+      **DECIDIDO (D74), CORREGIDO y VERIFICADO el 2026-08-05.** `max(fecha_pactada, ahora) +
+      frequency_weeks`. Medido: vencida desde el 15-jul, cobrada el 04-ago 23:29:01 → próxima
+      entrega 01-sep 23:29:01 (28 días exactos; la lógica vieja daba el 12-ago). Diagnóstico
+      original, que sigue explicando el porqué:
       `advanceOnSuccess` hace `next_delivery_date + frequency_weeks`
       (`src/lib/subscription-charge.ts`). Con un atraso **mayor a un ciclo**, la fecha nueva
       sigue en el pasado → el barrido vuelve a cobrar, y se repite hasta ponerse al día:
@@ -128,6 +140,13 @@
       **Decisión pendiente antes de tocar código.** `advanceOnSuccess` corre en TODA
       renovación exitosa, así que cambiarlo obliga a re-validar el escenario de renovación —
       por eso conviene resolverlo en el mismo cambio y el mismo deploy que #10.
+- [x] ~~**Purgar los datos de Sandbox de la BD de producción**~~ → **HECHO el 2026-08-05**, y
+      más amplio de lo previsto por decisión de Carlos: purga total de datos transaccionales
+      conservando catálogo, inventario y configuración. **411 filas** (9 órdenes, 15 clientes,
+      30 carritos, mascotas, suscripciones, ledger, `flow_customer`, `saved_card`, reservas,
+      notificaciones y tablas de enlace). Catálogo verificado intacto por una guarda que aborta
+      sola. Script: `tools/flow-e2e/purga-total.sql`. Detalle y el hallazgo del `auth_identity`
+      con `user_id`+`customer_id` en la misma fila: D73.
 - [ ] **Preguntar a Flow por la cuota diaria de transacciones** (`400 has exceeded the daily
       transaction quota`, medido en Sandbox tras 6 cargos al mismo cliente): ¿rige en
       Producción, con qué número, y es por cliente o por comercio? Sustituye a la parte (a) del
