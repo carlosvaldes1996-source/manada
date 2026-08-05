@@ -63,7 +63,10 @@
 > **Punto exacto de continuación tras D70/D71/D72.** Contexto completo: `DECISIONS.md` D72 ·
 > contratos `API.md §14` (pago), `§15` (customers), `§16` (nativo, **dormido**).
 > Rama: `flow/customers-etapa1`. Modelo elegido: **Medusa dueño de la cadencia** (Modelo A).
-> El cobro sigue **APAGADO** (`SUBSCRIPTION_CHARGES_ENABLED=false`) — no encender hasta cerrar 1–3.
+> **Etapa 3 CERRADA (D73/D74).** El cobro automático sigue **APAGADO** y así se queda: por
+> decisión de producto (**D76**) las renovaciones se ejecutan **a mano desde el Admin** hasta
+> que haya tracción real. Antes de encender `SUBSCRIPTION_CHARGES_ENABLED` hay que cerrar el
+> punto **(3)** y revisar el resto de este frente.
 
 - [x] ~~**(1) Cerrar el doble cobro**~~ → **HECHO en D73** (F6+F9): `lookupFlowStatusByCommerceId`
       con resultado discriminado, `failureKind` en el cobro, desenlaces `deferred`/`unverified`
@@ -77,9 +80,17 @@
       suscripción en producción**, así que encender el cobro no puede dañar a nadie. Vuelve a
       ser un riesgo el día que existan suscripciones reales: si alguna vez se crean sin
       `payment_method_id`, hay que medirlo antes de encender el barrido.
-- [ ] **(3) Unificar `saved_card.gateway_customer_id` ↔ `flow_customer`** (D70 lo dejó como copia
-      denormalizada declarada). El cobro lee la referencia desde `saved_card` vía
-      `subscription.payment_method_id`; `flow_customer` es el dueño desde D70.
+- [ ] **(3) Unificar `saved_card.gateway_customer_id` ↔ `flow_customer`** — 🔒 **DEUDA TÉCNICA
+      BLOQUEANTE DEL ENCENDIDO** (D76): no se hace ahora, pero **debe resolverse antes de poner
+      `SUBSCRIPTION_CHARGES_ENABLED=true`**.
+      D70 dejó `gateway_customer_id` como copia denormalizada declarada y `flow_customer` como
+      dueño. El cobro lee **la copia** (`subscription.payment_method_id` → `saved_card`), nunca a
+      la dueña. **Modo de fallo concreto:** si la auto-sanación de D70 se dispara (Flow reporta el
+      cliente como eliminado), crea un `cus_…` nuevo y actualiza `flow_customer` **pero no
+      `saved_card`** → el cobro apunta a un cliente inexistente, falla siempre y —con #10 ya
+      corregido— la suscripción se **aplaza en cada barrido**: nunca cobra, nunca avisa, y en el
+      Admin se ve sana. Misma clase de bug que #10, esperando en otra esquina.
+      Hoy no puede morder porque no hay cobro automático ni suscripciones.
 - [ ] **(4) E2E en sandbox** con `FLOW_API_KEY`/`FLOW_SECRET_KEY` + ngrok en `MEDUSA_BACKEND_URL`
       (`apps/backend/DEV.md`). Validar de paso los 2 puntos abiertos de `API.md §16.13`
       (`changePlan` entre cadencias distintas · omitir `startDateOfNewPlan`) **solo si** alguna vez
@@ -95,17 +106,17 @@
 > por `commerceOrder`** — medido, dos cargos aceptados con el mismo id. D72 asumía lo
 > contrario. Quitar el sufijo `-a${attempt}` no basta: la única protección es la nuestra.
 
-- [ ] **Arnés E2E de Flow — existe, está SIN COMMITEAR y necesita curación.**
-      Ubicación provisional: **`tools/flow-e2e/`** (untracked; ver su `README.md`). Conduce el
-      flujo real contra el backend desplegado y encierra conocimiento caro de re-derivar: la
-      secuencia exacta del checkout, que los rails se distinguen por la URL de Flow
-      (`/app/customer/disclaimer.php` = suscripción · `/app/web/pay.php` = compra única), la
-      tarjeta de prueba de Transbank y la cuota diaria. **Lo más valioso del conjunto es
-      `purga-total.sql`**, que ni siquiera es un script de prueba: es la purga, ya ejecutada
-      con éxito el 2026-08-05, con guarda automática de catálogo y el tratamiento correcto de
-      `auth_identity`. ⚠️ **`sandbox-limpieza.sql` queda ANULADO** — purgaba por ventana de
-      fechas y sobre una tienda en vivo habría alcanzado a clientes reales.
-      Antes de commitearlo hay que resolver tres cosas:
+- [x] ~~**Arnés E2E de Flow — sin commitear y necesita curación.**~~ → **RESUELTO el 2026-08-05
+      (D76).** Se conservó **solo lo reutilizable** en **`apps/backend/e2e/`** (ubicación que no
+      necesita excepción a `ARCHITECTURE.md §2`): `purga-total.sql` —probado en producción, con
+      guarda de catálogo y el tratamiento correcto de `auth_identity`— y un `README.md` con el
+      conocimiento de terreno que costó caro (los dos rails y su URL, la tarjeta de Transbank,
+      la cuota por cliente, el `Transaction not found`, la receta para probar una renovación a
+      mano y los desenlaces del motor). **Los `.mjs` se eliminaron**: cobraban de verdad sin
+      comprobar el ambiente, y la mitad tenía ids y tokens de sesión hardcodeados.
+      `sandbox-limpieza.sql` se fue con ellos. La regla quedó escrita en el README: un arnés que
+      mueva dinero **debe negarse a correr** si el backend no apunta a Sandbox.
+      El planteamiento original, que sigue explicando el porqué:
       - **Ubicación:** `tools/` en la raíz sería un paquete nuevo → lo prohíbe
         `ARCHITECTURE.md §2` regla 5 sin aprobación explícita. Alternativa que **no** necesita
         excepción: **`apps/backend/e2e/`** (backend verificando backend, fuera de `src/`).
