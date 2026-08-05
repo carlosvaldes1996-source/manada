@@ -84,6 +84,12 @@ function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 3600 * 1000);
 }
 
+/** La más tardía de dos fechas (ancla de la cadencia; ver `advanceOnSuccess`). */
+function laterOf(a: Date | string, b: Date): Date {
+  const da = new Date(a);
+  return da.getTime() >= b.getTime() ? da : b;
+}
+
 type ShippingSnapshot = {
   first_name?: string | null;
   last_name?: string | null;
@@ -322,8 +328,17 @@ export async function chargeDueSubscription(
       );
     }
 
-    const prior = lookup.status;
-    if (prior.status === FLOW_STATUS.PAID) {
+    // `not_found` — Flow respondió que NO tiene esa transacción, así que el intento
+    // previo nunca llegó a la pasarela (murió en la puerta: cuota agotada, llaves malas,
+    // 5xx, red). No hay nada que recuperar ni riesgo de recobrar: se cae al cobro normal
+    // de más abajo, con la MISMA referencia estable del período.
+    //
+    // Sin esta rama, un `deferred` era una trampa sin salida: el ledger quedaba `pending`
+    // con una referencia que Flow no conocía, toda consulta posterior devolvía
+    // `unavailable`, y la suscripción se aplazaba PARA SIEMPRE — activa, vencida e
+    // invisible en el Admin. Medido contra Sandbox el 2026-08-04.
+    if (lookup.outcome === "found" && lookup.status.status === FLOW_STATUS.PAID) {
+      const prior = lookup.status;
       await charges.updateSubscriptionCharges({
         id: ledger.id,
         status: "paid",
@@ -416,7 +431,9 @@ export async function chargeDueSubscription(
         charge.message ??
           (lookup.outcome === "unavailable"
             ? `No se pudo verificar el cobro: ${lookup.message}`
-            : "Flow no entregó un veredicto del cobro."),
+            : lookup.outcome === "not_found"
+              ? "Flow no registró el cargo: no llegó a la pasarela."
+              : "Flow no entregó un veredicto del cobro."),
       );
     }
 
@@ -461,7 +478,24 @@ export async function chargeDueSubscription(
   }
 }
 
-/** Avanza la suscripción tras un cobro exitoso (cadencia estable desde la fecha pactada). */
+/**
+ * Avanza la suscripción tras un cobro exitoso.
+ *
+ * La cadencia se ancla en **la más tardía entre la fecha pactada y hoy**, no en la fecha
+ * pactada a secas. Con el cobro puntual (o adelantado) el resultado es idéntico al de
+ * siempre: manda la fecha pactada y el ciclo conserva su ritmo. Lo que cambia es el cobro
+ * ATRASADO: si el atraso supera un ciclo, avanzar desde la fecha pactada dejaba la nueva
+ * entrega **también en el pasado**, así que el barrido volvía a cobrar de inmediato, y otra
+ * vez, hasta ponerse al día — varios cobros seguidos y varios sacos despachados que el
+ * cliente no pidió.
+ *
+ * La decisión (Carlos, 2026-08-04) es de dominio, no de implementación: en Manada la
+ * cadencia la fija **el consumo del saco** (D64), no un calendario de facturación. Si la
+ * entrega se atrasó, la mascota se quedó sin comida hace rato: corresponde despachar ahora
+ * y contar el ciclo siguiente **desde ese despacho**. Volver a una fecha concreta a pedido
+ * de un cliente es una excepción operativa que se resuelve a mano en el Admin, no algo que
+ * el algoritmo deba intentar adivinar.
+ */
 async function advanceOnSuccess(
   subs: SubscriptionModuleService,
   sub: SubscriptionShape,
@@ -472,7 +506,10 @@ async function advanceOnSuccess(
   await subs.updateSubscriptions({
     id: sub.id,
     status: "active",
-    next_delivery_date: addWeeks(sub.next_delivery_date, sub.frequency_weeks || 4),
+    next_delivery_date: addWeeks(
+      laterOf(sub.next_delivery_date, new Date()),
+      sub.frequency_weeks || 4,
+    ),
     last_charged_at: new Date(),
     failed_charge_count: 0,
     last_charge_error: null,

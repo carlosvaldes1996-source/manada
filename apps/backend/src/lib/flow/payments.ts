@@ -152,8 +152,43 @@ export async function getFlowStatus(token: string, config: FlowConfig): Promise<
 export type FlowStatusLookup =
   /** Flow respondió con un estado. Es la única respuesta sobre la que se decide. */
   | { outcome: "found"; status: FlowStatusResult }
-  /** No se pudo obtener respuesta (red, timeout, 4xx, 5xx). NO significa "no pagado". */
+  /**
+   * Flow respondió que NO tiene ninguna transacción con esa referencia. Es un
+   * **veredicto**, no una duda: si Flow no la registró, no la cobró.
+   */
+  | { outcome: "not_found"; message: string }
+  /** No se pudo obtener respuesta (red, timeout, 5xx, 429). NO significa "no pagado". */
   | { outcome: "unavailable"; message: string };
+
+/**
+ * ¿Flow dijo EXPLÍCITAMENTE que no conoce esta referencia?
+ *
+ * Solo un **400** cuenta: significa que la petición llegó, Flow la entendió y su capa de
+ * aplicación respondió. Un 5xx, un 429 o un fallo de red (`httpStatus 0`) no son
+ * veredicto de nada y deben seguir siendo `unavailable`.
+ *
+ * ⚠️ **TRANSITORIO — comparar el texto es una solución puente, no la definitiva.**
+ * Decisión explícita de Carlos (2026-08-04): en cuanto el logging nuevo entregue el `code`
+ * estable que manda Flow, esta comparación se reemplaza por el número y el texto deja de
+ * ser el criterio. No debe quedarse así. `FlowApiError` ya transporta el `code` y
+ * `describeLookupError` lo deja en el mensaje, así que la primera ocurrencia registrada
+ * basta para cerrarlo. Pendiente en `TODO.md` Frente 1b.
+ *
+ * Mientras tanto, **equivocarse aquí falla hacia el lado seguro:** si Flow cambia el texto
+ * y dejamos de reconocerlo, el resultado vuelve a ser `unavailable`, que es el
+ * comportamiento conservador de siempre — se aplaza, nunca se cobra de más.
+ */
+function isTransactionNotFound(e: unknown): boolean {
+  return (
+    e instanceof FlowApiError && e.httpStatus === 400 && /transaction not found/i.test(e.message)
+  );
+}
+
+/** Mensaje de diagnóstico que CONSERVA el `code` de Flow cuando vino (hoy se perdía). */
+function describeLookupError(e: unknown): string {
+  if (!(e instanceof FlowApiError)) return e instanceof Error ? e.message : String(e);
+  return e.code === undefined ? e.message : `${e.message} [code=${e.code}]`;
+}
 
 /**
  * `GET payment/getStatusByCommerceId` — FUENTE DE VERDAD del cobro recurrente:
@@ -166,10 +201,17 @@ export type FlowStatusLookup =
  * repetidos bajo el mismo `commerceOrder` (medido en la Etapa 3), eso es doble cobro
  * real. Era la deuda declarada en D70 y el punto 1 del Frente 1b.
  *
- * ⚠️ **No se intenta distinguir "no existe" de "error"**, y es deliberado: el spec
- * oficial no documenta qué código devuelve Flow ante un `commerceId` desconocido, así
- * que cualquier clasificación sería adivinada — y adivinar de menos aquí cuesta dinero.
- * Quien llama resuelve la ambigüedad con su propio ledger: si no consta que se haya
+ * ⚠️ **"No existe" y "no pude preguntar" SÍ se distinguen, desde 2026-08-04.** La versión
+ * anterior los unificaba a propósito, porque el spec no documenta qué devuelve Flow ante
+ * un `commerceId` desconocido. El spec sigue sin documentarlo, pero ya está **medido**
+ * contra Sandbox: responde `400 "Transaction not found"`.
+ *
+ * Unificarlos tenía un costo que se midió en la misma sesión: un cobro que moría ANTES de
+ * llegar a Flow (400 de cuota, 401, 5xx, red) dejaba el ledger `pending` con una
+ * referencia que Flow nunca registró, y desde ahí toda consulta caía en `unavailable` →
+ * la suscripción se aplazaba **para siempre**, activa, vencida e invisible en el Admin.
+ *
+ * Quien llama sigue resolviendo el resto con su propio ledger: si no consta que se haya
  * enviado nunca ese `commerceOrder`, no hay nada que preguntar y no se pregunta.
  */
 export async function lookupFlowStatusByCommerceId(
@@ -188,9 +230,9 @@ export async function lookupFlowStatusByCommerceId(
     }
     return { outcome: "found", status: toStatusResult(data, commerceId) };
   } catch (e) {
-    return {
-      outcome: "unavailable",
-      message: e instanceof Error ? e.message : String(e),
-    };
+    const message = describeLookupError(e);
+    return isTransactionNotFound(e)
+      ? { outcome: "not_found", message }
+      : { outcome: "unavailable", message };
   }
 }

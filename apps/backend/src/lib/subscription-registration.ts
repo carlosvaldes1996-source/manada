@@ -222,11 +222,9 @@ async function settleRegistrationUnlocked(
   // (3) Cobro del total + verificación. `commerceOrder` determinista por carrito
   //     (un doble callback reusa el mismo id → Flow no recobra; además verificamos).
   const commerceOrder = `MANADA-SUBFIRST-${cartId.replace(/^cart_/, "")}`;
-  // Solo se pregunta por un cobro previo si CONSTA que hubo uno: el spec no documenta
-  // qué devuelve Flow ante un `commerceId` desconocido, así que preguntar "a ciegas"
-  // en el primer intento obligaría a interpretar un error como "no existe" — que es
-  // justamente la ambigüedad que causa doble cobro. Sin intentos previos no hay nada
-  // que verificar.
+  // Solo se pregunta por un cobro previo si CONSTA que hubo uno: sin intentos previos no
+  // hay nada que verificar, y preguntar "a ciegas" gastaría una llamada para recibir el
+  // mismo "no existe" que ya sabemos.
   const priorAttempts = await flowService.listFlowPayments({ cart_id: cartId });
   let paid = false;
   let flowOrder: number | undefined;
@@ -244,10 +242,18 @@ async function settleRegistrationUnlocked(
       );
       return { outcome: "unverified" };
     }
-    paid = previous.status.status === FLOW_STATUS.PAID;
-    flowOrder = previous.status.flowOrder;
-    rawStatus = previous.status.status;
-    chargedAmount = previous.status.amount;
+    // `not_found` — Flow no registró ese intento, o sea que nunca llegó a la pasarela
+    // (murió en la puerta: cuota, llaves, 5xx, red). No hay cobro previo que respetar y
+    // no hay riesgo de recobrar, así que se sigue al cobro normal con la misma
+    // referencia. Sin esta rama, un intento que moría en la puerta dejaba el carrito
+    // atascado en `unverified` para siempre — el mismo defecto que en la renovación,
+    // medido contra Sandbox el 2026-08-04.
+    if (previous.outcome === "found") {
+      paid = previous.status.status === FLOW_STATUS.PAID;
+      flowOrder = previous.status.flowOrder;
+      rawStatus = previous.status.status;
+      chargedAmount = previous.status.amount;
+    }
   }
 
   if (!paid) {

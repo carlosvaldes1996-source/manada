@@ -83,18 +83,59 @@
         BD de producción. Cuando las credenciales vuelvan a Producción, correrlo por inercia
         **cobraría una tarjeta real**. Debe negarse a ejecutar si el backend no apunta a
         Sandbox, salvo bandera explícita. Es la diferencia entre una herramienta y un arma.
-- [ ] **Revalidar el escenario de RENOVACIÓN en Sandbox** — es lo único de los tres escenarios
-      que quedó a medias. F7 (orden impaga) y F8 (sin reservar stock) están corregidos y
-      desplegados **pero sin verificar**: la corrida se topó con la **cuota diaria de Flow
-      Sandbox**. Debe verse la orden en **Paid** y **Allocated**, y un solo cargo.
-      La suscripción usada quedó en `past_due` con `failed_charge_count=1` por F9 (antes de
-      corregirlo) → resetear `status`, `failed_charge_count` y `next_charge_attempt_at` antes
-      de reintentar, o usar otra.
+- [x] ~~**Revalidar el escenario de RENOVACIÓN en Sandbox**~~ → **APROBADO el 2026-08-04**,
+      con un cliente nuevo (cuota fresca). Orden **Paid + Allocated**, cargo único
+      (`flowOrder 9265675`, $42.290), ledger `paid` con `commerce_order` **estable** (sin el
+      sufijo `-a1` → confirma la corrección de D73 corriendo de verdad), cadencia
+      2026-07-20 → 2026-08-17, correo de renovación entregado y sin duplicar el de compra.
+      **F7 y F8 verificados por primera vez.** Con esto los **tres escenarios** de la Etapa 3
+      quedan aprobados. (La corrida destapó los defectos **#10** y **#11** de abajo.)
+- [ ] **🔴 Defecto #10 — un `deferred` deja la suscripción TRABADA para siempre.**
+      **Medido** el 2026-08-04 contra Sandbox. Cuando un cargo muere **antes de llegar a
+      Flow** (400 de cuota, 401, 5xx, red), `deferCharge` deja el ledger en `pending` con un
+      `commerce_order` que Flow nunca registró. Cada intento posterior pregunta por él, recibe
+      **`400 "Transaction not found"`**, `lookupFlowStatusByCommerceId` lo clasifica como
+      `unavailable` y vuelve a aplazar — indefinidamente. La suscripción sigue `active`,
+      vencida e **invisible en el Admin**: pérdida silenciosa de ingresos, sin alarma.
+      ⚠️ **Es un defecto de la propia corrección de D73** (F6+F9), no anterior: antes el
+      sufijo `-a${attempt}` cambiaba la referencia en cada intento y no había punto muerto.
+      D73 cambió "castigar al cliente por un problema nuestro" por "dejar de cobrar en
+      silencio".
+      **Premisa de D73 que queda corregida:** la entrada dice que no se distingue "no existe"
+      de "error" porque *"el spec no documenta qué devuelve Flow ante un `commerceId`
+      desconocido"*. El spec sigue sin documentarlo, pero **ya está medido**. Gana lo medido.
+      **Corrección propuesta:** tercer desenlace `not_found` → cobrar fresco (Flow es
+      autoritativo: si no tiene la transacción, no la cobró).
+      **Caso de reproducción VIVO — NO PURGAR hasta verificar la corrección:**
+      `sub_01KZ5CYDBAR3RSG3E0K3Q3HET2` (`active`, vencida desde 2026-07-15, ledger `pending`
+      en `…-20260715`). Recrearlo cuesta agotar a propósito una cuota de ~6 cargos.
+- [ ] **🟡 Reemplazar la comparación por TEXTO de `not_found` por el `code` de Flow.**
+      `isTransactionNotFound` (`src/lib/flow/payments.ts`) reconoce hoy el `400` por el texto
+      `"Transaction not found"` porque **todavía no sabemos qué `code` manda Flow**.
+      **Decisión explícita de Carlos (2026-08-04): es transitorio, no definitivo.** El mismo
+      cambio añadió `describeLookupError`, que ahora deja `[code=N]` en el mensaje y en los
+      logs → **la primera ocurrencia registrada da el número** y con eso se cierra.
+      Falla hacia el lado seguro mientras tanto: si el texto cambia, vuelve a `unavailable`
+      (se aplaza, nunca se cobra de más).
+- [ ] **🟠 Defecto #11 — la cadencia avanza desde la fecha programada, no desde hoy.**
+      `advanceOnSuccess` hace `next_delivery_date + frequency_weeks`
+      (`src/lib/subscription-charge.ts`). Con un atraso **mayor a un ciclo**, la fecha nueva
+      sigue en el pasado → el barrido vuelve a cobrar, y se repite hasta ponerse al día:
+      varios cobros seguidos y **varios sacos despachados** que el cliente no pidió.
+      **Derivado de leer el código el 2026-08-04, NO reproducido.**
+      ⚠️ **Se potencia con #10:** un aplazamiento largo produce justo el atraso que lo activa.
+      El dunning normal no basta para dispararlo (3 intentos × 3 días < 4 semanas).
+      **Decisión pendiente antes de tocar código.** `advanceOnSuccess` corre en TODA
+      renovación exitosa, así que cambiarlo obliga a re-validar el escenario de renovación —
+      por eso conviene resolverlo en el mismo cambio y el mismo deploy que #10.
 - [ ] **Preguntar a Flow por la cuota diaria de transacciones** (`400 has exceeded the daily
       transaction quota`, medido en Sandbox tras 6 cargos al mismo cliente): ¿rige en
       Producción, con qué número, y es por cliente o por comercio? Sustituye a la parte (a) del
       punto (5) —ahora la pregunta es concreta—. **Con volumen real esto puede frenar un
       barrido completo de renovaciones**, así que deja de ser "no bloqueante".
+      **Medido el 2026-08-04: la cuota es POR CLIENTE, no por comercio** — un cliente nuevo
+      cobró sin problema mientras `101920` seguía bloqueado. Queda por confirmar con soporte
+      si rige en Producción y con qué número.
 - [ ] **Despacho gratis para suscriptores — decisión de producto tomada, falta implementar.**
       Hoy la incoherencia es un efecto secundario, no una regla: la 1ª compra cobra
       **$3.990** de despacho (el suscrito no alcanza el umbral de envío gratis de $30.000)
