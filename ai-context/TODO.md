@@ -28,6 +28,36 @@
 - [ ] Decidir rama `production` dedicada vs `main`=prod (D27 §3) → conectar dominio `tumanada.cl`.
 - [ ] Al validar cada etapa: **documentar D30 + actualizar `DEPLOYMENT.md` + commit/push** (mandato del WIP).
 
+## 🟢 Frente 1c — Analytics del funnel (D75) · implementado, pendiente de despliegue
+
+> Módulo `cart-funnel` + proyector + `visitor_id`. **100 % aditivo**, verificado en local
+> (backfill 34/34 · cruce contra 13 órdenes reales · idempotencia · regresión 20/20).
+> Contexto completo: `DECISIONS.md` D75 · `ai-context/FUNNEL_TRACKING_PROPOSAL.md` · `DATABASE.md §11`.
+
+- [ ] **Desplegar a Railway.** La migración corre sola en `preDeployCommand`. Crea la tabla
+      `cart_funnel` + 3 índices sobre tablas nativas (`cart` y `cart_line_item`). Sin downtime:
+      no altera ninguna tabla existente.
+- [ ] **Correr el reporte contra producción — lo corre Carlos** (no hay acceso a esa BD desde
+      desarrollo): `npx medusa exec ./src/scripts/funnel-report.ts`. Da el embudo real sin depender
+      de la proyección. Sirve para dimensionar antes de nada.
+- [ ] **Backfill del histórico en producción:** `npx medusa exec ./src/scripts/backfill-cart-funnel.ts`.
+      Idempotente y reanudable; usar `FUNNEL_BACKFILL_LIMIT` para una primera pasada acotada.
+      **No pasa `observedAt` a propósito** → los carritos históricos conservan su fecha real.
+- [ ] **Política de privacidad:** reflejar el `visitor_id` (identificador propio, aleatorio, sin dato
+      personal, no es cookie de terceros) antes de darlo por encendido.
+- [ ] **Menor — carritos de prueba en la BD local:** quedaron 2 órdenes canceladas (#1500, #1501) del
+      arnés de regresión, con su reserva de stock ya liberada. Inofensivas; se limpian si molestan al
+      leer los reportes locales.
+
+### Fuera del alcance del MVP (decisión de Carlos, 2026-08-05)
+
+- ⬜ **API Admin + pantalla de administración** del funnel. Basta con que el dato quede persistido y
+      consultable por SQL.
+- ⬜ **Remarketing / recuperación de carritos** (job + correo por Resend + `recovery_*`). Las columnas
+      ya existen; el mecanismo no se implementó. Cuando se retome: va **gateado y apagado**, como
+      `SUBSCRIPTION_CHARGES_ENABLED` (D73) y `AUTO_ACCOUNT_ENABLED` (D65), y necesita decisión de
+      negocio sobre frecuencia y tono, no solo técnica.
+
 ## 🔴 Frente 1b — Flow · Etapa 3: endurecer el motor de cobro (D72)
 
 > **Punto exacto de continuación tras D70/D71/D72.** Contexto completo: `DECISIONS.md` D72 ·

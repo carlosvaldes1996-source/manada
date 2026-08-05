@@ -59,6 +59,13 @@ module.exports = defineConfig({
     // `customer` de Medusa y su cliente (`cus_…`) en Flow. Es la ÚNICA fuente de
     // verdad del vínculo — Flow no permite buscar un cliente por `externalId`.
     { resolve: './src/modules/flow-customer' },
+    // Módulo custom `cart-funnel` (D75): proyección del funnel de compra sobre el
+    // carrito. NO es un espejo del Cart (que sigue siendo el único dueño de su
+    // contenido): guarda solo lo que Medusa no tiene — identidad anónima, etapa,
+    // último movimiento real, atribución — más un snapshot de totales, porque los
+    // del carrito son columnas CALCULADAS y no se pueden consultar. Se alimenta de
+    // subscribers, siempre fuera del camino crítico del checkout.
+    { resolve: './src/modules/cart-funnel' },
     // Módulo custom `flow-subscription` (D71, API.md §16): espejo del modelo de
     // suscripción NATIVO de Flow — planes (tarifa recurrente) y suscripciones.
     // Capa de integración terminada, aún SIN conectar al checkout ni al módulo

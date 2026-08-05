@@ -258,3 +258,83 @@ Es el **eje de la idempotencia**: la orden se crea recién cuando Flow confirma 
   vez, la orden ocurre **exactamente una vez**.
 - **Sin FK a la orden:** `order_id`/`payment_collection_id` son punteros informativos; la fuente de verdad del
   pago es Flow (re-consultado con `getStatus`), no el payload del callback.
+
+---
+
+## 11. Funnel de compra — IMPLEMENTADO (D75) · módulo custom `cart-funnel`
+
+> **El Cart de Medusa ES el "purchase intent".** No se creó ninguna entidad espejo: el carrito nace en el
+> primer add-to-cart (creación **perezosa**), **nunca se borra** y ya está unido a la orden por el link
+> nativo `order_cart`. Esta tabla es un **sidecar**, no una copia.
+
+### 11.1 Qué guarda (y qué NO)
+
+Un campo entra a `cart_funnel` **si y solo si** cumple una de tres condiciones:
+
+- **(a) Medusa no lo guarda:** `visitor_id` (identidad anónima), etapa del funnel, atribución UTM, contexto
+  de mascota, estado de la campaña de recuperación.
+- **(b) Medusa lo sobrescribe y nos importa el momento:** `activated_at`, `identified_at`,
+  `checkout_started_at`, `payment_pending_at`, `paid_at`, `last_activity_at`.
+- **(c) Es una llave de consulta cara de calcular:** los totales y `customer_id`/`email`.
+
+**NO entra nunca:** líneas, precios por línea, ajustes, tax lines ni direcciones. Eso vive en el Cart y se
+lee en vivo. Los campos de la categoría (c) son **copias no autoritativas**: si discrepan del Cart, gana el
+Cart y el proyector las corrige en la pasada siguiente.
+
+### 11.2 Tabla `cart_funnel` (una fila por carrito, `cart_id` único)
+
+| Grupo | Campos |
+|---|---|
+| Identidad | `cart_id` (único) · `visitor_id` · `customer_id` · `email` |
+| Progreso | `stage` · `activated_at` · `identified_at` · `checkout_started_at` · `payment_pending_at` · `paid_at` · `last_activity_at` |
+| Desenlace del pago | `payment_attempts` · `last_payment_status` |
+| Snapshot comercial | `items_count` · `units_count` · `subtotal` · `discount_total` · `shipping_total` · `total` · `currency_code` · `has_subscription` · `promo_codes` (`text[]`) |
+| Conversión | `order_id` · `order_display_id` · `converted_at` |
+| Atribución | `utm_source` · `utm_medium` · `utm_campaign` · `utm_term` · `utm_content` · `referrer` · `landing_path` · `device_type` |
+| Contexto Manada | `pet_species` · `pet_stage` |
+| CRM | `recovery_email_count` · `recovery_email_at` · `recovered_at` |
+| Extensión | `context` (jsonb) · `projection_version` · `projected_at` |
+
+### 11.3 Diseño (por qué así)
+
+- **Progreso ≠ desenlace.** `stage` es **monótono** (`active < identified < checkout_started <
+  payment_pending < paid`) y solo avanza, así el orden de llegada de los eventos es irrelevante y una
+  métrica histórica no cambia de significado. El resultado del pago es un eje aparte
+  (`last_payment_status`): un pago rechazado que luego se reintenta con éxito no es "menos progreso".
+- **`abandoned` NO se almacena:** se deriva en lectura (`stage != 'paid' AND last_activity_at < now() -
+  interval`). Cambiar la definición de negocio es cambiar una consulta, no reprocesar la tabla.
+- **El snapshot de totales es obligatorio, no comodidad.** Los totales del carrito son
+  `model.bigNumber().computed()`: **no existen como columnas** (`CREATE TABLE "cart"` no las tiene). Sin la
+  foto, listar carritos abandonados por valor obliga a hidratar todas las relaciones de cada carrito.
+- **`projection_version` abarata las migraciones futuras:** agregar un campo = columna nullable + subir la
+  versión + re-proyectar solo lo viejo (`FUNNEL_BACKFILL_ONLY_STALE=true`), con el mismo proyector.
+- **Sin FK ni Module Link al carrito:** `cart_id` es un puntero. El vínculo canónico carrito↔orden sigue
+  siendo el link NATIVO `order_cart`; `order_id` aquí es solo la llave denormalizada.
+
+### 11.4 Cómo se llena — un proyector, no subscribers
+
+Toda la lógica vive en `apps/backend/src/lib/cart-funnel-projection.ts`. Los subscribers
+(`cart-funnel-tracker.ts` sobre `cart.created`/`cart.updated`/`cart.customer_transferred`/
+`cart.customer_updated`, y `cart-funnel-converted.ts` sobre `order.placed`) **solo lo disparan**.
+
+El proyector **lee el carrito y recalcula la fila entera**; no interpreta el evento (que además solo trae
+`{ id }`). De ahí salen sus tres propiedades: idempotente, auto-reparable (un evento perdido lo corrige el
+siguiente) y reutilizable por el backfill sin una segunda implementación.
+
+**`last_activity_at` se deriva, no se estampa:** `cart.updated_at` no sirve porque `addToCartWorkflow` **no
+toca la fila `cart`**. Se toma el máximo de todos los timestamps involucrados, incluido el `deleted_at` de
+las líneas eliminadas (única huella de que alguien quitó un producto). El backfill omite `observedAt` a
+propósito, para no marcar el histórico con la fecha de hoy.
+
+> ⚠️ **Trampa recurrente de Medusa (causa raíz de D73, reaparecida dos veces en D75):** los totales de Cart y
+> Order se calculan sobre las **relaciones cargadas**. Pedir `items.id` en vez de `items.*` deja el subtotal
+> en 0 y el total = solo el despacho, **sin ningún error**. Siempre cargar `items.*` + `adjustments.*` +
+> `tax_lines.*` + `shipping_methods.*`.
+
+### 11.5 Índices añadidos sobre tablas NATIVAS
+
+La migración del módulo agrega tres caminos de acceso que faltaban (no altera ninguna tabla del core):
+`cart (created_at) WHERE completed_at IS NULL` · `cart (completed_at)` · y
+`cart_line_item (product_id) WHERE deleted_at IS NOT NULL` — este último es el que hace viable la consulta
+de "productos más abandonados", porque los índices nativos son parciales con `WHERE deleted_at IS NULL` y
+**excluyen justo las líneas que interesan**.

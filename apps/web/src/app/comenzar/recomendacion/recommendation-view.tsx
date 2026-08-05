@@ -29,6 +29,7 @@ import { PetAvatar } from "@/components/pet/pet-avatar";
 import { usePet, useCart, useSession } from "@/components/providers";
 import { fade, fadeInUp } from "@/lib/motion";
 import { trackRecommendationShown } from "@/lib/analytics";
+import { setFunnelPetContext } from "@/lib/funnel-context";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 import type { Product, SubscriptionFrequencyWeeks } from "@/types";
@@ -156,6 +157,10 @@ export function RecommendationView({ products }: { products: Product[] }) {
     if (activePet && recommended && shownRef.current !== recommended.id) {
       shownRef.current = recommended.id;
       trackRecommendationShown(activePet, recommended);
+      // Especie y etapa al contexto de funnel (D75): es el momento en que se
+      // conocen y lo que después permite segmentar el abandono por tipo de
+      // mascota. Si el carrito nace más tarde, lo hereda de la sesión.
+      setFunnelPetContext(activePet.species, activePet.stage);
     }
   }, [activePet, recommended]);
 

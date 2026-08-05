@@ -2,6 +2,7 @@ import type { CartItem, SubscriptionFrequencyWeeks } from "@/types";
 import { medusa } from "./client";
 import { getRegionId } from "./region";
 import { mapLineItemProduct, type StoreCartLineLike } from "./map-product";
+import { getFunnelContext } from "@/lib/funnel-context";
 
 /**
  * Capa de carrito sobre la Store API de Medusa (Fase 5 · Etapa 3).
@@ -36,9 +37,24 @@ async function unwrap(p: Promise<{ cart: unknown }>): Promise<MedusaCart> {
   return (await p).cart as MedusaCart;
 }
 
+/**
+ * Crea el carrito y le adjunta el contexto de funnel (D75): identidad anónima del
+ * visitante + atribución de la sesión. Va en `metadata.manada_funnel`, un namespace
+ * propio que no colisiona con el `rut` que el checkout escribe después (Medusa
+ * MEZCLA la metadata al actualizar, no la reemplaza).
+ *
+ * Es la única forma de saber después quién era el invitado que abandonó: sin esto,
+ * un carrito de invitado queda con `customer_id` y `email` en null y es anónimo
+ * para siempre. No cambia ningún comportamiento: el `POST /store/carts` nativo ya
+ * acepta `metadata`, así que no hay una petición nueva ni un endpoint nuevo.
+ */
 export async function createCart(): Promise<MedusaCart> {
   const region_id = await getRegionId();
-  return unwrap(medusa.store.cart.create({ region_id }, { fields: CART_FIELDS }));
+  const funnel = getFunnelContext();
+  const metadata = Object.keys(funnel).length > 0 ? { manada_funnel: funnel } : undefined;
+  return unwrap(
+    medusa.store.cart.create({ region_id, ...(metadata ? { metadata } : {}) }, { fields: CART_FIELDS }),
+  );
 }
 
 export async function retrieveCart(id: string): Promise<MedusaCart | null> {
