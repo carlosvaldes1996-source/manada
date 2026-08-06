@@ -100,6 +100,13 @@ export function OnboardingWizard() {
       const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as { draft?: Draft; stepIndex?: number };
+        // Restaurar de sessionStorage EXIGE un efecto: leerlo durante el render (o en
+        // un inicializador lazy de useState) rompe la hidratación de SSR — justo lo que
+        // evita el comentario de arriba. Y el seteo debe ser SÍNCRONO: React lo agrupa
+        // en el mismo commit, antes del paint, así que no se alcanza a ver el formulario
+        // vacío. Diferirlo a un microtask solo para callar la regla añadiría el parpadeo
+        // que hoy no existe. Se silencia la regla a conciencia, no se elude.
+        /* eslint-disable react-hooks/set-state-in-effect */
         if (saved.draft) setDraft(saved.draft);
         if (
           typeof saved.stepIndex === "number" &&
@@ -113,6 +120,7 @@ export function OnboardingWizard() {
       /* almacenamiento no disponible o dato corrupto: se empieza limpio */
     }
     setRestored(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   // Guarda cada cambio del borrador (y el paso actual) una vez restaurado.

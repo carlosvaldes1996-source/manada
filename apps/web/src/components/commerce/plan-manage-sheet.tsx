@@ -185,7 +185,10 @@ export function PlanManageSheet({
     setPending(true);
     try {
       const { url } = await startSubscriptionCardUpdate(sub.id);
-      window.location.href = url;
+      // `assign()` y no `location.href = …`: son equivalentes (misma navegación,
+      // misma entrada de historial), pero la asignación a una propiedad de `window`
+      // la lee `react-hooks/immutability` como mutación de un valor de scope externo.
+      window.location.assign(url);
     } catch {
       toast({
         title: "No se pudo abrir la actualización de tarjeta",
