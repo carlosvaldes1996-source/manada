@@ -317,9 +317,18 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (sessionLoading) return;
 
-    // INVITADO: sembrar desde el espejo local, una sola vez por montaje. El seteo
-    // va diferido (microtask), mismo patrón que la sesión/carrito, para no encadenar
-    // renders síncronos dentro del efecto.
+    // INVITADO: sembrar desde el espejo local, una sola vez por montaje.
+    //
+    // OJO con el `async` de abajo: NO difiere nada. Un IIFE `async` sin `await` antes
+    // de los `setState` corre ENTERO de forma síncrona (el cuerpo solo cede el control
+    // en el primer `await`, y aquí no hay ninguno porque `localStorage` es síncrono).
+    // A diferencia de `session-provider`/`cart-provider`, que sí quedan diferidos por
+    // la llamada de red que tienen en medio, esta rama copió la forma sin la sustancia.
+    //
+    // Se deja igual a propósito: síncrono es lo que se quiere. React agrupa estos
+    // seteos en el mismo commit, antes del paint, así que la mascota aparece ya
+    // hidratada. Diferirlos de verdad (`await Promise.resolve()`) solo agregaría un
+    // render extra y un parpadeo del estado vacío que hoy no existe.
     if (status !== "authenticated") {
       if (guestHydratedRef.current) return;
       guestHydratedRef.current = true;
