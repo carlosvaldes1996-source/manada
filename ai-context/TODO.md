@@ -51,8 +51,10 @@
 
 ### Fuera del alcance del MVP (decisión de Carlos, 2026-08-05)
 
-- ⬜ **API Admin + pantalla de administración** del funnel. Basta con que el dato quede persistido y
-      consultable por SQL.
+- [x] ~~**API Admin + pantalla de administración**~~ → **HECHO en D78.** Se levantó al descubrir que
+      el Admin de Medusa v2 **no tiene sección de carritos** (solo `/orders`, `/customers`,
+      `/promotions`): sin pantalla, responder una pregunta de negocio exigía un `railway ssh`.
+      Solo lectura, cero escrituras. Pendiente: **desplegar** para verla en producción.
 - ⬜ **Remarketing / recuperación de carritos** (job + correo por Resend + `recovery_*`). Las columnas
       ya existen; el mecanismo no se implementó. Cuando se retome: va **gateado y apagado**, como
       `SUBSCRIPTION_CHARGES_ENABLED` (D73) y `AUTO_ACCOUNT_ENABLED` (D65), y necesita decisión de
