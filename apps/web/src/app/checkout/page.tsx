@@ -24,6 +24,7 @@ import { useCart, useSession } from "@/components/providers";
 import {
   listShippingOptions,
   setCheckoutInfo,
+  setCartEmail,
   selectShippingMethod,
   createFlowPayment,
   createSubscriptionPayment,
@@ -214,6 +215,39 @@ export default function CheckoutPage() {
     if (city && !getComunas(next).includes(city)) setCity("");
   }
 
+  /**
+   * Persistencia temprana del correo (D79) — el comprador termina de escribirlo y
+   * el carrito ya queda identificado, sin esperar a que apriete "Pagar".
+   *
+   * Sin esto, `setCheckoutInfo` era el único que escribía el email y solo corre al
+   * enviar el pago: quien llenaba su correo y se iba quedaba anónimo en el funnel,
+   * justo el segmento más valioso para recuperar (dejó contacto y tenía intención).
+   *
+   * Tres guardas para que NUNCA pueda estorbar al pago, que es lo único innegociable:
+   *  1. No corre si ya se está enviando el pago.
+   *  2. No repite la llamada si el correo no cambió desde la última vez.
+   *  3. `submitPayment` **espera** esta promesa antes de tocar el carrito. Es la
+   *     guarda importante: `updateCartWorkflow` toma un lock sobre el carrito con
+   *     timeout de 2 s, así que dos escrituras solapadas podrían hacer fallar el
+   *     pago. Encadenándolas, la contención simplemente no existe.
+   * Y es best-effort de punta a punta: si falla, se traga el error en silencio —
+   * perder una medición jamás puede costar una venta.
+   */
+  const emailPersistRef = useRef<Promise<void> | null>(null);
+  const persistedEmailRef = useRef<string | null>(null);
+
+  function persistEmail() {
+    const value = email.trim();
+    if (!cartId || submitting) return;
+    if (!EMAIL_RE.test(value)) return;
+    if (persistedEmailRef.current === value) return;
+    persistedEmailRef.current = value;
+    emailPersistRef.current = setCartEmail(cartId, value).catch(() => {
+      // Reintentar en el siguiente blur si no quedó guardado.
+      persistedEmailRef.current = null;
+    });
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = "Cuéntanos tu nombre";
@@ -261,6 +295,12 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     try {
+      // Si la persistencia temprana del correo (D79) está en vuelo, se espera aquí:
+      // `updateCartWorkflow` toma un lock sobre el carrito y dos escrituras
+      // solapadas podrían agotar su timeout de 2 s y tumbar el pago. Encadenarlas
+      // elimina la contención. La promesa ya trae su propio catch, así que un fallo
+      // de la medición no puede propagarse a esta ruta.
+      await emailPersistRef.current;
       // Prepara el carrito. El RUT viaja en metadata (→ orden). El monto NO se
       // envía: el backend cobra el total del carrito.
       await setCheckoutInfo(cartId, email.trim(), address, rutFormatted);
@@ -331,7 +371,7 @@ export default function CheckoutPage() {
                   <Input label="Nombre" placeholder="Juan" autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} error={errors.firstName} className="flex-1" required />
                   <Input label="Apellido" placeholder="Pérez" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} className="flex-1" required />
                 </Row>
-                <Input type="email" label="Correo para la confirmación y el seguimiento" placeholder="tucorreo@ejemplo.cl" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} className="max-w-md" required />
+                <Input type="email" label="Correo para la confirmación y el seguimiento" placeholder="tucorreo@ejemplo.cl" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={persistEmail} error={errors.email} className="max-w-md" required />
                 <Input label="RUT (para tu boleta)" placeholder="12.345.678-9" inputMode="text" autoComplete="off" value={rut} onChange={(e) => setRut(e.target.value)} onBlur={() => rut.trim() && setRut(formatRut(rut))} error={errors.rut} className="max-w-md" required />
               </Block>
 

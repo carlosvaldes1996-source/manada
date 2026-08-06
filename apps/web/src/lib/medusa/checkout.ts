@@ -67,6 +67,23 @@ export async function setCheckoutInfo(
   return cart as unknown as MedusaCart;
 }
 
+/**
+ * Fija SOLO el correo en el carrito (D79). Se llama cuando el comprador termina de
+ * escribirlo en el checkout, sin esperar a que apriete "Pagar".
+ *
+ * Por qué existe: `setCheckoutInfo` corre únicamente dentro del envío del pago, así
+ * que quien escribía su correo y se iba quedaba **anónimo** en el funnel — justo el
+ * segmento más valioso (dejó contacto, tenía intención, no compró). Con esto,
+ * "llegó al checkout" pasa a significar lo que dice.
+ *
+ * Es la MISMA llamada nativa que ya hace el checkout al pagar, solo que antes y con
+ * un único campo: la actualización es parcial, no pisa dirección ni metadata. Quien
+ * la invoca la trata como best-effort — nunca debe bloquear ni romper el pago.
+ */
+export async function setCartEmail(cartId: string, email: string): Promise<void> {
+  await medusa.store.cart.update(cartId, { email }, { fields: CART_FIELDS });
+}
+
 /** Selecciona el método de despacho. */
 export async function selectShippingMethod(cartId: string, optionId: string): Promise<MedusaCart> {
   const { cart } = await medusa.store.cart.addShippingMethod(

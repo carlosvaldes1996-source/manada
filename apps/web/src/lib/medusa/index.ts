@@ -25,6 +25,7 @@ export {
 export {
   listShippingOptions,
   setCheckoutInfo,
+  setCartEmail,
   selectShippingMethod,
   type CheckoutAddress,
   type ShippingOptionView,
