@@ -11,8 +11,13 @@ import { FreeShippingBar } from "./free-shipping-bar";
 
 export interface CartDrawerProps {
   children: React.ReactNode;
-  /** Umbral de envío gratis (CLP). */
-  freeShippingThreshold?: number;
+  /**
+   * Umbral de envío gratis (CLP). Sin valor por defecto A PROPÓSITO: el umbral lo
+   * define el backend (`GET /store/shipping-policy` → `getShippingPolicy()`) y
+   * duplicarlo aquí como constante lo dejaría desincronizado en silencio el día
+   * que cambie. Quien monte el drawer pasa el valor de la política.
+   */
+  freeShippingThreshold: number;
 }
 
 /**
@@ -20,7 +25,7 @@ export interface CartDrawerProps {
  * carrito. Lista las líneas, muestra el progreso a envío gratis y el subtotal,
  * con CTA a checkout. Conectado al estado global del carrito.
  */
-export function CartDrawer({ children, freeShippingThreshold = 30000 }: CartDrawerProps) {
+export function CartDrawer({ children, freeShippingThreshold }: CartDrawerProps) {
   const { items, count, subtotal, updateQuantity, removeItem } = useCart();
 
   return (

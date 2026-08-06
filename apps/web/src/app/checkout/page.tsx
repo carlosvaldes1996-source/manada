@@ -166,25 +166,35 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  // Monto que decide el envío gratis: el MISMO que evalúa el backend. La promoción
+  // automática (`setup-free-shipping.ts`) tiene la regla sobre `item_total`, así que
+  // se lee ese total del carrito real; el subtotal local es solo el respaldo para
+  // el instante en que el carrito aún no ha llegado.
+  const freeShippingBase = cart?.item_total ?? subtotal;
+
+  // ¿Aplica envío gratis? La regla es del backend (`/store/shipping-policy`): aquí
+  // solo se consulta. Mientras la política no llegue, no se asume nada (cobra).
+  const freeShipping = policy != null && freeShippingBase >= policy.freeShippingThreshold;
+
+  // `freeShipping` es la ÚNICA derivación de costo de la pantalla: la aplican por
+  // igual las tarjetas de despacho y el resumen, de modo que no puedan mostrar dos
+  // cifras distintas para el mismo despacho. El costo efectivo de una opción es $0
+  // si la promoción automática aplica —descuenta el 100% del método elegido, sea
+  // cual sea— y si no, el precio real que envía Medusa. Nunca un valor hardcodeado.
   const shippingOptionsView: ShippingOption[] = useMemo(
     () =>
       shipOptions.map((o) => ({
         id: o.id,
         label: o.name,
         eta: o.description ?? "Despacho a domicilio",
-        cost: o.amount,
+        cost: freeShipping ? 0 : o.amount,
         icon: <Truck className="size-5 text-text-brand" aria-hidden />,
       })),
-    [shipOptions],
+    [shipOptions, freeShipping],
   );
 
-  // El envío mostrado refleja EXACTAMENTE la regla del backend (fuente única):
-  // gratis sobre el umbral; bajo ese monto, el costo de la opción elegida. Así el
-  // total coincide con lo que cobra la orden (la promoción automática de envío
-  // gratis deja el despacho en $0 sobre el umbral). No se hardcodea ningún valor.
   const selectedShippingAmount = shipOptions.find((o) => o.id === shippingId)?.amount ?? 0;
-  const shippingCost =
-    policy && subtotal >= policy.freeShippingThreshold ? 0 : selectedShippingAmount;
+  const shippingCost = freeShipping ? 0 : selectedShippingAmount;
   const total = subtotal + shippingCost;
 
   // Región → comuna (dependiente). Se guardan por nombre, consistente con las
@@ -318,8 +328,8 @@ export default function CheckoutPage() {
                   </p>
                 )}
                 <Row gap={3} className="max-w-md" wrap>
-                  <Input label="Nombre" placeholder="Carlos" autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} error={errors.firstName} className="flex-1" required />
-                  <Input label="Apellido" placeholder="Valdés" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} className="flex-1" required />
+                  <Input label="Nombre" placeholder="Juan" autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} error={errors.firstName} className="flex-1" required />
+                  <Input label="Apellido" placeholder="Pérez" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} className="flex-1" required />
                 </Row>
                 <Input type="email" label="Correo para la confirmación y el seguimiento" placeholder="tucorreo@ejemplo.cl" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} className="max-w-md" required />
                 <Input label="RUT (para tu boleta)" placeholder="12.345.678-9" inputMode="text" autoComplete="off" value={rut} onChange={(e) => setRut(e.target.value)} onBlur={() => rut.trim() && setRut(formatRut(rut))} error={errors.rut} className="max-w-md" required />

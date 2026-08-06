@@ -103,7 +103,7 @@ export function RegisterView({
               <Stack gap={4}>
                 <Input
                   label="Tu nombre"
-                  placeholder="Ej: Carlos"
+                  placeholder="Ej: Juan"
                   autoComplete="given-name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
