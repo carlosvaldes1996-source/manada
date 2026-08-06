@@ -150,19 +150,52 @@ function overlayStoredPhotos(pets: Pet[]): Pet[] {
  * `localStorage` que refleja el perfil de mascota del INVITADO (ids `local_…`),
  * espejo del patrón del carrito (`manada_cart_id`). Invariantes (directiva de
  * Carlos): (1) es SOLO un reflejo del estado temporal del onboarding —jamás
- * persiste ids reales del backend— y (2) al autenticarse/migrar con éxito se
+ * persiste ids reales del backend—, (2) al autenticarse/migrar con éxito se
  * LIMPIA, porque desde ahí el backend es la fuente única y este espejo quedaría
- * obsoleto. Sirve para sobrevivir recargas/pestañas nuevas antes de crear la cuenta.
+ * obsoleto, y (3) **caduca a las 24 h** (D77): sirve para sobrevivir recargas y
+ * pestañas nuevas mientras dura la intención de compra, no para dejar una mascota
+ * a la que nadie volvió instalada en el dispositivo para siempre.
  */
 const GUEST_PETS_KEY = "manada.guest_pets";
+
+/**
+ * Vida del espejo de invitado (D77). El sello es de **creación**, no de última
+ * escritura: la ventana es absoluta y una visita NO la renueva. Si se refrescara
+ * en cada guardado, la hidratación misma (que reescribe el espejo) la renovaría en
+ * cada carga de página y el espejo volvería a ser eterno para cualquier visitante
+ * recurrente — justo el síntoma que esta decisión corrige.
+ */
+const GUEST_PETS_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface GuestPetsSnapshot {
   pets: Pet[];
   activePetId: string | null;
   foodAssignedAt: Record<string, string>;
+  /** Epoch ms en que se creó el espejo (base del TTL). */
+  savedAt: number;
 }
 
-/** Lee el espejo del invitado, filtrando defensivamente a solo ids `local_…`. */
+/**
+ * Sello de creación del espejo, SIN aplicar el TTL. Lo usa la escritura para
+ * arrastrar la fecha original; la caducidad la decide solo `readGuestPets`.
+ */
+function readGuestPetsSavedAt(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(GUEST_PETS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GuestPetsSnapshot>;
+    return typeof parsed.savedAt === "number" ? parsed.savedAt : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lee el espejo del invitado, filtrando defensivamente a solo ids `local_…`.
+ * Si está vencido —o viene de una versión previa al TTL, o sea sin `savedAt`—
+ * se DESCARTA y se borra del dispositivo en el acto (D77).
+ */
 function readGuestPets(): GuestPetsSnapshot | null {
   if (typeof window === "undefined") return null;
   try {
@@ -170,11 +203,20 @@ function readGuestPets(): GuestPetsSnapshot | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<GuestPetsSnapshot>;
     const pets = (parsed.pets ?? []).filter((p) => p && isLocalId(p.id));
+
+    // Espejo legado (sin sello) o vencido → se descarta con sus fotos huérfanas.
+    const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : null;
+    if (savedAt === null || Date.now() - savedAt >= GUEST_PETS_TTL_MS) {
+      expireGuestPets(pets);
+      return null;
+    }
+
     if (pets.length === 0) return null;
     return {
       pets,
       activePetId: parsed.activePetId ?? null,
       foodAssignedAt: parsed.foodAssignedAt ?? {},
+      savedAt,
     };
   } catch {
     return null;
@@ -198,14 +240,29 @@ function writeGuestPets(
     const activeId = activePetId && ids.has(activePetId) ? activePetId : (pets[0]?.id ?? null);
     const assigned: Record<string, string> = {};
     for (const id of ids) if (foodAssignedAt[id]) assigned[id] = foodAssignedAt[id];
+    // TTL absoluto (D77): se conserva el sello existente; solo el primer guardado
+    // lo estampa. Editar la mascota o asignarle alimento NO extiende la ventana.
+    const savedAt = readGuestPetsSavedAt() ?? Date.now();
     window.localStorage.setItem(
       GUEST_PETS_KEY,
-      JSON.stringify({ pets: slim, activePetId: activeId, foodAssignedAt: assigned }),
+      JSON.stringify({ pets: slim, activePetId: activeId, foodAssignedAt: assigned, savedAt }),
     );
   } catch (err) {
     // Cuota llena o storage bloqueado: el perfil vive igual en memoria esta sesión.
     console.warn("[pets] no se pudo guardar el perfil de invitado en el dispositivo", err);
   }
+}
+
+/**
+ * Descarta un espejo vencido (D77). Además del snapshot borra las fotos de esas
+ * mascotas: viven en otra llave (`PHOTOS_KEY`) y, al ser data-URLs, quedarían
+ * huérfanas consumiendo cuota sin que nadie pueda volver a mostrarlas. Solo toca
+ * ids `local_…`; las fotos de mascotas migradas ya se renombraron al id real
+ * (`migrateStoredPhoto`), así que no hay riesgo de borrar la foto de un cliente.
+ */
+function expireGuestPets(pets: Pet[]) {
+  for (const p of pets) if (isLocalId(p.id)) writeStoredPhoto(p.id, null);
+  clearGuestPets();
 }
 
 /** Borra el espejo del invitado (al migrar/autenticar o cerrar sesión). */

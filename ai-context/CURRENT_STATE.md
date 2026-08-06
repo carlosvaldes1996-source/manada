@@ -6,7 +6,7 @@
 > | **Purpose** | Foto del estado actual: qué es real, qué frentes están abiertos y cuál es el siguiente paso. Se **reescribe** al cerrar cada hito (no se apila; la narración histórica vive en `DECISIONS.md`). |
 > | **Owner** | Carlos (fundador) · Claude |
 > | **Status** | 🟢 Vivo |
-> | **Last Updated** | 2026-08-05 |
+> | **Last Updated** | 2026-08-06 |
 > | **Depends On** | DECISIONS.md, ROADMAP.md |
 > | **Supersedes** | `history/05-bitacora-avances-2026-07.md` (versión-bitácora archivada) |
 > | **Source of Truth** | ✅ del *estado actual y el siguiente paso*. Único dueño del estado: ningún otro doc lo repite. |
@@ -66,7 +66,7 @@
 ## Claves del código (para no re-derivar)
 
 - **Capa Medusa del front:** `apps/web/src/lib/medusa/` — `client.ts` (SDK, JWT en localStorage/SSR nostore) · `products.ts`/`map-product.ts` (catálogo; `SUBSCRIPTIONS_ENABLED`; `getProductByHandle` con `React.cache`) · **`catalog-cache.ts`** (`server-only`; envolturas `unstable_cache` que usan SOLO las páginas ISR, D59) · `cart.ts` · `checkout.ts` · `auth.ts`/`account.ts` · `shipping.ts` · `pets.ts` (mapper `StorePet→Pet`).
-- **Providers:** `components/providers/` — `session-provider` (sesión JWT persistente) · `pet-provider` (hidrata `/store/pets` al login, empuja mascotas de invitado, `updatePet`/`assignFood` optimistas) · `cart-provider` (cart_id en localStorage). Coordinador: `hooks/use-auth-actions.ts` (login/registro/logout + `transferCart`).
+- **Providers:** `components/providers/` — `session-provider` (sesión JWT persistente) · `pet-provider` (hidrata `/store/pets` al login, empuja mascotas de invitado, `updatePet`/`assignFood` optimistas) · `cart-provider` (cart_id en localStorage). Coordinador: `hooks/use-auth-actions.ts` (login/registro/logout + `transferCart`). **El espejo local del invitado (`manada.guest_pets`) caduca a las 24 h (D77)** — TTL absoluto desde la creación, no deslizante; antes no tenía vencimiento y una mascota creada sin cuenta quedaba en el dispositivo para siempre.
 - **Backend custom:** `apps/backend/src/modules/pet` · `src/api/store/pets` (+ validators zod) · `src/subscribers/{password-reset,food-purchased}.ts` · `src/api/middlewares.ts` (`subscription_price`) · `src/lib/shipping.ts` + `src/scripts/{seed,setup-free-shipping}.ts`.
 - **Pago Flow (D58):** `src/modules/flow-payment` (modelo `flow_payment`) · `src/lib/flow.ts` (firma HMAC + `payment/create`/`getStatus`) · `src/lib/flow-settle.ts` (conciliación idempotente) · `src/api/store/carts/[id]/flow-payment` + `src/api/flow/{confirmation,return}`. Front: `apps/web/src/lib/medusa/flow.ts` + `app/checkout/*`. Contrato: `API.md §14`.
 - **Funnel/perfil:** `app/comenzar/*` (wizard + recomendación server-hydrated) · `lib/recommend.ts` (puro, recibe `products`) · `lib/anticipation.ts` · `app/(tienda)/cuenta/mascotas/*` + `components/pet/{pet-edit-dialog,food-selector-dialog,pet-tag}.tsx`.
