@@ -182,7 +182,7 @@ export function LandingView({ products }: { products: Product[] }) {
               }
               icon={<Heart className="size-5" aria-hidden />}
               title="Nunca le falta nada"
-              description="Recibe su comida en la puerta, a tiempo. Te avisamos antes de que se acabe y tú decides cada pedido."
+              description="Recibe su comida en la puerta, a tiempo. Te avisamos antes de que se acabe y tú eliges: la pides en ese momento o la dejas en un plan que controlas tú."
             />
           </Grid>
         </Stack>
@@ -221,8 +221,21 @@ export function LandingView({ products }: { products: Product[] }) {
           </Stack>
           <Grid cols={1} sm={2} gap={3}>
             <TrustItem icon={<Truck className="size-5" aria-hidden />} title="Despacho honesto" body="Ves el costo real de despacho antes de pagar, sin sorpresas al final." />
-            <TrustItem icon={<RefreshCw className="size-5" aria-hidden />} title="Tú decides" body="Te avisamos a tiempo y tú confirmas cada pedido. Nada se compra solo." />
-            <TrustItem icon={<ShieldCheck className="size-5" aria-hidden />} title="Compra sin sorpresas" body="Pagas por transferencia con los datos que te enviamos y coordinamos el despacho contigo." />
+            {/* Las dos ramas explícitas, en vez de un "nada se compra solo" que
+                choca con que sí vendemos un plan recurrente: negar la recurrencia
+                es justo lo que hace leer la suscripción como cobro oculto. */}
+            <TrustItem
+              icon={<RefreshCw className="size-5" aria-hidden />}
+              title="Tú decides"
+              body="En compra única pagas una vez y no se repite. Si eliges un plan, tú fijas cada cuánto llega y puedes saltarlo, pausarlo o cancelarlo sin costo."
+            />
+            {/* Medio de pago real desde D58: Flow. El copy anterior (transferencia)
+                venía del pago manual de D24 y ya no describía el checkout. */}
+            <TrustItem
+              icon={<ShieldCheck className="size-5" aria-hidden />}
+              title="Pago seguro"
+              body="Pagas con tarjeta de crédito o débito en el checkout de Flow. Los datos de tu tarjeta los guarda Flow, nunca nosotros."
+            />
             <TrustItem icon={<Heart className="size-5" aria-hidden />} title="Hecho con cariño" body="Recomendaciones pensadas para tu mascota, no para vaciar la bodega." />
           </Grid>
         </div>
