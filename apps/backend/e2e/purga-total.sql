@@ -78,7 +78,8 @@ DECLARE
     'fulfillment_label', 'fulfillment_item', 'fulfillment',
     'fulfillment_address',
 
-    -- 6. RESERVAS de stock  (NO se tocan inventory_item ni inventory_level)
+    -- 6. RESERVAS de stock  (no se borran inventory_item ni inventory_level, pero
+    --    su contador SÍ se reconcilia después del bucle — ver "RECONCILIACIÓN")
     'reservation_item',
 
     -- 7. MÓDULOS PROPIOS DE MANADA
@@ -113,6 +114,48 @@ BEGIN
     END IF;
   END LOOP;
   RAISE NOTICE 'TOTAL borrado: % filas', total;
+END $$;
+
+-- ═══ RECONCILIACIÓN del contador de stock reservado ═══
+-- Arriba se borró `reservation_item` por SQL, pero `inventory_level.reserved_quantity`
+-- es una columna ALMACENADA que Medusa solo mantiene creando/borrando reservas *a
+-- través del módulo de inventario*. El módulo lo dice y bloquea escribirla a mano:
+--   "reserved_quantity should solely be handled through creating & updating
+--    reservation items"
+--
+-- Sin este paso el contador queda inflado y aparecen RESERVAS FANTASMA: stock
+-- retenido por pedidos que ya no existen, invisible en el Admin. Cuestan dos veces:
+--   (a) impiden borrar el producto — el error "Cannot remove following inventory
+--       item(s) since they have reservations" ENGAÑA: la validación real
+--       (core-flows/inventory/steps/delete-inventory-items) es `reserved_quantity > 0`,
+--       no la existencia de reservas; y
+--   (b) restan del disponible (`stocked - reserved`), así que la tienda vende menos
+--       de lo que tiene, o muestra "agotado" con bodega llena.
+--
+-- Fue real: la purga del 2026-08-05 dejó 4 niveles con 7 unidades fantasma, que solo
+-- salieron a la luz al intentar borrar un producto del prototipo.
+--
+-- Se escriben las DOS columnas —la numérica y su espejo `raw_` (jsonb)— porque es un
+-- bigNumber de Medusa; dejar el espejo desincronizado siembra el mismo bug en otra
+-- capa. El `NOT EXISTS` es la salvaguarda: solo toca niveles SIN reserva viva, así
+-- que es seguro incluso con la tienda en vivo.
+DO $$
+DECLARE n bigint;
+BEGIN
+  UPDATE inventory_level il
+     SET reserved_quantity     = 0,
+         raw_reserved_quantity = jsonb_build_object('value', '0', 'precision', 20),
+         updated_at            = now()
+   WHERE il.deleted_at IS NULL
+     AND il.reserved_quantity > 0
+     AND NOT EXISTS (
+       SELECT 1 FROM reservation_item ri
+        WHERE ri.inventory_item_id = il.inventory_item_id
+          AND ri.location_id       = il.location_id
+          AND ri.deleted_at IS NULL
+     );
+  GET DIAGNOSTICS n = ROW_COUNT;
+  RAISE NOTICE 'contador de reservas reconciliado: % nivel(es)', n;
 END $$;
 
 -- ═══ CREDENCIALES — el punto delicado ═══

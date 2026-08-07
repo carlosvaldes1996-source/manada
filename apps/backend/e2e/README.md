@@ -61,6 +61,33 @@ protegería nada y la guarda de catálogo tampoco funcionaría.
   existen en el esquema (`payment_method_token` y `auth_verification_token` no existen en
   este servidor). Sin eso, una sola tabla ausente aborta toda la transacción.
 
+### El agujero que dejó la purga del 2026-08-05: reservas fantasma
+
+**Borrar `reservation_item` por SQL no libera el stock.** `inventory_level.reserved_quantity`
+es una columna **almacenada** que Medusa solo mantiene creando/borrando reservas *a través
+del módulo de inventario* — el módulo lo dice y bloquea escribirla a mano:
+
+> `// reserved_quantity should solely be handled through creating & updating reservation items`
+
+Aquella purga dejó **4 niveles con 7 unidades fantasma**: stock retenido por pedidos que ya
+no existen, invisible en el Admin. Costaba dos veces:
+
+- **Impedía borrar el producto.** El error `Cannot remove following inventory item(s) since
+  they have reservations` **engaña**: la validación real
+  (`core-flows/inventory/steps/delete-inventory-items`) es `reserved_quantity > 0`, no la
+  existencia de reservas. Se busca la reserva, no hay ninguna, y no se entiende el error.
+- **Restaba del disponible** (`stocked - reserved`) → la tienda vendía menos de lo que tiene.
+
+**Ya está cerrado en el script:** tras el bucle de borrado corre una **reconciliación** que
+pone el contador en cero solo en los niveles **sin reserva viva** (`NOT EXISTS`), y escribe
+las **dos** columnas (la numérica y su espejo `raw_` en jsonb, porque es un bigNumber de
+Medusa). Verificado en local con un fantasma fabricado: lo limpia, deja intacto un nivel con
+reserva viva, y el espejo queda sincronizado.
+
+Para diagnosticar o reparar esto **fuera** de una purga hay herramienta propia:
+`src/scripts/fix-inventory-reservations.ts` (diagnóstico por defecto, `--apply` para
+corregir; nunca borra reservas vivas).
+
 ### El detalle que casi cuesta el acceso al Admin
 
 La credencial de Carlos tiene **`user_id` y `customer_id` en la MISMA fila** de
