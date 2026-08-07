@@ -25,6 +25,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Stack, Row } from "@/components/ui/stack";
+// Del módulo concreto, no del barril: `providers/index` monta el
+// SubscribeFlowProvider que renderiza esta hoja, y el barril cerraría el ciclo.
+import { useCart } from "@/components/providers/cart-provider";
 import { effectiveSubscriptionPrice, formatCLP } from "@/lib/format";
 import { SUBSCRIPTION_FREQUENCIES } from "@/hooks/use-subscription";
 import type { Product, SubscriptionFrequencyWeeks } from "@/types";
@@ -44,6 +47,10 @@ export function SubscribeConfirmSheet({
   details: SubscribeConfirmDetails | null;
 }) {
   const router = useRouter();
+  // El alta corre en segundo plano mientras esta hoja se lee (SubscribeFlowProvider).
+  // Casi siempre termina antes del clic; si no, el CTA espera en vez de dejar al
+  // usuario en un carrito que todavía no tiene la línea.
+  const { isSyncing } = useCart();
   if (!details) return null;
 
   const { product, frequency } = details;
@@ -104,7 +111,11 @@ export function SubscribeConfirmSheet({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Seguir viendo
           </Button>
-          <Button onClick={goToCart} leadingIcon={<ShoppingBag className="size-4" aria-hidden />}>
+          <Button
+            onClick={goToCart}
+            loading={isSyncing}
+            leadingIcon={<ShoppingBag className="size-4" aria-hidden />}
+          >
             Ir al carrito
           </Button>
         </DialogFooter>

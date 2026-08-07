@@ -36,6 +36,13 @@ interface CartContextValue {
   subtotal: number;
   /** Carga inicial del carrito persistido. */
   isLoading: boolean;
+  /**
+   * Hay una mutación EN VUELO (agregar/actualizar/quitar línea). Junto con
+   * `isLoading` distingue "el carrito está vacío" de "todavía no lo sé": sin esta
+   * señal, una vista que aterriza mientras el alta viaja al backend anuncia un
+   * carrito vacío que en un segundo deja de serlo.
+   */
+  isSyncing: boolean;
   addItem: (
     product: Product,
     opts?: { quantity?: number; subscriptionWeeks?: SubscriptionFrequencyWeeks },
@@ -61,6 +68,9 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCartState] = useState<MedusaCart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Mutaciones en vuelo (contador, no booleano: dos clics rápidos se solapan y el
+  // primero en terminar no debe declarar el carrito quieto).
+  const [pendingOps, setPendingOps] = useState(0);
   // Ref para operar con el carrito actual sin closures obsoletos en clics rápidos.
   const cartRef = useRef<MedusaCart | null>(null);
 
@@ -90,6 +100,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
   }, [setCart]);
 
+  /**
+   * Envuelve una escritura del carrito para que `isSyncing` la refleje mientras
+   * viaja. Punto único: cualquier mutación nueva pasa por aquí y la señal sigue
+   * siendo verdadera sin que cada consumidor lleve su propio estado de "cargando".
+   */
+  const runMutation = useCallback(async <T,>(op: () => Promise<T>): Promise<T> => {
+    setPendingOps((n) => n + 1);
+    try {
+      return await op();
+    } finally {
+      setPendingOps((n) => n - 1);
+    }
+  }, []);
+
   /** Devuelve el carrito actual o crea uno nuevo (perezoso: solo al primer ítem). */
   const ensureCart = useCallback(async (): Promise<MedusaCart> => {
     if (cartRef.current) return cartRef.current;
@@ -104,42 +128,49 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.warn(`[cart] "${product.name}" no tiene variantId; no se puede agregar al carrito real.`);
         return;
       }
-      const current = await ensureCart();
+      const variantId = product.variantId;
       const quantity = opts?.quantity ?? 1;
-      // Suscripción: ruta propia que fija el precio suscrito + deja la metadata de
-      // suscripción en la línea (D55). Compra única: ruta core sin cambios.
-      const updated = opts?.subscriptionWeeks
-        ? await addSubscriptionLineItem(current.id, product.variantId, quantity, opts.subscriptionWeeks)
-        : await addLineItem(current.id, product.variantId, quantity);
-      setCart(updated);
+      await runMutation(async () => {
+        const current = await ensureCart();
+        // Suscripción: ruta propia que fija el precio suscrito + deja la metadata de
+        // suscripción en la línea (D55). Compra única: ruta core sin cambios.
+        const updated = opts?.subscriptionWeeks
+          ? await addSubscriptionLineItem(current.id, variantId, quantity, opts.subscriptionWeeks)
+          : await addLineItem(current.id, variantId, quantity);
+        setCart(updated);
+      });
       // Punto único del funnel para "add_to_cart": PLP, PDP, recomendación y
       // recompra del dashboard pasan todas por aquí (una sola instrumentación).
       trackAddToCart(product, quantity);
     },
-    [ensureCart, setCart],
+    [ensureCart, runMutation, setCart],
   );
 
   const updateQuantity = useCallback<CartContextValue["updateQuantity"]>(
     async (lineId, quantity) => {
       const current = cartRef.current;
       if (!current || !lineId) return;
-      const updated =
-        quantity <= 0
-          ? await removeLineItem(current.id, lineId)
-          : await setLineItemQuantity(current.id, lineId, quantity);
-      setCart(updated ?? null);
+      await runMutation(async () => {
+        const updated =
+          quantity <= 0
+            ? await removeLineItem(current.id, lineId)
+            : await setLineItemQuantity(current.id, lineId, quantity);
+        setCart(updated ?? null);
+      });
     },
-    [setCart],
+    [runMutation, setCart],
   );
 
   const removeItem = useCallback<CartContextValue["removeItem"]>(
     async (lineId) => {
       const current = cartRef.current;
       if (!current || !lineId) return;
-      const updated = await removeLineItem(current.id, lineId);
-      setCart(updated ?? null);
+      await runMutation(async () => {
+        const updated = await removeLineItem(current.id, lineId);
+        setCart(updated ?? null);
+      });
     },
-    [setCart],
+    [runMutation, setCart],
   );
 
   const applyCart = useCallback<CartContextValue["applyCart"]>((next) => setCart(next), [setCart]);
@@ -176,8 +207,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const items = mapCartItems(cart);
     const count = items.reduce((sum, i) => sum + i.quantity, 0);
     const subtotal = cart?.item_subtotal ?? items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
-    return { cart, items, count, subtotal, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, transferToCustomer, reset, seedItems };
-  }, [cart, isLoading, addItem, removeItem, updateQuantity, applyCart, refresh, clear, transferToCustomer, reset, seedItems]);
+    return { cart, items, count, subtotal, isLoading, isSyncing: pendingOps > 0, addItem, removeItem, updateQuantity, applyCart, refresh, clear, transferToCustomer, reset, seedItems };
+  }, [cart, isLoading, pendingOps, addItem, removeItem, updateQuantity, applyCart, refresh, clear, transferToCustomer, reset, seedItems]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

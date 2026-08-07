@@ -110,6 +110,8 @@ export function RecommendationView({ products }: { products: Product[] }) {
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [planMode, setPlanMode] = useState<PlanMode>("recommended");
   const [brandOpen, setBrandOpen] = useState(false);
+  // Alta en curso: el CTA espera al carrito real antes de saltar (ver `addToOrder`).
+  const [adding, setAdding] = useState(false);
 
   const food = useMemo(
     () => speciesFoods.find((f) => f.id === selectedId) ?? recommended,
@@ -203,10 +205,28 @@ export function RecommendationView({ products }: { products: Product[] }) {
    * compra como invitado (D17/D26); la cuenta se materializa recién en el checkout y
    * solo donde es estructuralmente necesaria (la suscripción, que exige `customer_id`).
    */
-  function addToOrder() {
-    if (!food) return;
-    addItem(food, { quantity: 1 });
+  async function addToOrder() {
+    if (!food || adding) return;
+    setAdding(true);
+    try {
+      // Se ESPERA el alta antes de navegar. Para quien llega del funnel el carrito
+      // todavía no existe: `addItem` hace dos viajes al backend (crear carrito +
+      // agregar la línea), y navegar sin esperarlos hacía aterrizar en un carrito
+      // que aún no tenía nada. El botón queda en "cargando" en vez de mostrar una
+      // pantalla que se desdice sola.
+      await addItem(food, { quantity: 1 });
+    } catch {
+      setAdding(false);
+      toast({
+        title: "No pudimos sumar el producto",
+        description: "Revisa tu conexión e inténtalo de nuevo.",
+        variant: "error",
+      });
+      return;
+    }
     assignFood(activePet!.id, food.id);
+    // `adding` sigue en true a propósito: la navegación desmonta esta vista y el
+    // botón no debe volver a habilitarse en el intertanto.
     router.push("/carrito");
   }
 
@@ -391,6 +411,7 @@ export function RecommendationView({ products }: { products: Product[] }) {
                   size="lg"
                   block
                   onClick={savePlan}
+                  disabled={adding}
                   trailingIcon={<Check className="size-4" aria-hidden />}
                 >
                   Guardar el plan de {activePet.name}
@@ -398,9 +419,12 @@ export function RecommendationView({ products }: { products: Product[] }) {
                 <button
                   type="button"
                   onClick={addToOrder}
-                  className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline"
+                  disabled={adding}
+                  aria-busy={adding || undefined}
+                  className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-text-brand underline-offset-4 hover:underline disabled:opacity-50"
                 >
-                  <Repeat className="size-4" aria-hidden /> o reponerla ahora
+                  <Repeat className="size-4" aria-hidden />{" "}
+                  {adding ? "Sumando al pedido…" : "o reponerla ahora"}
                 </button>
               </Stack>
             ) : (
@@ -429,9 +453,10 @@ export function RecommendationView({ products }: { products: Product[] }) {
                         block
                         variant="secondary"
                         onClick={addToOrder}
+                        loading={adding}
                         trailingIcon={<ArrowRight className="size-4" aria-hidden />}
                       >
-                        Sumar al pedido
+                        {adding ? "Sumando al pedido…" : "Sumar al pedido"}
                       </Button>
                     </Stack>
                   ) : (
@@ -449,9 +474,10 @@ export function RecommendationView({ products }: { products: Product[] }) {
                         size="lg"
                         block
                         onClick={addToOrder}
+                        loading={adding}
                         trailingIcon={<ArrowRight className="size-4" aria-hidden />}
                       >
-                        Sumar al pedido de {activePet.name}
+                        {adding ? "Sumando al pedido…" : `Sumar al pedido de ${activePet.name}`}
                       </Button>
                     </Stack>
                   )}

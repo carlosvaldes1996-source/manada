@@ -9,6 +9,7 @@ import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   CartItem,
   FreeShippingBar,
@@ -35,7 +36,7 @@ import type { Product } from "@/types";
  * y cross-sell con productos REALES del catálogo (Store API).
  */
 export default function CarritoPage() {
-  const { items, updateQuantity, removeItem } = useCart();
+  const { items, updateQuantity, removeItem, isLoading, isSyncing } = useCart();
   const { activePet } = usePet();
   const router = useRouter();
 
@@ -86,6 +87,15 @@ export default function CarritoPage() {
         (!activePet || p.species.includes(activePet.species)),
     )
     .slice(0, 6);
+
+  // Sin líneas hay DOS estados distintos y solo uno es "vacío": mientras se hidrata
+  // el carrito persistido (`isLoading`) o mientras un alta viaja al backend
+  // (`isSyncing`, p. ej. al llegar desde la recomendación) todavía no sabemos qué
+  // hay. Anunciar "tu carrito está vacío" ahí es decir algo falso durante un par de
+  // segundos: se muestra el esqueleto de las líneas que están por aparecer.
+  if (items.length === 0 && (isLoading || isSyncing)) {
+    return <CartSkeleton />;
+  }
 
   if (items.length === 0) {
     return (
@@ -194,6 +204,42 @@ export default function CarritoPage() {
             products={related}
           />
         )}
+      </Stack>
+    </Section>
+  );
+}
+
+/**
+ * Carrito aún desconocido: mismo esqueleto que la página real (una línea + el
+ * resumen) para que al llegar el dato no se mueva nada. Un placeholder cálido,
+ * nunca un mensaje que afirme lo que todavía no sabemos.
+ */
+function CartSkeleton() {
+  return (
+    <Section spacing="md">
+      <Stack gap={6}>
+        <h1 className="heading-1 text-text-primary">Tu carrito</h1>
+        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+          <Stack gap={3}>
+            <Skeleton shape="text" className="w-40" />
+            <Row
+              gap={4}
+              align="start"
+              className="rounded-[var(--radius-lg)] border border-border-default bg-surface p-4"
+            >
+              <Skeleton className="size-20 shrink-0" />
+              <Stack gap={2} className="min-w-0 flex-1">
+                <Skeleton shape="text" className="w-1/4" />
+                <Skeleton shape="text" className="w-3/4" />
+                <Skeleton shape="text" className="mt-1 h-6 w-1/3" />
+              </Stack>
+            </Row>
+          </Stack>
+          <Stack gap={4}>
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-44 w-full" />
+          </Stack>
+        </div>
       </Stack>
     </Section>
   );
