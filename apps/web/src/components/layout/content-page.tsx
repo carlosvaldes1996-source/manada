@@ -37,3 +37,15 @@ export function ProseBlock({ heading, children }: { heading: string; children: R
     </section>
   );
 }
+
+/**
+ * Lista con viñetas dentro de un `ProseBlock`. Existe porque las páginas legales
+ * enumeran mucho (datos, finalidades, derechos) y un párrafo con comas se vuelve
+ * ilegible; el reset de Tailwind quita las viñetas, así que se restituyen aquí una
+ * sola vez en lugar de repetir clases en cada página. Los hijos son los `<li>`.
+ */
+export function ProseList({ children }: { children: React.ReactNode }) {
+  return (
+    <ul className="flex list-disc flex-col gap-1.5 pl-5 marker:text-text-muted">{children}</ul>
+  );
+}

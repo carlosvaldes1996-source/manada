@@ -43,8 +43,11 @@
 - [ ] **Backfill del histórico en producción:** `npx medusa exec ./src/scripts/backfill-cart-funnel.ts`.
       Idempotente y reanudable; usar `FUNNEL_BACKFILL_LIMIT` para una primera pasada acotada.
       **No pasa `observedAt` a propósito** → los carritos históricos conservan su fecha real.
-- [ ] **Política de privacidad:** reflejar el `visitor_id` (identificador propio, aleatorio, sin dato
-      personal, no es cookie de terceros) antes de darlo por encendido.
+- [x] ~~**Política de privacidad:** reflejar el `visitor_id`~~ → **HECHO en D80.** La política se
+      reescribió completa al estándar de la Ley 21.719: el identificador aleatorio del navegador,
+      la atribución de campaña y los terceros que reciben datos quedan declarados. **Este punto ya
+      no bloquea el encendido** (sí lo hace, para las cookies de medición, el banner de consentimiento
+      del Frente 2).
 - [ ] **Menor — carritos de prueba en la BD local:** quedaron 2 órdenes canceladas (#1500, #1501) del
       arnés de regresión, con su reserva de stock ya liberada. Inofensivas; se limpian si molestan al
       leer los reportes locales.
@@ -224,6 +227,17 @@
 
 - [ ] **Mercado Pago Checkout Pro** (fast-follow tras infra live con pago manual): provider module + webhook + habilitar en región + redirect/confirmación. Decidido: Checkout Pro redirect; "construir todo, credenciales de prueba después" (D24).
 - [ ] **Email transaccional**: entrega real del enlace de recuperación (hoy subscriber → log, D26) + confirmaciones de orden/datos de transferencia.
+- [ ] **Banner de consentimiento de cookies (brecha de cumplimiento, la abre D80).** La Ley 21.719
+      —vigente el **1 de diciembre de 2026**— exige consentimiento **explícito y previo** para las
+      cookies que no son necesarias; hoy **GTM carga siempre** y con él GA4 (D46) y el Meta Pixel
+      (D53). Hace falta: banner con aceptar/rechazar por categoría (nada premarcado), persistir la
+      elección, y **no montar `GoogleTagManager` hasta que haya consentimiento** (el punto único de
+      integración de D46 juega a favor: se gatea en un solo lugar, `layout.tsx`). Ojo con el efecto
+      colateral: sin consentimiento no hay medición del funnel, así que conviene decidir el diseño
+      del banner —no solo implementarlo— antes de encender campañas.
+- [ ] **Identidad legal del responsable (la abre D80):** razón social, RUT y domicilio de la empresa
+      no están documentados en `/ai-context`, así que la política de privacidad y los términos los
+      omiten. Completarlos en ambas páginas cuando exista la entidad.
 
 ## 🟡 Frente 3 — Producto (en paralelo, por bloques; un bloque → validado → un commit)
 
