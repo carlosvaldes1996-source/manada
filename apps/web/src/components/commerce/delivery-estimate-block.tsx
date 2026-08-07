@@ -2,7 +2,7 @@ import { Truck } from "lucide-react";
 import { formatDeliveryDate, formatShippingCost } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export interface HonestShippingBlockProps {
+export interface DeliveryEstimateBlockProps {
   date: Date;
   cost: number;
   comuna: string;
@@ -12,12 +12,21 @@ export interface HonestShippingBlockProps {
 }
 
 /**
- * Bloque de despacho honesto (UX.md §1, DESIGN_SYSTEM §8 honestidad): fecha y
- * costo REALES, siempre visibles, nunca en letra chica. Tono cálido del sistema
- * (no azul frío). Aparece en la ProductCard y en la ficha — la transparencia es
- * parte del diferenciador.
+ * Estimación de entrega: fecha y costo REALES para una comuna, siempre visibles y
+ * nunca en letra chica (DESIGN_SYSTEM §8). Tono cálido del sistema (no azul frío).
+ *
+ * ⚠️ Hoy NO se usa en producción: el despacho es manual y todavía no se calcula por
+ * comuna, así que las pantallas reales montan <ShippingPolicyNote>, que dice lo que
+ * sí sabemos (la política de costo) sin prometer una fecha. Este bloque queda listo
+ * para el día que exista el cálculo por comuna; vive en el styleguide mientras tanto.
  */
-export function HonestShippingBlock({ date, cost, comuna, size = "sm", className }: HonestShippingBlockProps) {
+export function DeliveryEstimateBlock({
+  date,
+  cost,
+  comuna,
+  size = "sm",
+  className,
+}: DeliveryEstimateBlockProps) {
   const free = cost === 0;
   return (
     <div

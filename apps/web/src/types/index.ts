@@ -218,7 +218,7 @@ export interface SubscriptionView {
   lastChargeError?: string | null;
 }
 
-/** Despacho honesto: fecha y costo reales, siempre visibles (UX.md §1). */
+/** Estimación de entrega: fecha y costo reales, siempre visibles (UX.md §1). */
 export interface ShippingEstimate {
   comuna: string;
   /** Fecha estimada de entrega. */

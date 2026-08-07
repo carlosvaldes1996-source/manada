@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ContentPage, ProseBlock } from "@/components/layout/content-page";
 import { SITE } from "@/config/site";
 
@@ -28,8 +29,14 @@ export default function TerminosPage() {
       </ProseBlock>
       <ProseBlock heading="Despacho">
         <p>
-          El costo de despacho se muestra de forma honesta antes de pagar y coordinamos la entrega
-          contigo tras la compra. Puede variar según tu comuna y disponibilidad.
+          El despacho es gratis en los pedidos con suscripción, sin monto mínimo, y en las compras
+          únicas que superen el monto publicado en{" "}
+          <Link href="/despacho" className="font-semibold text-text-brand hover:underline">
+            Despacho y cobertura
+          </Link>
+          ; bajo ese monto se cobra el despacho estándar. El costo aparece en el carrito y al pagar
+          antes de que confirmes la compra, y puede variar según tu comuna y disponibilidad.
+          Coordinamos la entrega contigo tras la compra.
         </p>
       </ProseBlock>
       <ProseBlock heading="Contacto">

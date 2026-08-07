@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ShoppingBag, Truck } from "lucide-react";
+import { RefreshCw, ShoppingBag } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,10 @@ import {
   FreeShippingBar,
   OrderSummary,
   ProductRail,
+  ShippingPolicyNote,
 } from "@/components/commerce";
 import { useCart, usePet } from "@/components/providers";
-import { effectiveSubscriptionPrice, formatCLP } from "@/lib/format";
+import { effectiveSubscriptionPrice } from "@/lib/format";
 import { getShippingPolicy, listProducts, type ShippingPolicy } from "@/lib/medusa";
 import type { Product } from "@/types";
 
@@ -63,12 +64,20 @@ export default function CarritoPage() {
   const regularSubtotal = items.reduce((s, i) => s + i.product.price.current * i.quantity, 0);
   const savings = items.reduce((s, i) => s + (i.product.price.current - effective(i)) * i.quantity, 0);
   const paySubtotal = regularSubtotal - savings;
-  // Estimación coherente con el backend: gratis sobre el umbral, si no el costo base.
-  // El cobro definitivo lo confirma el checkout con las opciones reales de Medusa.
-  const shippingCost = policy ? (paySubtotal >= policy.freeShippingThreshold ? 0 : policy.baseShippingAmount) : undefined;
 
   const subscriptionLines = items.filter((i) => i.subscriptionWeeks);
   const oneTimeLines = items.filter((i) => !i.subscriptionWeeks);
+
+  // Las DOS ramas de la política, en el mismo orden en que las evalúa el backend
+  // (promociones `ENVIO_GRATIS_SUSCRIPCION` y `ENVIO_GRATIS_30K`): con suscripción
+  // el despacho va incluido sin monto mínimo; si no, decide el umbral. El cobro
+  // definitivo lo confirma el checkout con las opciones reales de Medusa.
+  const includedBySubscription = Boolean(policy?.subscriptionFreeShipping) && subscriptionLines.length > 0;
+  const shippingCost = policy
+    ? includedBySubscription || paySubtotal >= policy.freeShippingThreshold
+      ? 0
+      : policy.baseShippingAmount
+    : undefined;
 
   const related = catalog
     .filter(
@@ -149,7 +158,13 @@ export default function CarritoPage() {
 
           {/* Resumen + envío gratis */}
           <Stack gap={4}>
-            {policy && <FreeShippingBar subtotal={paySubtotal} threshold={policy.freeShippingThreshold} />}
+            {policy && (
+              <FreeShippingBar
+                subtotal={paySubtotal}
+                threshold={policy.freeShippingThreshold}
+                includedBySubscription={includedBySubscription}
+              />
+            )}
             <OrderSummary
               subtotal={regularSubtotal}
               savings={savings}
@@ -164,13 +179,10 @@ export default function CarritoPage() {
               </Button>
             </OrderSummary>
 
-            {/* Reaseguro de confianza (vale para todo carrito, clave en la 1ª compra) */}
-            <Stack gap={2} className="rounded-[var(--radius-md)] border border-border-default bg-surface p-4 text-[13px] text-text-secondary">
-              <Row gap={2} align="start">
-                <Truck className="mt-0.5 size-4 shrink-0 text-text-brand" aria-hidden />
-                Despacho honesto: ves el costo real antes de pagar y es gratis sobre {policy ? formatCLP(policy.freeShippingThreshold) : "cierto monto"}.
-              </Row>
-            </Stack>
+            {/* Reaseguro de confianza (vale para todo carrito, clave en la 1ª compra).
+                Misma nota que la ficha de producto: la regla se cuenta una sola vez
+                y con las mismas palabras en todo el sitio. */}
+            {policy && <ShippingPolicyNote policy={policy} size="md" />}
           </Stack>
         </div>
 

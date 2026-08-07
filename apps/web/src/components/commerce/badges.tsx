@@ -43,8 +43,9 @@ export interface ShippingBadgeProps {
 }
 
 /**
- * Despacho honesto en formato compacto (badge). Para el bloque completo y
- * siempre-visible de la PDP usar <HonestShippingBlock>.
+ * Estimación de entrega en formato compacto (badge). Para la política de costo
+ * de la PDP usar <ShippingPolicyNote>; para el bloque completo con fecha y
+ * comuna, <DeliveryEstimateBlock>.
  */
 export function ShippingBadge({ date, cost, comuna }: ShippingBadgeProps) {
   const parts: string[] = [];

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Product } from "@/types";
+import type { ShippingPolicy } from "@/lib/medusa";
 import { useSession } from "@/components/providers";
 import { LandingView } from "./landing-view";
 import { DashboardView } from "./dashboard-view";
@@ -11,11 +12,17 @@ import { DashboardView } from "./dashboard-view";
  * pasa a ambas vistas; la decisión landing vs. dashboard depende del estado de
  * sesión (solo disponible en cliente).
  */
-export function HomeSwitch({ products }: { products: Product[] }) {
+export function HomeSwitch({
+  products,
+  shippingPolicy,
+}: {
+  products: Product[];
+  shippingPolicy: ShippingPolicy;
+}) {
   const { status } = useSession();
   return status === "authenticated" ? (
     <DashboardView products={products} />
   ) : (
-    <LandingView products={products} />
+    <LandingView products={products} shippingPolicy={shippingPolicy} />
   );
 }

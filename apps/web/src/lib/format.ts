@@ -22,7 +22,7 @@ const DATE_SHORT = new Intl.DateTimeFormat("es-CL", {
   month: "long",
 });
 
-/** Date → "lunes, 30 de junio" (para despacho honesto) */
+/** Date → "lunes, 30 de junio" (para la estimación de entrega) */
 export function formatDateLong(date: Date): string {
   return DATE_SHORT.format(date);
 }
@@ -36,7 +36,7 @@ const DATE_MED = new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "shor
 
 /**
  * Fecha de despacho en lenguaje natural y cálido:
- * hoy / mañana / "vie 4 jul". Para el bloque de despacho honesto.
+ * hoy / mañana / "vie 4 jul". Para el bloque de estimación de entrega.
  */
 export function formatDeliveryDate(date: Date): string {
   const today = new Date();

@@ -21,7 +21,7 @@
 - **Perfil de mascota = núcleo** del producto, no un add-on. Todo se personaliza alrededor de él.
 - **Home y catálogo personalizados** según la(s) mascota(s) del usuario.
 - **Anticipación visible:** la app siempre muestra "el siguiente paso" antes de que lo pidas (recompra, dosis, etapa).
-- **Despacho honesto:** costo y fecha reales en la **ficha**, no recién en el checkout.
+- **Despacho sin letra chica:** la regla completa —gratis con suscripción; en compra única, gratis sobre el umbral— visible en la **ficha**, no recién en el checkout. Se dice cuál de las dos ramas manda en este pedido, no solo el monto (D81; el rótulo "despacho honesto" se retiró: nombraba la virtud en vez de explicar la regla).
 - **Checkout de 1 pantalla**, con suscripción como decisión natural en el último paso.
 - **Buscador potente:** autocompletar, tolerante a typos, sugerencias por mascota.
 - **Fricción cero:** menos pasos, menos campos, defaults inteligentes.
@@ -80,7 +80,7 @@ El **Perfil de Mascota** alimenta todo. Datos mínimos: especie, nombre, foto, f
 ## 4. Inventario de páginas (Fase 2 → prototipo)
 1. **Home** (logueado/personalizado + versión visitante).
 2. **PLP** — listado de categoría con filtros.
-3. **PDP** — ficha de producto (con despacho honesto + suscripción).
+3. **PDP** — ficha de producto (con política de despacho + suscripción).
 4. **Perfil de Mascota** — alta y edición (núcleo).
 5. **Carrito** (drawer + página).
 6. **Checkout** (1 pantalla).
@@ -92,7 +92,7 @@ El **Perfil de Mascota** alimenta todo. Datos mínimos: especie, nombre, foto, f
 
 ### A — Primera compra con suscripción (visitante → cliente)
 1. Entra por búsqueda/SEO a una **PDP**.
-2. Ve precio + **despacho honesto** ("Llega mañana a Ñuñoa · $2.990") sin loguearse.
+2. Ve precio + **política de despacho** ("Despacho gratis con suscripción · en compra única, gratis sobre $30.000") sin loguearse.
 3. CTA "Agregar" o **"Suscríbete y ahorra 15%"**.
 4. Al elegir suscripción → mini-onboarding: "¿Para qué mascota?" (nombre + especie + peso) → **frecuencia auto-calculada** (editable).
 5. Carrito → **checkout 1 pantalla** (datos, despacho, pago Webpay).
@@ -202,7 +202,7 @@ Confianza: boleta SII, devoluciones, seguridad.
 - **Selector de mascota global** en header: cambia la personalización de toda la app (cross-fade, §10 motion).
 - **Nudges de anticipación** consistentes (cápsula Miel) en Home, PDP, perfil y post-compra.
 - **Estados vacíos** con ilustración + CTA (DESIGN_SYSTEM §7).
-- **Despacho honesto** como componente reutilizable (PDP, PLP card, carrito, checkout).
+- **Política de despacho** como componente reutilizable (`ShippingPolicyNote` en PDP y carrito; `FreeShippingBar` en carrito/drawer; razón del costo en el checkout). El texto tiene un dueño único: `apps/web/src/lib/shipping-copy.ts`.
 - **"Por qué te lo recomendamos"** accesible en cada sugerencia (transparencia = confianza).
 
 ---

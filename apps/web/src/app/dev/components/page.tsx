@@ -56,9 +56,9 @@ import {
   CategoryCard,
   CheckoutStepper,
   Coupon,
+  DeliveryEstimateBlock,
   DiscountBadge,
   FreeShippingBar,
-  HonestShippingBlock,
   OrderSummary,
   PaymentMethod,
   PersonalizationBanner,
@@ -67,6 +67,7 @@ import {
   ProductRail,
   ReviewCard,
   ShippingMethod,
+  ShippingPolicyNote,
   StockBadge,
   SubscriptionBadge,
   SubscriptionBox,
@@ -92,6 +93,7 @@ import {
   DEMO_NUDGE,
   DEMO_PETS,
   DEMO_SHIPPING,
+  DEMO_SHIPPING_POLICY,
   PRODUCTS,
   REVIEWS,
 } from "@/lib/demo-data";
@@ -480,19 +482,23 @@ function CommerceSection() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
   const [filters, setFilters] = React.useState<FilterSelection>({ especie: ["perro"] });
   return (
-    <GuideSection id="commerce" title="Commerce" blurb="Componentes de dominio e-commerce: catálogo, despacho honesto, suscripción y checkout.">
+    <GuideSection id="commerce" title="Commerce" blurb="Componentes de dominio e-commerce: catálogo, despacho, suscripción y checkout.">
       <Demo name="ProductCard" when="Unidad central del catálogo. Conecta con el carrito y emite toast al agregar.">
         <div className="w-64"><ProductCard product={product} /></div>
       </Demo>
-      <Demo name="Badges de e-commerce" when="Stock, descuento, suscripción y despacho honesto compacto.">
+      <Demo name="Badges de e-commerce" when="Stock, descuento, suscripción y estimación de entrega compacta.">
         <StockBadge stock={24} />
         <StockBadge stock={3} />
         <StockBadge stock={0} />
         <DiscountBadge percent={17} />
         <SubscriptionBadge discount={15} />
       </Demo>
-      <Demo name="HonestShippingBlock" when="Fecha y costo reales, siempre visibles. Nunca en letra chica.">
-        <HonestShippingBlock date={DEMO_SHIPPING.date} cost={0} comuna="Ñuñoa" size="md" />
+      <Demo name="ShippingPolicyNote" when="La política real en la PDP y el carrito: las dos ramas (suscripción / compra única), nunca en letra chica." canvasClassName="flex-col items-stretch">
+        <ShippingPolicyNote policy={DEMO_SHIPPING_POLICY} size="md" />
+        <ShippingPolicyNote policy={{ ...DEMO_SHIPPING_POLICY, subscriptionFreeShipping: false }} size="md" />
+      </Demo>
+      <Demo name="DeliveryEstimateBlock" when="Fecha y costo reales por comuna. Aún sin uso: falta el cálculo por comuna.">
+        <DeliveryEstimateBlock date={DEMO_SHIPPING.date} cost={0} comuna="Ñuñoa" size="md" />
       </Demo>
       <Demo name="ProductGrid" when="Grilla 2→3→4 con estados loading y empty integrados." canvasClassName="block">
         <ProductGrid products={PRODUCTS.slice(0, 4)} />
@@ -510,6 +516,7 @@ function CommerceSection() {
         <PersonalizationBanner pet={pet} action={<Button variant="link" size="sm">Quitar</Button>} />
         <FreeShippingBar subtotal={22000} threshold={30000} />
         <FreeShippingBar subtotal={32000} threshold={30000} />
+        <FreeShippingBar subtotal={22000} threshold={30000} includedBySubscription />
       </Demo>
       <Demo name="SubscriptionBox" when="Caja de suscripción de la PDP (acento Miel). Frecuencia + ahorro." canvasClassName="block">
         <div className="max-w-md"><SubscriptionBox product={product} /></div>

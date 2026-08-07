@@ -6,17 +6,32 @@ import { cn } from "@/lib/utils";
 export interface FreeShippingBarProps {
   /** Subtotal actual del carrito (CLP). */
   subtotal: number;
-  /** Umbral para envío gratis (CLP). */
+  /** Umbral para envío gratis en compra única (CLP). */
   threshold: number;
+  /**
+   * El carrito trae una línea de suscripción Y la política incluye el despacho.
+   * Cuando es `true`, el umbral deja de aplicar: mostrar el progreso hacia él
+   * sería empujar a gastar más por un beneficio que el comprador YA tiene.
+   */
+  includedBySubscription?: boolean;
   className?: string;
 }
 
 /**
- * Barra de progreso hacia el envío gratis (carrito/drawer). Motiva a sumar sin
- * presionar: cuando se alcanza, celebra en verde éxito. Honesta con el monto.
+ * Estado del envío gratis en el carrito/drawer. Dos modos, según cuál de las dos
+ * ramas de la política manda (ver `@/lib/shipping-copy`):
+ *
+ *  - Suscripción → el despacho ya está incluido: se confirma y no se pide nada más.
+ *  - Compra única → progreso hacia el umbral. Motiva a sumar sin presionar y
+ *    celebra en verde éxito al alcanzarlo.
  */
-export function FreeShippingBar({ subtotal, threshold, className }: FreeShippingBarProps) {
-  const reached = subtotal >= threshold;
+export function FreeShippingBar({
+  subtotal,
+  threshold,
+  includedBySubscription = false,
+  className,
+}: FreeShippingBarProps) {
+  const reached = includedBySubscription || subtotal >= threshold;
   const remaining = Math.max(0, threshold - subtotal);
   const pct = Math.min(100, Math.round((subtotal / threshold) * 100));
 
@@ -30,7 +45,9 @@ export function FreeShippingBar({ subtotal, threshold, className }: FreeShipping
     >
       <span className="flex items-center gap-2">
         <Truck className="size-4 shrink-0" aria-hidden />
-        {reached ? (
+        {includedBySubscription ? (
+          <span>Tu suscripción incluye el despacho 🎉</span>
+        ) : reached ? (
           <span>¡Tienes envío gratis! 🎉</span>
         ) : (
           <span>
@@ -38,7 +55,9 @@ export function FreeShippingBar({ subtotal, threshold, className }: FreeShipping
           </span>
         )}
       </span>
-      <Progress value={pct} tone={reached ? "success" : "brand"} size="sm" label="Progreso hacia envío gratis" />
+      {!includedBySubscription && (
+        <Progress value={pct} tone={reached ? "success" : "brand"} size="sm" label="Progreso hacia envío gratis" />
+      )}
     </div>
   );
 }

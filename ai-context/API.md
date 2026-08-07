@@ -224,21 +224,36 @@ reemplaza cuando el catálogo deje de caber en una lectura; el contrato (`search
 no cambia.
 
 ### 8.2 Política de envío — FUENTE ÚNICA en el backend
-Manada tiene **una sola regla de envío**, definida en el backend y **nunca duplicada
-en el front**: *gratis sobre `free_shipping_threshold`; bajo ese monto, `base_shipping_amount`.*
+Manada tiene **una sola regla de envío con DOS ramas** (D81), definida en el backend y
+**nunca duplicada en el front**:
+1. **Con suscripción → gratis siempre**, sin monto mínimo (basta una línea con
+   `metadata.is_subscription`, D55).
+2. **Compra única → gratis sobre `free_shipping_threshold`**; bajo ese monto,
+   `base_shipping_amount`.
 
 - **`GET /store/shipping-policy`** → `{ shipping_policy: { currency_code, base_shipping_amount,
-  free_shipping_threshold } }`. Valores en `apps/backend/src/lib/shipping.ts` (fuente única;
-  hoy `3990` / `30000` CLP). El front lo consume con `getShippingPolicy()`
-  (`apps/web/src/lib/medusa/shipping.ts`) para la barra de envío gratis, la PDP
-  (`ShippingPolicyNote`) y el carrito. **No hay umbral ni costo hardcodeados en el front.**
-- **Cobro real (nativo):** la opción "Despacho Estándar" ($3.990) vive en el seed; el
-  "gratis sobre el umbral" es una **promoción automática** (`is_automatic`,
+  free_shipping_threshold, subscription_free_shipping } }`. Valores en
+  `apps/backend/src/lib/shipping.ts` (fuente única; hoy `3990` / `30000` CLP).
+  `subscription_free_shipping` es una **constante de política** (no un cálculo sobre el
+  carrito): dice que la suscripción incluye despacho, y por eso puede anunciarse en
+  superficies sin carrito (landing, PDP, `/despacho`). El front lo consume con
+  `getShippingPolicy()` (`apps/web/src/lib/medusa/shipping.ts`) para la barra de envío
+  gratis, la PDP (`ShippingPolicyNote`), el carrito y el checkout, y **degrada a `false`
+  si el campo no viene** (backend viejo desplegado ⇒ no se anuncia un beneficio que ese
+  backend no aplicaría al cobrar). **No hay umbral, costo ni regla hardcodeados en el front.**
+- **Cobro real (nativo):** la opción "Despacho Estándar" ($3.990) vive en el seed; cada
+  rama del "gratis" es una **promoción automática** (`is_automatic`,
   `application_method: { type: "percentage", target_type: "shipping_methods", value: 100,
-  allocation: "across" }`, regla `item_total ≥ 30000`) creada por el script idempotente
-  `apps/backend/src/scripts/setup-free-shipping.ts` (sin reseed). Así, al completar el
-  carrito, **la orden real queda con `shipping_total = 0`** cuando el subtotal alcanza el
-  umbral (verificado: orden bajo umbral → $3.990; orden sobre umbral → $0).
+  allocation: "across" }`), ambas creadas por el script idempotente
+  `apps/backend/src/scripts/setup-free-shipping.ts` (sin reseed):
+  - `ENVIO_GRATIS_30K` — regla `item_total ≥ 30000`.
+  - `ENVIO_GRATIS_SUSCRIPCION` — regla `items.metadata.is_subscription in ["true"]`.
+    El operador es **`in`, no `eq`**: `eq` exige que TODAS las líneas cumplan y un carrito
+    mixto (suscripción + compra única) perdería el beneficio.
+  Que ambas apliquen a la vez no cobra de menos: la segunda no encuentra saldo que
+  descontar (`applicableTotal = 0`) y no genera ajuste. Así, al completar el carrito,
+  **la orden real queda con `shipping_total = 0`** cuando corresponde (verificado: orden
+  bajo umbral → $3.990; orden sobre umbral → $0; carrito con suscripción → $0).
 
 ### 8.3 Auditoría de copy (sin promesas de terceros)
 El contenido visible se alineó a la realidad del MVP: **no** se promete Webpay, boleta

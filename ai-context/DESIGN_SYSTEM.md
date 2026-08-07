@@ -310,7 +310,7 @@ bg.brand-soft, radius.xl, padding 24
 ```
 
 ### 12.3 Ficha de producto
-Layout 2 col desktop (galería 7 / info 5). Info: marca (overline) → nombre (h1 Fraunces) → precio (price) → selector suscripción (cápsula Miel con ahorro) → **bloque de despacho honesto** → CTA primario sticky en móvil. Tabs: Descripción · Ingredientes · Opiniones. Cross-sell "Para la manada de {nombre}".
+Layout 2 col desktop (galería 7 / info 5). Info: marca (overline) → nombre (h1 Fraunces) → precio (price) → selector suscripción (cápsula Miel con ahorro) → **nota de política de despacho** (`ShippingPolicyNote`, D81) → CTA primario sticky en móvil. Tabs: Descripción · Ingredientes · Opiniones. Cross-sell "Para la manada de {nombre}".
 
 ### 12.4 Header / navegación
 Logo (lockup) izq · buscador central prominente (`bg.subtle`, icon 24) · selector de mascota + carrito der. Mega-menú por **especie → necesidad → etapa** (no por marca). Fondo Arena, borde inferior `border.default`.

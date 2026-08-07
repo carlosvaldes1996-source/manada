@@ -22,7 +22,9 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { CategoryTiles } from "@/components/commerce/category-tiles";
 import { ProductRail } from "@/components/commerce/product-rail";
 import { featuredShowcase } from "@/lib/catalog";
+import { formatCLP } from "@/lib/format";
 import { TOBY_ANTICIPATION } from "@/lib/demo-data";
+import type { ShippingPolicy } from "@/lib/medusa";
 import type { Product } from "@/types";
 
 /**
@@ -33,7 +35,13 @@ import type { Product } from "@/types";
  * primaria ("Crear el perfil de tu mascota") repetida; "Ingresar" como salida
  * secundaria. Voz de marca: cálida, experta, tuteo chileno (BRANDING §4).
  */
-export function LandingView({ products }: { products: Product[] }) {
+export function LandingView({
+  products,
+  shippingPolicy,
+}: {
+  products: Product[];
+  shippingPolicy: ShippingPolicy;
+}) {
   return (
     <AppShell variant="marketing">
       {/* ── Hero: propuesta de valor + prueba del "se anticipa" ── */}
@@ -220,7 +228,19 @@ export function LandingView({ products }: { products: Product[] }) {
             </Row>
           </Stack>
           <Grid cols={1} sm={2} gap={3}>
-            <TrustItem icon={<Truck className="size-5" aria-hidden />} title="Despacho honesto" body="Ves el costo real de despacho antes de pagar, sin sorpresas al final." />
+            <TrustItem
+              icon={<Truck className="size-5" aria-hidden />}
+              title={
+                shippingPolicy.subscriptionFreeShipping
+                  ? "Despacho gratis con suscripción"
+                  : "Despacho sin sorpresas"
+              }
+              body={
+                shippingPolicy.subscriptionFreeShipping
+                  ? `Sin monto mínimo. En una compra única, gratis sobre ${formatCLP(shippingPolicy.freeShippingThreshold)} y el costo lo ves antes de pagar.`
+                  : `Gratis sobre ${formatCLP(shippingPolicy.freeShippingThreshold)}. Ves el costo real antes de pagar, sin sorpresas al final.`
+              }
+            />
             {/* Las dos ramas explícitas, en vez de un "nada se compra solo" que
                 choca con que sí vendemos un plan recurrente: negar la recurrencia
                 es justo lo que hace leer la suscripción como cobro oculto. */}

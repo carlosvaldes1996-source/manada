@@ -6,18 +6,19 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from "@/components/
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCLP } from "@/lib/format";
+import type { ShippingPolicy } from "@/lib/medusa";
 import { CartItem } from "./cart-item";
 import { FreeShippingBar } from "./free-shipping-bar";
 
 export interface CartDrawerProps {
   children: React.ReactNode;
   /**
-   * Umbral de envío gratis (CLP). Sin valor por defecto A PROPÓSITO: el umbral lo
+   * Política de envío completa. Sin valor por defecto A PROPÓSITO: la regla la
    * define el backend (`GET /store/shipping-policy` → `getShippingPolicy()`) y
-   * duplicarlo aquí como constante lo dejaría desincronizado en silencio el día
-   * que cambie. Quien monte el drawer pasa el valor de la política.
+   * duplicarla aquí como constante la dejaría desincronizada en silencio el día
+   * que cambie. Quien monte el drawer pasa la política.
    */
-  freeShippingThreshold: number;
+  policy: ShippingPolicy;
 }
 
 /**
@@ -25,8 +26,12 @@ export interface CartDrawerProps {
  * carrito. Lista las líneas, muestra el progreso a envío gratis y el subtotal,
  * con CTA a checkout. Conectado al estado global del carrito.
  */
-export function CartDrawer({ children, freeShippingThreshold }: CartDrawerProps) {
+export function CartDrawer({ children, policy }: CartDrawerProps) {
   const { items, count, subtotal, updateQuantity, removeItem } = useCart();
+
+  // Con una línea de suscripción el despacho va incluido: el umbral no aplica.
+  const includedBySubscription =
+    policy.subscriptionFreeShipping && items.some((i) => i.subscriptionWeeks);
 
   return (
     <Drawer>
@@ -70,7 +75,11 @@ export function CartDrawer({ children, freeShippingThreshold }: CartDrawerProps)
           />
         ) : (
           <div className="flex flex-col gap-3">
-            <FreeShippingBar subtotal={subtotal} threshold={freeShippingThreshold} />
+            <FreeShippingBar
+              subtotal={subtotal}
+              threshold={policy.freeShippingThreshold}
+              includedBySubscription={includedBySubscription}
+            />
             <div>
               {items.map((line) => (
                 <CartItem

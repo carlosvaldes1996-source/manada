@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCachedCatalog } from "@/lib/medusa/catalog-cache";
+import { getCachedCatalog, getCachedShippingPolicy } from "@/lib/medusa/catalog-cache";
 import { HomeSwitch } from "./home-switch";
 
 // Canonical propio de la home (antes lo aportaba el layout raíz, que se filtraba
@@ -21,6 +21,11 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const products = await getCachedCatalog();
-  return <HomeSwitch products={products} />;
+  // La landing anuncia la política de despacho: se lee del backend (fuente única)
+  // en vez de hardcodear el umbral en el copy, que es como se desincroniza.
+  const [products, shippingPolicy] = await Promise.all([
+    getCachedCatalog(),
+    getCachedShippingPolicy(),
+  ]);
+  return <HomeSwitch products={products} shippingPolicy={shippingPolicy} />;
 }

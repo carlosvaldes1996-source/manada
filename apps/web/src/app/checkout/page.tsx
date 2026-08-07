@@ -35,6 +35,8 @@ import {
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
+import { shippingReasonLabel } from "@/lib/shipping-copy";
+import { cn } from "@/lib/utils";
 import { trackBeginCheckout } from "@/lib/analytics";
 import { PENDING_PURCHASE_KEY } from "@/lib/checkout-snapshot";
 import { formatRut, isValidRut } from "@/lib/rut";
@@ -175,7 +177,15 @@ export default function CheckoutPage() {
 
   // ¿Aplica envío gratis? La regla es del backend (`/store/shipping-policy`): aquí
   // solo se consulta. Mientras la política no llegue, no se asume nada (cobra).
-  const freeShipping = policy != null && freeShippingBase >= policy.freeShippingThreshold;
+  //
+  // Son las DOS ramas de la política, espejo exacto de las dos promociones
+  // automáticas que el backend aplica sobre el carrito real: la suscripción incluye
+  // el despacho SIN monto mínimo (`ENVIO_GRATIS_SUSCRIPCION`) y, si no la hay,
+  // decide el umbral (`ENVIO_GRATIS_30K`). Si esta pantalla evaluara solo el umbral,
+  // le mostraría $3.990 a quien se está suscribiendo y el backend cobraría $0.
+  const includedBySubscription = Boolean(policy?.subscriptionFreeShipping) && hasSubscription;
+  const freeShipping =
+    policy != null && (includedBySubscription || freeShippingBase >= policy.freeShippingThreshold);
 
   // `freeShipping` es la ÚNICA derivación de costo de la pantalla: la aplican por
   // igual las tarjetas de despacho y el resumen, de modo que no puedan mostrar dos
@@ -397,6 +407,13 @@ export default function CheckoutPage() {
                   <ShippingMethod options={shippingOptionsView} value={shippingId} onValueChange={setShippingId} />
                 ) : (
                   <p className="text-sm text-text-secondary">Cargando opciones de despacho…</p>
+                )}
+                {/* Por qué cuesta lo que cuesta: el monto solo, sin razón, es lo que
+                    hace dudar justo antes de pagar. */}
+                {policy && (
+                  <p className={cn("text-[13px]", freeShipping ? "text-success-strong" : "text-text-secondary")}>
+                    {shippingReasonLabel(policy, { free: freeShipping, bySubscription: includedBySubscription })}
+                  </p>
                 )}
                 {errors.shipping && <p className="text-sm text-danger">{errors.shipping}</p>}
               </Block>

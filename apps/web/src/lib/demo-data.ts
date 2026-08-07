@@ -1,5 +1,6 @@
 import type { AnticipationNudge, Brand, CartItem, Pet, Product, ShippingEstimate } from "@/types";
 import type { Review } from "@/components/commerce/review-card";
+import type { ShippingPolicy } from "./medusa";
 import { dailyRationGrams, estimateRunOut, type RunOutEstimate } from "./anticipation";
 
 /**
@@ -168,7 +169,7 @@ export const DEMO_CART: CartItem[] = [
   { lineId: "demo-line-2", product: PRODUCTS[4], quantity: 2 },
 ];
 
-/** Estimación de despacho de muestra (HonestShippingBlock del styleguide). */
+/** Estimación de despacho de muestra (DeliveryEstimateBlock del styleguide). */
 export const DEMO_SHIPPING: ShippingEstimate = {
   comuna: "Ñuñoa",
   date: (() => {
@@ -177,6 +178,18 @@ export const DEMO_SHIPPING: ShippingEstimate = {
     return d;
   })(),
   cost: 0,
+};
+
+/**
+ * Política de envío de muestra (ShippingPolicyNote/FreeShippingBar del styleguide).
+ * Los valores REALES los sirve el backend (`GET /store/shipping-policy`); estos son
+ * solo para renderizar el componente fuera de un carrito.
+ */
+export const DEMO_SHIPPING_POLICY: ShippingPolicy = {
+  currencyCode: "clp",
+  baseShippingAmount: 3990,
+  freeShippingThreshold: 30000,
+  subscriptionFreeShipping: true,
 };
 
 /** Cápsula de anticipación de muestra (AnticipationCapsule del styleguide). */

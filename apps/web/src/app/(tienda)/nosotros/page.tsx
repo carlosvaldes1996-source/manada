@@ -62,8 +62,8 @@ export default function NosotrosPage() {
           <Stack gap={3}>
             <h2 className="heading-2 text-text-primary">Cómo lo hacemos</h2>
             <p className="body-l text-text-secondary">
-              Con un perfil de mascota que aprende de su peso, etapa y rutina, y con despacho
-              honesto —fecha y costo reales, siempre a la vista.
+              Con un perfil de mascota que aprende de su peso, etapa y rutina, y con un despacho sin
+              letra chica: gratis si tienes suscripción, y el costo siempre a la vista antes de pagar.
             </p>
           </Stack>
         </div>
