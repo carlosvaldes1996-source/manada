@@ -1073,9 +1073,48 @@ ambiguo**. Para la deuda ya existente, `scripts/report-duplicate-customers.ts` l
 > checkout, Medusa devuelve el customer de la cuenta y **fuerza `cart.email` al correo de la
 > cuenta**. No genera duplicados; queda documentado para que no sorprenda.
 
+### 17.6b Superficie de seguridad — verificada contra la implementación
+
+La identidad ligada pero sin activar es el punto crítico del diseño: apunta a datos
+reales y todavía no es de nadie. Lo verificado, con pruebas que **atacan** ese punto
+(`account-adoption-security.spec.ts`, 12 casos):
+
+| Propiedad | Cómo se sostiene |
+|---|---|
+| No se puede entrar antes del enlace | La contraseña del formulario se **descarta**; la identidad guarda una aleatoria de 24 bytes (scrypt) que no se devuelve ni se loguea. Login con la clave escrita → **401** |
+| `confirm` es el único camino a cuenta | Exige sesión; sin token → **401** y `has_account` sigue en `false` |
+| Nadie puede reclamar la identidad pendiente | `POST /auth/customer/emailpass/register` sobre ese correo → falla, porque `app_metadata` ya está puesto |
+| El token vence | `RESET_PASSWORD_TOKEN_TTL_SECONDS = 15 min`, en el JWT (`exp`) **y** en la fila de `auth_password_reset_token` |
+| El token es de un solo uso | `consumePasswordResetToken({ jti, provider, entity_id })` **borra la fila atómicamente**; el 2º intento → 401 |
+| El token no activa otra cuenta | La ruta de update fuerza `entity_id: req.auth_context.actor_id`, tomado del **token**: el `entity_id` del cuerpo se ignora |
+| Un token de sesión no sirve de activación | La ruta rechaza si `purpose !== "reset"` o falta `jti` |
+| No se reutiliza tras `activated: true` | La fila ya se borró en el 1er uso; y `confirm` es no-op con `has_account = true` |
+| El token no expone nada sensible | Claims: `entity_id` (el correo del propio destinatario), `provider`, `actor_type`, `purpose`, `jti`, `iat`, `exp`. **Sin `customer_id`, sin contraseña, sin datos del pedido** |
+
+**Dos huecos encontrados al verificar, ambos cerrados:**
+
+1. **La ruta nativa `POST /store/customers` seguía creando la segunda fila.** El endpoint
+   de §17.3 la reemplazó en nuestro frontend, pero la nativa es pública: se comprobó que
+   con un invitado presente devolvía `200` y dejaba **2 filas**. No es solo higiene — un
+   tercero que registrara por ahí el correo ajeno dejaba al dueño real **sin poder adoptar
+   nunca** su compra (`already_account` para siempre) y reinstalaba la ambigüedad de §17.6,
+   por la que el siguiente checkout de la víctima puede engancharse al `customer` del
+   atacante. Se cierra con un guard en `middlewares.ts` que aplica la misma invariante;
+   el correo limpio sigue pasando.
+2. **Ventana TOCTOU en el provisioning.** Entre crear la identidad y ligarla, existe sin
+   dueño, y en ese estado el provider emailpass **pisa la contraseña** de quien llame al
+   registro nativo. Ganar esa carrera daba una clave utilizable sobre una identidad que
+   quedaba ligada al invitado. Se cierra **reescribiendo la contraseña después de ligar**:
+   desde ahí `app_metadata` está presente, el provider rechaza todo `register` posterior y
+   la última escritura es siempre nuestra.
+
 ### 17.7 Verificación
 
-`apps/backend/integration-tests/http/account-adoption.spec.ts` — **10 casos, todos verdes**:
+**23/23 verde** entre los dos specs de adopción + el `health`.
+
+`account-adoption-security.spec.ts` — **12 casos**, la tabla de §17.6b.
+
+`apps/backend/integration-tests/http/account-adoption.spec.ts` — **10 casos**:
 adopción completa · job → cuenta · registro antes del job · job antes del registro ·
 provisioning dos veces · invitado con orden pagada (se comprueba que `order.customer_id`
 **no cambió**) · invitado sin orden · correo limpio · par invitado+registrado preexistente

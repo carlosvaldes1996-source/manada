@@ -64,6 +64,10 @@ type AuthServiceLike = {
     error?: string;
   }>;
   updateAuthIdentities: (data: { id: string; app_metadata: Record<string, unknown> }) => Promise<unknown>;
+  updateProvider: (
+    provider: string,
+    data: { entity_id: string; password: string },
+  ) => Promise<{ success: boolean }>;
 };
 
 type CustomerServiceLike = {
@@ -146,6 +150,30 @@ export async function provisionAccount(
         appMetadata.customer_id = guest.id;
         await authService.updateAuthIdentities({ id: reg.authIdentity.id, app_metadata: appMetadata });
       }
+
+      // (3b) Cierre de una ventana TOCTOU, en defensa en profundidad.
+      //
+      //      Entre (2) y (3) la identidad existe SIN dueño, y en ese estado la ruta
+      //      nativa `POST /auth/customer/emailpass/register` —pública— le PISA la
+      //      contraseña y devuelve éxito. Quien ganara esa carrera terminaría con una
+      //      clave utilizable sobre una identidad que en (3) queda ligada al invitado:
+      //      login → `confirm` → se lleva la compra, la dirección y la tarjeta ajenas.
+      //
+      //      La ventana es de milisegundos y hay que provocarla a propósito, pero se
+      //      cierra sin ambigüedad reescribiendo la contraseña DESPUÉS de ligar: a
+      //      partir de (3) `app_metadata` está presente, el provider rechaza cualquier
+      //      `register` posterior, y la última escritura es nuestra pase lo que pase
+      //      en el medio. La clave final vuelve a ser una aleatoria que nadie conoce.
+      await authService
+        .updateProvider("emailpass", {
+          entity_id: email,
+          password: crypto.randomBytes(24).toString("base64url"),
+        })
+        .catch((e) => {
+          // Si esto falla, la identidad quedó ligada pero con la clave del paso (2),
+          // que también es aleatoria: se registra y se sigue, no se rompe el alta.
+          console.error(`[cuenta] No se pudo re-sellar la clave de ${email}:`, e);
+        });
     }
 
     // (4) Nombre del formulario de registro, si el invitado no traía (nace sin nombre).

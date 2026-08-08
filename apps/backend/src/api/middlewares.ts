@@ -6,8 +6,10 @@ import {
   MedusaResponse,
   validateAndTransformBody,
 } from "@medusajs/framework/http";
+import { Modules } from "@medusajs/framework/utils";
 import { StoreCreatePet, StoreUpdatePet } from "./store/pets/validators";
 import { StoreAccountRegister } from "./store/account/register/validators";
+import { resolveCustomersByEmail } from "../lib/account-provisioning";
 import { AdminCreateFormat } from "./admin/products/[id]/formats/validators";
 import { StoreAddSubscriptionItem } from "./store/carts/[id]/subscription-items/validators";
 import { StoreUpdateSubscription } from "./store/subscriptions/[id]/validators";
@@ -130,6 +132,51 @@ const subscriptionsAuth = authenticate("customer", ["bearer", "session"]);
  */
 const accountConfirmAuth = authenticate("customer", ["bearer", "session"]);
 
+/**
+ * Cierra la ruta NATIVA `POST /store/customers` cuando el correo ya existe (D82).
+ *
+ * `POST /store/account/register` (§17.3) sustituyó a esta ruta **en nuestro frontend**,
+ * pero la nativa sigue publicada y cualquiera puede llamarla: verificado que con un
+ * invitado presente crea igual la segunda fila, porque `validateCustomerAccountCreation`
+ * solo lanza si YA hay cuenta. Sin este guard, la invariante "nunca dos `customer` por
+ * correo" valdría para nuestra app y no para la API.
+ *
+ * Y no es solo higiene de datos. Un tercero que registre por aquí el correo de otro:
+ *  · deja al dueño real **sin poder adoptar nunca** su compra de invitado (a partir de
+ *    ahí `provisionAccount` responde `already_account` para siempre), y
+ *  · reinstala la ambigüedad de `findOrCreateCustomerStep` (§17.6) — con las dos filas
+ *    presentes, el próximo checkout de invitado de la víctima puede engancharse al
+ *    `customer` del atacante, y ahí sí se le filtran datos del pedido.
+ *
+ * El correo limpio pasa intacto: no se rompe el uso legítimo de la ruta.
+ */
+async function blockDuplicateCustomer(
+  req: MedusaRequest,
+  res: MedusaResponse,
+  next: MedusaNextFunction,
+) {
+  const email = (req.body as { email?: unknown } | undefined)?.email;
+  if (typeof email !== "string" || !email.trim()) return next();
+
+  try {
+    const customerService = req.scope.resolve(Modules.CUSTOMER);
+    const { registered, guest } = await resolveCustomersByEmail(
+      customerService as never,
+      email.trim().toLowerCase(),
+    );
+    if (registered || guest) {
+      res.status(409).json({
+        status: "already_account",
+        message: "Ya hay una cuenta con ese correo. Inicia sesión o recupera tu contraseña.",
+      });
+      return;
+    }
+  } catch {
+    // Si no se pudo comprobar, no se inventa un bloqueo: sigue el camino nativo.
+  }
+  return next();
+}
+
 export default defineMiddlewares({
   routes: [
     {
@@ -220,6 +267,13 @@ export default defineMiddlewares({
       matcher: "/store/account/confirm",
       method: ["POST"],
       middlewares: [accountConfirmAuth],
+    },
+    {
+      // Guard sobre la ruta NATIVA de alta (§17.3): la invariante "un customer por
+      // correo" tiene que valer también para quien llame la API directo.
+      matcher: "/store/customers",
+      method: ["POST"],
+      middlewares: [blockDuplicateCustomer],
     },
   ],
 });
