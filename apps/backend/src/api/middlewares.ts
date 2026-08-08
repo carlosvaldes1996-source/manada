@@ -7,6 +7,7 @@ import {
   validateAndTransformBody,
 } from "@medusajs/framework/http";
 import { StoreCreatePet, StoreUpdatePet } from "./store/pets/validators";
+import { StoreAccountRegister } from "./store/account/register/validators";
 import { AdminCreateFormat } from "./admin/products/[id]/formats/validators";
 import { StoreAddSubscriptionItem } from "./store/carts/[id]/subscription-items/validators";
 import { StoreUpdateSubscription } from "./store/subscriptions/[id]/validators";
@@ -121,6 +122,14 @@ const paymentMethodsAuth = authenticate("customer", ["bearer", "session"]);
  */
 const subscriptionsAuth = authenticate("customer", ["bearer", "session"]);
 
+/**
+ * Autenticación de cliente para `POST /store/account/confirm` (API.md §17.2, D82).
+ * Aquí la sesión NO es solo control de acceso: es la prueba de posesión del correo
+ * que habilita la adopción del invitado (la identidad nace con clave aleatoria, así
+ * que un token solo puede venir del enlace enviado a esa casilla).
+ */
+const accountConfirmAuth = authenticate("customer", ["bearer", "session"]);
+
 export default defineMiddlewares({
   routes: [
     {
@@ -196,6 +205,21 @@ export default defineMiddlewares({
       matcher: "/store/carts/:id/subscription-payment",
       method: ["POST"],
       middlewares: [subscriptionsAuth],
+    },
+    {
+      // Alta de cuenta sin duplicar clientes (API.md §17.3, D82). PÚBLICA a propósito:
+      // es el paso previo a tener sesión. Reemplaza a `store.customer.create` en el
+      // registro del storefront.
+      matcher: "/store/account/register",
+      method: ["POST"],
+      middlewares: [validateAndTransformBody(StoreAccountRegister)],
+    },
+    {
+      // Consuma la adopción invitado→cuenta (API.md §17.2). La auth es la prueba
+      // de posesión del correo.
+      matcher: "/store/account/confirm",
+      method: ["POST"],
+      middlewares: [accountConfirmAuth],
     },
   ],
 });

@@ -1,6 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
-import { provisionAccountForOrder, type ProvisionOutcome } from "../lib/account-provisioning";
+import { provisionAccount, type ProvisionOutcome } from "../lib/account-provisioning";
 
 /**
  * Activación de cuenta post-compra CON RETRASO (obj 4) — job programado.
@@ -13,10 +13,15 @@ import { provisionAccountForOrder, type ProvisionOutcome } from "../lib/account-
  *
  * Selección: órdenes de INVITADO (customer sin `has_account`) con antigüedad ≥
  * `ACCOUNT_ACTIVATION_DELAY_MINUTES` (default 120), dentro de una ventana de
- * recuperación (`RECOVERY_HOURS`) para tolerar caídas del job. IDEMPOTENTE: una vez
- * provisionada, la cuenta queda con `has_account = true` y se omite en barridos
- * siguientes (además `provisionAccountForOrder` re-chequea por dentro); un lock por
- * cliente evita doble envío entre ejecuciones solapadas. NO BLOQUEANTE: un fallo se
+ * recuperación (`RECOVERY_HOURS`) para tolerar caídas del job.
+ *
+ * IDEMPOTENTE en dos niveles (D82 cambió el de adentro): el envío no se repite porque
+ * `provisionAccount` devuelve `already_pending` en cuanto la identidad emailpass está
+ * ligada —y el provider sale ANTES de hashear, así que reintentarlo es barato—; y una
+ * vez que el cliente usa el enlace, `has_account = true` lo saca ya del pre-filtro.
+ * Antes esa garantía la daba marcar `has_account` al provisionar, algo que ya no se
+ * hace: el flag es ahora la prueba de que alguien demostró poseer el correo (§17.2).
+ * Un lock por cliente cubre además ejecuciones solapadas. NO BLOQUEANTE: un fallo se
  * registra y no detiene al resto ni afecta la orden.
  *
  * ⚠️ GATEADO por `AUTO_ACCOUNT_ENABLED=true` (OFF por defecto): toca la auth de
@@ -70,10 +75,11 @@ export default async function sendAccountActivations(container: MedusaContainer)
       const outcome = await locking.execute(
         `account-activation:${order.customer_id}`,
         () =>
-          provisionAccountForOrder(container, {
+          provisionAccount(container, {
             email: order.email,
             customerId: order.customer_id,
             firstName: order.shipping_address?.first_name,
+            trigger: "job",
           }),
         { timeout: 30 },
       );

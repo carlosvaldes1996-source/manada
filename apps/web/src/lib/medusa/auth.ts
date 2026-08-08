@@ -52,23 +52,69 @@ export interface RegisterInput {
   password: string;
 }
 
+/** Desenlaces del alta (API.md §17.3). */
+export type RegisterOutcome =
+  /** Correo limpio: cuenta creada y sesión abierta. */
+  | "created"
+  /** Había un invitado con ese correo: se envió el enlace de activación, sin sesión. */
+  | "verify_email";
+
 /**
- * Registro nativo en tres pasos (patrón oficial de Medusa v2):
- * 1) token de registro (`auth.register`) — el SDK lo guarda,
- * 2) crear el customer (`store.customer.create`) con ese token,
- * 3) `auth.login` → token de sesión definitivo (ya con `customer_id`).
- * Lanza si el correo ya existe (lo traduce `useAuthActions`).
+ * Alta de cuenta vía `POST /store/account/register` (API.md §17.3, D82).
+ *
+ * Ya NO se usa el trío nativo `auth.register` → `store.customer.create` → `auth.login`:
+ * Medusa admite DOS filas de `customer` por correo (`UNIQUE (email, has_account)`) y
+ * ese camino creaba la segunda cuando ya existía un invitado, dejando su compra,
+ * suscripción y mascotas colgando de un cliente que la cuenta nueva nunca veía.
+ *
+ * El paso que se mueve al servidor es `auth.register`: si la identidad naciera aquí
+ * con la contraseña elegida, quien tuviera un invitado con ese correo podría entrar
+ * sin demostrar que la casilla es suya. Ahora el backend decide, y solo en el caso
+ * `created` hay contraseña utilizable y login inmediato.
+ *
+ * Lanza en 409 (correo con cuenta) — el mensaje ya viene listo para la UI.
  */
-export async function registerCustomer(input: RegisterInput): Promise<User> {
+export async function registerCustomer(input: RegisterInput): Promise<RegisterOutcome> {
   const email = input.email.trim().toLowerCase();
-  await medusa.auth.register(CUSTOMER, EMAILPASS, { email, password: input.password });
-  const { customer } = await medusa.store.customer.create({
-    email,
-    first_name: input.firstName.trim(),
-    last_name: input.lastName?.trim() || undefined,
-  });
+  const { status } = await medusa.client.fetch<{ status: RegisterOutcome }>(
+    "/store/account/register",
+    {
+      method: "POST",
+      body: {
+        email,
+        password: input.password,
+        first_name: input.firstName.trim(),
+        last_name: input.lastName?.trim() || undefined,
+      },
+    },
+  );
+
+  // `verify_email` = la adopción del invitado queda pendiente del clic en el correo.
+  if (status === "verify_email") return "verify_email";
+
   await medusa.auth.login(CUSTOMER, EMAILPASS, { email, password: input.password });
-  return mapCustomer(customer);
+  return "created";
+}
+
+/**
+ * Consuma la adopción invitado→cuenta (API.md §17.2). Se llama tras CADA login: es
+ * el backend —no el navegador— quien sabe si esta es la primera sesión después de
+ * una activación, y solo puede decirlo una vez (al marcar `has_account` la condición
+ * se apaga sola). Devuelve `true` únicamente en ese primer login.
+ *
+ * Nunca propaga: si falla, la sesión ya es válida y el único costo es no adoptar la
+ * mascota del onboarding en este intento.
+ */
+export async function confirmAccount(): Promise<boolean> {
+  try {
+    const { activated } = await medusa.client.fetch<{ activated: boolean }>(
+      "/store/account/confirm",
+      { method: "POST" },
+    );
+    return Boolean(activated);
+  } catch {
+    return false;
+  }
 }
 
 /** Login nativo (emailpass). Sin MFA/terceros en el MVP. */

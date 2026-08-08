@@ -160,9 +160,12 @@ El checkout de invitado (§6.2) sigue **idéntico**; para el cliente autenticado
 se **prellenan** nombre/correo desde la sesión. Guest checkout nunca se bloquea.
 
 ### 7.6 Pendiente (recomendaciones, no implementadas)
-Email transaccional ✅ **implementado** (D45, §11). Sigue pendiente: **reclamo de órdenes de
-invitado** al registrarse con el mismo correo (`order.requestTransfer`, nativo, requiere email);
-selección de dirección guardada dentro del checkout.
+Email transaccional ✅ **implementado** (D45, §11). **Reclamo de la compra de invitado** ✅
+resuelto por **§17** (D82) — y por adopción del propio `customer`, no por `order.requestTransfer`:
+la orden nunca cambia de dueño. Sigue pendiente: selección de dirección guardada dentro del checkout.
+
+> ⚠️ El registro ya **no** usa `store.customer.create` (§7.1): pasa por
+> `POST /store/account/register` (§17.3), que es lo que impide la segunda fila de `customer`.
 
 ---
 
@@ -961,3 +964,131 @@ subscription/get → refrescar el espejo local
 > 1. `changePlan` entre planes de **distinta cadencia** (4 → 2 semanas) no está prohibido en el
 >    spec, pero tampoco descrito: hay que verificar cómo reprograma `next_invoice_date`.
 > 2. Omitir `startDateOfNewPlan` debería significar "inmediato", pero **no está documentado**.
+
+---
+
+## 17. Contrato de adopción invitado → cuenta (`/store/account/register`) — D82
+
+**Problema que resuelve.** Medusa v2 permite **dos filas de `customer` por correo**: el índice
+es `UNIQUE (email, has_account) WHERE deleted_at IS NULL`, no `UNIQUE (email)`. Y
+`validateCustomerAccountCreation` (core-flows 2.16) solo lanza en dos casos —
+`hasExistingAccount && authIdentityId` y `!hasExistingAccount && !authIdentityId`—, así que
+**registrarse con un correo que ya tiene invitado no cae en ninguno** y crea la segunda fila.
+Resultado: la orden/suscripción/mascota del invitado quedan colgando de un `customer_id` que
+la cuenta nueva nunca ve (todo se scopea por `auth_context.actor_id`, §9/§10/§13).
+
+### 17.1 Principio — adoptar, nunca fusionar
+
+**Adoptar** = poner `has_account = true` sobre la fila que ya existe, **conservando el
+`customer_id`**. Con eso las 12 tablas que apuntan a `customer_id` quedan intactas sin mover un
+solo registro:
+
+`order` · `cart` · `cart_address` · `order_address` · `customer_address` ·
+`customer_group_customer` · `customer_customer_pet_pet` · `customer_customer_subscription_subscription` ·
+`customer_account_holder` · `saved_card` · `flow_customer` · `cart_funnel`
+
+**Fusionar está prohibido** y no se implementa: `flow_customer` tiene `UNIQUE (customer_id)` y
+`customer_account_holder` tiene PK `(customer_id, account_holder_id)`, así que mover filas entre
+dos customers puede colisionar. Además `createPaymentSessionWorkflow` crea el account holder
+condicionado **solo a que exista `customer_id`** (no mira `has_account`), de modo que un invitado
+sí puede tener uno. **Nada de pago se reasigna, se recalcula ni se toca.**
+
+### 17.2 Lógica central única
+
+`apps/backend/src/lib/account-provisioning.ts` expone **una sola** función
+`provisionAccount({ email, customerId?, firstName?, trigger })`, con dos disparadores.
+Consuma la adopción `POST /store/account/confirm` (§17.5), el único punto donde
+`has_account` pasa a `true`:
+
+| `trigger` | Quién llama | Cuándo |
+|---|---|---|
+| `"job"` | `jobs/send-account-activations.ts` (D65) | ~2 h después de una compra de invitado que nunca se registró |
+| `"claim"` | `POST /store/account/register` | el invitado **pide** crear cuenta con ese correo |
+
+Ambos caminos terminan en el **mismo email con token** (`auth.password_reset` con
+`metadata.activation`, §11) y en la **misma adopción**. No hay dos implementaciones que puedan
+divergir.
+
+**La adopción se consuma solo al hacer clic en el enlace.** El endpoint no marca `has_account`:
+deja la identidad emailpass creada y ligada al `customer_id` del invitado, y es
+`auth.updateProvider(token)` —posesión del correo demostrada— lo que cierra la adopción.
+
+### 17.3 `POST /store/account/register` — público
+
+Reemplaza el paso `store.customer.create` del registro nativo (§7.1). Body:
+`{ email, password, first_name, last_name? }`.
+
+| Respuesta | Cuándo | Qué hace el front |
+|---|---|---|
+| `201 { status: "created", customer }` | el correo no existe en ninguna forma | sigue al `auth.login` nativo → sesión |
+| `202 { status: "verify_email" }` | existe un **invitado** con ese correo | pantalla "revisa tu correo"; **no** abre sesión |
+| `409 { status: "already_account" }` | existe un **registrado** con ese correo | "ya tienes cuenta" → `/ingresar` + recuperar |
+
+**Enumeración (decisión explícita, D82-A):** `verify_email` revela que ese correo tuvo actividad
+previa en Manada. Se acepta a cambio de no meter verificación por correo a **todas** las altas
+(fricción en el funnel). Queda **encapsulado en el endpoint**: convertirlo en anti-enumeración es
+responder `202 verify_email` también en el caso `created` y mover el alta al clic del enlace, sin
+tocar el frontend más que el copy.
+
+### 17.4 Carreras — resueltas por el esquema
+
+`provider_identity` tiene `UNIQUE (entity_id, provider)`: **una sola identidad emailpass por
+correo en todo el sistema**. Eso convierte la carrera en un orden determinista, no en un empate.
+
+- **Registro/verificación antes del job** → el invitado ya quedó con `has_account = true`, el job
+  lo salta en el pre-filtro y `provisionAccount` re-chequea por dentro. **No-op.**
+- **Job antes del registro** → la identidad ya existe y está ligada; el endpoint responde
+  `409 already_account` y el front lleva a iniciar sesión / recuperar contraseña. **No se crea
+  otra identity ni otro customer.**
+- **Provisioning ejecutado dos veces** → idempotente: `already_account` en la segunda pasada.
+
+### 17.5 Efectos que NO son automáticos (y por eso se emiten a mano)
+
+- **Email de bienvenida (§11):** el subscriber escucha `customer.created`, y adoptar **no crea**
+  ningún customer → el evento no se emite. `provisionAccount` manda la notificación
+  `EmailTemplate.Welcome` explícitamente al consumarse la adopción.
+- **Mascota del onboarding (D82-B):** `useAuthActions.register` adopta la mascota local; el
+  camino de activación termina en `/ingresar`, y `login` **deliberadamente no** mezcla mascotas
+  (§7.3). La señal de "primer login tras activar" es la respuesta de
+  `POST /store/account/confirm` (`activated: true`), **no** una marca en `localStorage`: como
+  ese endpoint solo actúa cuando `has_account` era `false`, y al actuar lo pone en `true`,
+  devuelve `true` **exactamente una vez** en la vida de la cuenta. Idempotencia por
+  construcción, sin marca que consumir mal ni heurísticas de fecha, y el navegador no puede
+  provocarla. `login` llama a `confirmAccount()` siempre; en el caso normal es un no-op.
+  Sin mascota invitada no hace nada; ya transferida, `clearGuestPets()` impide duplicarla.
+
+### 17.6 Ambigüedad de `findOrCreateCustomerStep` — se elimina la causa, no el síntoma
+
+`fetchCustomersByEmail` hace `listCustomers({ email })` **sin `order`** y toma `[customer]`;
+con invitado + registrado coexistiendo, cuál gana no está garantizado. Se auditaron los hooks de
+`createCartWorkflow` y `updateCartWorkflow` (`validate`, `cartCreated`/`cartUpdated`,
+`setPricingContext`): **ninguno permite intervenir la elección del customer**, así que el step no
+es parcheable desde el proyecto.
+
+La solución es estructural: **si nunca coexisten las dos filas, el resultado deja de ser
+ambiguo**. Para la deuda ya existente, `scripts/report-duplicate-customers.ts` la **reporta**
+(`medusa exec`) — no migra nada: reasignar FKs es justamente lo que §17.1 prohíbe.
+
+> Nota relacionada, verificada en el step: si un cliente **autenticado** escribe otro correo en el
+> checkout, Medusa devuelve el customer de la cuenta y **fuerza `cart.email` al correo de la
+> cuenta**. No genera duplicados; queda documentado para que no sorprenda.
+
+### 17.7 Verificación
+
+`apps/backend/integration-tests/http/account-adoption.spec.ts` — **10 casos, todos verdes**:
+adopción completa · job → cuenta · registro antes del job · job antes del registro ·
+provisioning dos veces · invitado con orden pagada (se comprueba que `order.customer_id`
+**no cambió**) · invitado sin orden · correo limpio · par invitado+registrado preexistente
+(409 limpio, sin violar la UNIQUE) · `confirm` idempotente.
+
+El arnés estaba roto de antes y se reparó de paso (no corría ni el `health.spec.ts`):
+faltaba `pg-god` —dependencia no declarada de `@medusajs/test-utils`—, el runner arma la
+conexión desde `DB_USERNAME`/`DB_PASSWORD` y no desde `DATABASE_URL` (se derivan en
+`integration-tests/setup.js`), y jest no transformaba `.tsx`, así que las plantillas de correo
+de `resend` tumbaban el arranque.
+
+### 17.8 Estado
+
+**`AUTO_ACCOUNT_ENABLED` sigue en `false`** (D65): se enciende recién después del E2E completo.
+Al encenderlo en producción, la primera corrida **no parte de cero** — barre la ventana de
+recuperación de 72 h y envía activación a todas las órdenes de invitado de esos tres días.

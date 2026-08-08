@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BellRing, ShoppingBag, ShieldCheck, Check } from "lucide-react";
+import { BellRing, ShoppingBag, ShieldCheck, Check, MailCheck } from "lucide-react";
 import { FunnelShell } from "@/components/layout";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
@@ -50,6 +50,9 @@ export function RegisterView({
   const [errors, setErrors] = useState<{ firstName?: string; email?: string; password?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Correo al que se envió el enlace de activación (§17.3). Al fijarse, el formulario
+  // cede el lugar: no hay sesión que abrir hasta que el cliente haga clic.
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   // Si ya hay sesión, no tiene sentido registrarse: al destino según contexto.
   useEffect(() => {
@@ -69,7 +72,14 @@ export function RegisterView({
     if (Object.keys(next).length > 0) return;
 
     setLoading(true);
-    const { ok, error } = await register({ firstName, email, password });
+    const { ok, error, status } = await register({ firstName, email, password });
+    if (ok && status === "verify_email") {
+      // Ya había compras con este correo (API.md §17.3): la cuenta se activa desde
+      // el enlace, no aquí. No hay sesión que abrir ni a dónde navegar todavía.
+      setSentTo(email);
+      setLoading(false);
+      return;
+    }
     if (ok) {
       toast({ title: "¡Cuenta creada!", description: "Ya eres parte de la manada.", variant: "success" });
       router.push(postAuthHref);
@@ -85,8 +95,34 @@ export function RegisterView({
     <FunnelShell exitHref="/">
       <Section spacing="md" containerSize="default">
         <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] lg:gap-12">
-          {/* Formulario */}
+          {/* Formulario — o el aviso de activación por correo (§17.3) */}
           <Stack gap={6} className="max-w-md">
+            {sentTo ? (
+            <Stack gap={4}>
+              <span className="grid size-14 place-items-center rounded-full bg-success-soft text-[var(--success-strong)]" aria-hidden>
+                <MailCheck className="size-7" />
+              </span>
+              <Stack gap={2}>
+                <h1 className="heading-1 text-text-primary">Revisa tu correo</h1>
+                <p className="body-m text-text-secondary">
+                  Ya habías comprado con <strong className="text-text-primary">{sentTo}</strong>, así que te
+                  enviamos un enlace para activar tu cuenta. Al abrirlo defines tu contraseña y{" "}
+                  {petName ? `el perfil de ${petName}` : "tu perfil"}, tus pedidos y tu plan quedan todos juntos.
+                </p>
+              </Stack>
+              <Alert variant="info">
+                El enlace vence en 15 minutos. Si no llega, revisa spam o{" "}
+                <Link href="/recuperar" className="font-semibold underline underline-offset-2">
+                  pídelo de nuevo
+                </Link>
+                .
+              </Alert>
+              <Button asChild size="lg" block>
+                <Link href="/ingresar">Ya definí mi contraseña, iniciar sesión</Link>
+              </Button>
+            </Stack>
+            ) : (
+            <>
             <Stack gap={2}>
               <h1 className="heading-1 text-text-primary">
                 {petName ? `Guarda el perfil de ${petName}` : "Crea tu cuenta"}
@@ -147,6 +183,8 @@ export function RegisterView({
             <p className="text-[13px] text-text-muted">
               Tus datos y los de tu mascota son privados y solo se usan para cuidarla mejor.
             </p>
+            </>
+            )}
           </Stack>
 
           {/* Lo que estás guardando */}

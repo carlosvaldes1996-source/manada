@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
+import { Stack } from "@/components/ui/stack";
 import { useToast } from "@/components/ui/toast";
 import { useAuthActions } from "@/hooks";
 
@@ -52,6 +53,8 @@ export function AuthSheet({ open, onOpenChange, onAuthenticated, title, descript
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Correo con activación pendiente (§17.3): reemplaza el formulario dentro de la hoja.
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   function handleOpenChange(next: boolean) {
     // Al cerrar, descarta estados transitorios (deja lo tipeado por si reabre).
@@ -59,6 +62,7 @@ export function AuthSheet({ open, onOpenChange, onAuthenticated, title, descript
       setLoading(false);
       setFormError(null);
       setErrors({});
+      setSentTo(null);
     }
     onOpenChange(next);
   }
@@ -97,7 +101,15 @@ export function AuthSheet({ open, onOpenChange, onAuthenticated, title, descript
     if (Object.keys(next).length > 0) return;
 
     setLoading(true);
-    const { ok, error } = await register({ firstName, email, password });
+    const { ok, error, status } = await register({ firstName, email, password });
+    if (ok && status === "verify_email") {
+      // Ese correo ya tenía compras (API.md §17.3): la cuenta se activa desde el
+      // enlace. NO se llama `onAuthenticated` — no hay sesión y el flujo de
+      // suscripción no puede continuar hasta que el cliente vuelva logueado.
+      setSentTo(email);
+      setLoading(false);
+      return;
+    }
     if (ok) {
       toast({ title: "¡Cuenta creada!", description: "Ya eres parte de la manada.", variant: "success" });
       setLoading(false);
@@ -125,6 +137,18 @@ export function AuthSheet({ open, onOpenChange, onAuthenticated, title, descript
           </Alert>
         )}
 
+        {sentTo ? (
+          <Stack gap={4}>
+            <Alert variant="info" title="Revisa tu correo">
+              Ya habías comprado con <strong>{sentTo}</strong>. Te enviamos un enlace para activar tu
+              cuenta —vence en 15 minutos—; al abrirlo defines tu contraseña y tus pedidos quedan
+              todos juntos. Vuelve aquí e ingresa para seguir con tu plan.
+            </Alert>
+            <Button size="lg" block variant="secondary" onClick={() => setSentTo(null)}>
+              Volver
+            </Button>
+          </Stack>
+        ) : (
         <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "register")}>
           <TabsList>
             <TabsTrigger value="login">Ingresar</TabsTrigger>
@@ -199,6 +223,7 @@ export function AuthSheet({ open, onOpenChange, onAuthenticated, title, descript
             </form>
           </TabsContent>
         </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );

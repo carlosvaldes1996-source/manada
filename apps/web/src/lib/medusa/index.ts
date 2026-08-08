@@ -35,12 +35,14 @@ export {
   mapCustomer,
   getCurrentCustomer,
   registerCustomer,
+  confirmAccount,
   loginCustomer,
   logoutCustomer,
   requestPasswordReset,
   resetPassword,
   saveCustomerRut,
   type RegisterInput,
+  type RegisterOutcome,
 } from "./auth";
 export {
   listOrders,
