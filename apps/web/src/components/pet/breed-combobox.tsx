@@ -6,7 +6,7 @@ import { Search, Check, ChevronDown, PawPrint, ArrowLeft } from "lucide-react";
 import type { Species } from "@/types";
 import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
-import { searchBreeds, mestizoLabel, normalize } from "@/lib/breeds";
+import { searchBreeds, mestizoLabel, matchesMestizo } from "@/lib/breeds";
 import { cn } from "@/lib/utils";
 
 export interface BreedComboboxProps {
@@ -20,8 +20,10 @@ export interface BreedComboboxProps {
 /**
  * Selector de raza premium del onboarding (funnel F2).
  *
- * Buscador tolerante a acentos sobre la lista curada CL (perro/gato), con
- * Mestizo/Quiltro fijado arriba y un escape "mi raza no aparece" que habilita el
+ * Buscador tolerante a acentos, tipeos y nombres coloquiales ("ovejero",
+ * "pitbull", "rodesiano" — la lógica vive en `searchBreeds`) sobre la lista
+ * curada CL (perro/gato), con Mestizo/Quiltro fijado arriba y un escape
+ * "mi raza no aparece" —último recurso, no atajo— que habilita el
  * ingreso manual (como antes). La raza elegida se muestra como Chip con ✕ para
  * cambiarla — atajo útil, no formulario. Especies sin lista ("otro") caen al
  * ingreso manual directo. Reusa las primitivas Radix del stack (Popover) y el
@@ -41,10 +43,10 @@ export function BreedCombobox({ species, value, onChange, id }: BreedComboboxPro
 
   const items = React.useMemo<string[]>(() => {
     if (!hasList) return [];
-    const q = normalize(query);
     const names = searchBreeds(species, query).map((b) => b.nombre);
-    const showMestizo = !q || normalize(mestizo).includes(q);
-    return showMestizo ? [mestizo, ...names] : names;
+    // Mestizo va fijo arriba, pero solo si la consulta lo admite: "quiltro" lo
+    // encuentra, "beagle" no debe arrastrarlo hasta el primer lugar.
+    return matchesMestizo(query) ? [mestizo, ...names] : names;
   }, [hasList, species, query, mestizo]);
 
   function onOpenChange(next: boolean) {

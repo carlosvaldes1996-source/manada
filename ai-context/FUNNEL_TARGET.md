@@ -76,11 +76,13 @@ CONFIRMACIÓN / BIENVENIDA
 
 **Decisión:** reemplazar el texto libre actual por un **combobox con buscador**.
 
-- **Buscador + listado completo** en un sheet, tolerante a acentos. Listas **separadas perro/gato**.
+- **Buscador + listado completo** en un sheet, tolerante a acentos, **tipeos y nombres coloquiales**. Listas **separadas perro/gato**.
+- **Cómo busca** (`searchBreeds`, reusa las primitivas de texto del buscador de productos — `fold`/`editDistance`/`typoTolerance` de `lib/search/normalize.ts`, para que "buscar" signifique lo mismo en toda la app): palabra exacta → prefijo (**desde la 1ª letra** en el nombre; desde la 2ª en un sinónimo, que no se ve) → **consulta entera pegada** (*pitbull* → Pit Bull Terrier) → **distancia de edición** (*rodesiano* → Rhodesian Ridgeback, *retriver* → Retriever). Sin cobertura total cae a cobertura parcial; devuelve vacío solo cuando de verdad no hay nada — que es cuando *"mi raza no aparece"* **es** la respuesta correcta, no un atajo por buscador pobre.
 - **Fijados arriba:** *Mestizo/Quiltro* y las razas más comunes de Chile.
 - **Al fondo "No aparece / Otra raza"** → recién ahí se habilita el **ingreso manual** (como hoy).
 - **La raza alimenta el peso:** elegir una raza reconocida pre-rellena un rango de peso típico; elegir *Mestizo* o *No aparece* dispara la pregunta de **tamaño** (Toy/Pequeño/Mediano/Grande/Gigante) como proxy.
-- **Fuente de datos (MVP):** lista curada local de ~40–60 razas top CL por especie, cada una con `{ nombre, tamaño, pesoRangoAdulto }`. Taxonomía completa y origen backend → posterior.
+- **Fuente de datos (MVP):** lista curada local (`lib/breeds.ts`) de razas top CL por especie, cada una con `{ nombre, especie, pesoRangoAdulto?, popular?, sinonimos? }`. El tamaño **no** es un campo de la raza: los buckets (`DOG_SIZE_BUCKETS`/`CAT_SIZE_BUCKETS`) son el proxy para cuando NO hay raza reconocida (§1.4). Taxonomía completa y origen backend → posterior.
+- **Un nombre visible por raza; los demás son `sinonimos`.** El título es el que la gente reconoce, sin paréntesis de cortesía: *Pastor Alemán* (no "Ovejero Alemán (Pastor Alemán)"), *Pug*, *Weimaraner*, *Poodle Toy/Miniatura/Estándar*, *Dachshund (Salchicha)*. Todo lo demás —el nombre coloquial chileno (*ovejero*, *quiltro*), el que quedó fuera del título (*carlino*, *caniche*, *teckel*, *braco de weimar*) y el apodo de siempre (*pitbull*, *yorkie*, *westie*)— vive en `sinonimos`: **alimenta el buscador y nunca se muestra**. Antes esas palabras hacían de término de búsqueda desde el propio título, así que limpiarlo sin esta capa habría dejado razas inencontrables. Regla al agregar o renombrar: lo que se saca del nombre **baja a `sinonimos`**, no se pierde.
 - **Visual:** trigger "Buscar raza…" con lupa; raza elegida como **Chip con ✕** para cambiarla. Atajo útil, no chore.
 
 ## 1.4 Peso estimable — "No sé su peso" (resuelve O1)
