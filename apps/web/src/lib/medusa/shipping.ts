@@ -18,6 +18,10 @@ export interface ShippingCoverage {
   regions: string[];
   /** Cómo se le nombra la zona al comprador ("Región Metropolitana"). */
   label: string;
+  /** Comunas que recorre el reparto. Vacío = sin restricción a nivel de comuna. */
+  comunas: string[];
+  /** Nombre de la zona de reparto ("Gran Santiago"). */
+  areaLabel: string;
 }
 
 export interface ShippingPolicy {
@@ -45,7 +49,12 @@ export async function getShippingPolicy(): Promise<ShippingPolicy> {
       base_shipping_amount: number;
       free_shipping_threshold: number;
       subscription_free_shipping?: boolean;
-      coverage?: { regions?: string[]; label?: string };
+      coverage?: {
+        regions?: string[];
+        label?: string;
+        comunas?: string[];
+        area_label?: string;
+      };
     };
   }>("/store/shipping-policy");
   const coverage = shipping_policy.coverage;
@@ -60,7 +69,14 @@ export async function getShippingPolicy(): Promise<ShippingPolicy> {
     // front (una cobertura inventada acá podría costar una venta que SÍ se cumple).
     coverage:
       coverage?.regions?.length && coverage.label
-        ? { regions: coverage.regions, label: coverage.label }
+        ? {
+            regions: coverage.regions,
+            label: coverage.label,
+            // Mismo criterio una capa más abajo: sin lista de comunas no se
+            // restringe por comuna (backend anterior ⇒ solo valida región).
+            comunas: coverage.comunas ?? [],
+            areaLabel: coverage.area_label ?? coverage.label,
+          }
         : null,
   };
   return cached;

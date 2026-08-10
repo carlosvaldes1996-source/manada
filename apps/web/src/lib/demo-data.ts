@@ -190,7 +190,12 @@ export const DEMO_SHIPPING_POLICY: ShippingPolicy = {
   baseShippingAmount: 3990,
   freeShippingThreshold: 30000,
   subscriptionFreeShipping: true,
-  coverage: { regions: ["Metropolitana de Santiago"], label: "Región Metropolitana" },
+  coverage: {
+    regions: ["Metropolitana de Santiago"],
+    label: "Región Metropolitana",
+    comunas: ["Ñuñoa", "Providencia", "Santiago"],
+    areaLabel: "Gran Santiago",
+  },
 };
 
 /** Cápsula de anticipación de muestra (AnticipationCapsule del styleguide). */

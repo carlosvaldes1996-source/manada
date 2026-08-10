@@ -244,13 +244,21 @@ Manada tiene **una sola regla de envío con DOS ramas** (D81), definida en el ba
   gratis, la PDP (`ShippingPolicyNote`), el carrito y el checkout, y **degrada a `false`
   si el campo no viene** (backend viejo desplegado ⇒ no se anuncia un beneficio que ese
   backend no aplicaría al cobrar). **No hay umbral, costo ni regla hardcodeados en el front.**
-- **`coverage: { regions, label }` — DÓNDE despachamos (D84).** `regions` trae los nombres
+- **`coverage: { regions, label, comunas, area_label }` — DÓNDE despachamos (D84).** `regions` trae los nombres
   **canónicos** del selector del checkout (`apps/web/src/lib/chile-regions.ts`; hoy
   `["Metropolitana de Santiago"]`) y `label` es cómo se le nombra al comprador
   (`"Región Metropolitana"`). Es **informativo**: el candado real está en las dos rutas de
   pago (§14.3). El front degrada al revés que `subscription_free_shipping` — **sin `coverage`
   no bloquea a nadie** (`isCoveredRegion` ⇒ `true`), porque una cobertura inventada en el
   front costaría ventas que sí se pueden cumplir. **Por eso el backend se despliega primero.**
+- **`comunas` va VACÍO a propósito (D84.1).** El mecanismo existe (llenar el array de
+  `COVERAGE_COMUNAS` restringe también por comuna, sin tocar código), pero hoy no se usa: el
+  corte urbano/rural dentro de la RM no se puede adivinar sin datos, y una lista del Gran
+  Santiago dejaría fuera Colina/Chicureo, Buin, Talagante, Peñaflor, Padre Hurtado y Paine —
+  más ventas cumplibles bloqueadas que pedidos imposibles evitados. El caso rural lo cubre la
+  **política** (`/despacho`): contacto antes de despachar y devolución del 100% si no hay forma.
+  `isCoveredComuna` devuelve `true` con lista vacía **antes** de mirar la comuna: al revés
+  bloquearía la tienda entera.
 - **Cobro real (nativo):** la opción "Despacho Estándar" ($3.990) vive en el seed; cada
   rama del "gratis" es una **promoción automática** (`is_automatic`,
   `application_method: { type: "percentage", target_type: "shipping_methods", value: 100,

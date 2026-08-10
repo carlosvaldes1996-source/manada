@@ -31,7 +31,12 @@ import {
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { REGIONS, getComunas } from "@/lib/chile-regions";
-import { isCoveredRegion, outOfCoverageMessage } from "@/lib/shipping-copy";
+import {
+  isCoveredRegion,
+  isCoveredComuna,
+  outOfCoverageMessage,
+  outOfComunaMessage,
+} from "@/lib/shipping-copy";
 import { AccountGate } from "../account-gate";
 
 /** Direcciones reales del cliente — CRUD nativo de Medusa (Fase 5 · Etapa A). */
@@ -287,7 +292,13 @@ function AddressForm({
     () => getComunas(form.province ?? "").map((c) => ({ value: c, label: c })),
     [form.province],
   );
-  const outOfCoverage = Boolean(form.province) && !isCoveredRegion(policy, form.province ?? "");
+  const outOfRegion = Boolean(form.province) && !isCoveredRegion(policy, form.province ?? "");
+  const outOfComuna = !outOfRegion && Boolean(form.city) && !isCoveredComuna(policy, form.city);
+  const coverageMessage = outOfRegion
+    ? outOfCoverageMessage(policy)
+    : outOfComuna
+      ? outOfComunaMessage(policy, form.city)
+      : "";
 
   function set<K extends keyof AddressInput>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -310,8 +321,9 @@ function AddressForm({
     if (!form.lastName.trim()) next.lastName = "Falta el apellido";
     if (!form.address1.trim()) next.address1 = "Ingresa la dirección";
     if (!form.province?.trim()) next.province = "Elige tu región";
-    else if (outOfCoverage) next.province = outOfCoverageMessage(policy);
+    else if (outOfRegion) next.province = outOfCoverageMessage(policy);
     if (!form.city.trim()) next.city = "Elige tu comuna";
+    else if (outOfComuna) next.city = outOfComunaMessage(policy, form.city);
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -351,7 +363,7 @@ function AddressForm({
               <Select label="Comuna" placeholder={form.province ? "Elige tu comuna" : "Primero elige la región"} options={comunaOptions} value={form.city} onValueChange={(v) => set("city", v)} error={errors.city} disabled={!form.province} required />
             </div>
           </Row>
-          {outOfCoverage && <Alert variant="urgency">{outOfCoverageMessage(policy)}</Alert>}
+          {coverageMessage && <Alert variant="urgency">{coverageMessage}</Alert>}
           <Input label="Teléfono (opcional)" placeholder="+56 9 ..." value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" />
 
           <DialogFooter>

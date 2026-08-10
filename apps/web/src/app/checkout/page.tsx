@@ -35,7 +35,13 @@ import {
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
-import { shippingReasonLabel, isCoveredRegion, outOfCoverageMessage } from "@/lib/shipping-copy";
+import {
+  shippingReasonLabel,
+  isCoveredRegion,
+  isCoveredComuna,
+  outOfCoverageMessage,
+  outOfComunaMessage,
+} from "@/lib/shipping-copy";
 import { cn } from "@/lib/utils";
 import { trackBeginCheckout } from "@/lib/analytics";
 import { PENDING_PURCHASE_KEY } from "@/lib/checkout-snapshot";
@@ -236,7 +242,17 @@ export default function CheckoutPage() {
    * Esto evita el choque; no lo reemplaza: el rechazo que de verdad manda está en
    * la ruta de pago del backend.
    */
-  const outOfCoverage = Boolean(province) && !isCoveredRegion(policy, province);
+  const outOfRegion = Boolean(province) && !isCoveredRegion(policy, province);
+  // La comuna se valida aparte: la RM tiene comunas rurales donde el reparto no
+  // llega, y decirle "no despachamos a tu región" a alguien de Melipilla sería
+  // falso. Se nombra su comuna.
+  const outOfComuna = !outOfRegion && Boolean(city) && !isCoveredComuna(policy, city);
+  const outOfCoverage = outOfRegion || outOfComuna;
+  const coverageMessage = outOfRegion
+    ? outOfCoverageMessage(policy)
+    : outOfComuna
+      ? outOfComunaMessage(policy, city)
+      : "";
 
   /**
    * Persistencia temprana del correo (D79) — el comprador termina de escribirlo y
@@ -280,8 +296,9 @@ export default function CheckoutPage() {
     else if (!isValidRut(rut)) e.rut = "Revisa tu RUT";
     if (!address1.trim()) e.address1 = "Ingresa tu dirección";
     if (!province.trim()) e.province = "Elige tu región";
-    else if (outOfCoverage) e.province = outOfCoverageMessage(policy);
+    else if (outOfRegion) e.province = outOfCoverageMessage(policy);
     if (!city.trim()) e.city = "Elige tu comuna";
+    else if (outOfComuna) e.city = outOfComunaMessage(policy, city);
     if (!shippingId) e.shipping = "Elige un despacho";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -414,9 +431,12 @@ export default function CheckoutPage() {
                   {/* Fuera de zona: se dice apenas elige la región, con el porqué y
                       sin culpar al comprador. El CTA queda apagado hasta corregirlo. */}
                   {outOfCoverage && (
-                    <Alert variant="urgency" title="Todavía no llegamos a tu región">
-                      {outOfCoverageMessage(policy)} Estamos sumando zonas: escríbenos y te
-                      avisamos apenas abramos la tuya.
+                    <Alert
+                      variant="urgency"
+                      title={outOfRegion ? "Todavía no llegamos a tu región" : "Todavía no llegamos a tu comuna"}
+                    >
+                      {coverageMessage} Estamos sumando zonas: escríbenos y te avisamos apenas
+                      abramos la tuya.
                     </Alert>
                   )}
                   <Input label="Teléfono (para coordinar la entrega)" placeholder="+56 9 ..." autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -484,7 +504,7 @@ export default function CheckoutPage() {
 
                 {/* El botón apagado necesita su razón AL LADO: el aviso de la
                     dirección puede haber quedado fuera de pantalla en el resumen. */}
-                {outOfCoverage && <Alert variant="urgency">{outOfCoverageMessage(policy)}</Alert>}
+                {outOfCoverage && <Alert variant="urgency">{coverageMessage}</Alert>}
 
                 {needsLogin && (
                   <Alert variant="info">

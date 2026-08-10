@@ -45,9 +45,37 @@ export function isCoveredRegion(policy: ShippingPolicy | null, region: string): 
   return regions.includes(region);
 }
 
+/**
+ * ¿Recorre el reparto esta comuna? Misma degradación que la región: sin lista de
+ * comunas, el front no restringe (backend anterior ⇒ manda el servidor).
+ */
+export function isCoveredComuna(policy: ShippingPolicy | null, comuna: string): boolean {
+  const comunas = policy?.coverage?.comunas;
+  if (!comunas?.length) return true;
+  return comunas.includes(comuna);
+}
+
+/** Zona de reparto ("Gran Santiago"), con la región como respaldo. */
+export function coverageAreaLabel(policy?: ShippingPolicy | null): string {
+  return policy?.coverage?.areaLabel ?? coverageLabel(policy);
+}
+
 /** Aviso corto de cobertura, para vitrina (footer, ficha de producto). */
 export function coverageNote(policy?: ShippingPolicy | null): string {
-  return `Despachamos solo en la ${coverageLabel(policy)}`;
+  return policy?.coverage?.comunas?.length
+    ? `Despachamos solo en el ${coverageAreaLabel(policy)}`
+    : `Despachamos solo en la ${coverageLabel(policy)}`;
+}
+
+/**
+ * El "no llegamos a tu comuna". Nombra la comuna elegida: se entiende y se puede
+ * accionar, a diferencia de un "fuera de cobertura".
+ */
+export function outOfComunaMessage(policy: ShippingPolicy | null, comuna: string): string {
+  return (
+    `Por ahora no llegamos a ${comuna || "esa comuna"}. ` +
+    `Despachamos en el ${coverageAreaLabel(policy)}: elige una comuna de esa zona para completar tu compra.`
+  );
 }
 
 /**

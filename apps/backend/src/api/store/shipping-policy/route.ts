@@ -4,6 +4,8 @@ import {
   BASE_SHIPPING_AMOUNT,
   COVERAGE_REGIONS,
   COVERAGE_LABEL,
+  COVERAGE_COMUNAS,
+  COVERAGE_AREA_LABEL,
 } from "../../../lib/shipping";
 
 /**
@@ -34,6 +36,8 @@ export async function GET(_req: MedusaRequest, res: MedusaResponse) {
       coverage: {
         regions: COVERAGE_REGIONS,
         label: COVERAGE_LABEL,
+        comunas: COVERAGE_COMUNAS,
+        area_label: COVERAGE_AREA_LABEL,
       },
     },
   });
