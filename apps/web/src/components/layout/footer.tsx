@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Truck } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Logo } from "./logo";
 import { SITE } from "@/config/site";
+import { coverageNote } from "@/lib/shipping-copy";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -43,6 +45,16 @@ export function Footer() {
         <div className="flex flex-col gap-3">
           <Logo tone="inverse" />
           <p className="max-w-xs text-sm text-neutral-400">{SITE.messages.anticipation}.</p>
+          {/* Cobertura: se dice en todas las pantallas, no solo al pagar. Enterarse
+              de que no llegamos a tu región recién en el checkout es una promesa
+              rota; acá es un dato que se tiene desde el principio. */}
+          <Link
+            href="/despacho"
+            className="inline-flex items-start gap-2 text-sm text-neutral-300 transition-colors hover:text-white"
+          >
+            <Truck className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+            <span>{coverageNote()}</span>
+          </Link>
         </div>
         {COLUMNS.map((col) => (
           <nav key={col.title} aria-label={col.title}>

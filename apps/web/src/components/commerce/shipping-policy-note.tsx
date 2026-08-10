@@ -1,6 +1,6 @@
 import { Truck } from "lucide-react";
 import type { ShippingPolicy } from "@/lib/medusa";
-import { oneTimeShippingLabel, subscriptionShippingLabel } from "@/lib/shipping-copy";
+import { oneTimeShippingLabel, subscriptionShippingLabel, coverageNote } from "@/lib/shipping-copy";
 import { cn } from "@/lib/utils";
 
 export interface ShippingPolicyNoteProps {
@@ -39,16 +39,21 @@ export function ShippingPolicyNote({ policy, size = "sm", className }: ShippingP
         strokeWidth={1.75}
         aria-hidden
       />
-      {subscription ? (
-        <span className="flex flex-col gap-0.5">
-          <strong className="font-semibold text-success-strong">{subscription}</strong>
-          <span>En compra única: {oneTime}</span>
-        </span>
-      ) : (
-        <span>
-          Envío <strong className="font-semibold text-text-primary">{oneTime}</strong>
-        </span>
-      )}
+      <span className="flex flex-col gap-0.5">
+        {subscription ? (
+          <>
+            <strong className="font-semibold text-success-strong">{subscription}</strong>
+            <span>En compra única: {oneTime}</span>
+          </>
+        ) : (
+          <span>
+            Envío <strong className="font-semibold text-text-primary">{oneTime}</strong>
+          </span>
+        )}
+        {/* Dónde llegamos, junto a cuánto cuesta: la cobertura es parte del precio
+            del despacho, y saberla antes de agregar al carrito evita el choque. */}
+        <span>{coverageNote(policy)}</span>
+      </span>
     </div>
   );
 }

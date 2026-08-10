@@ -235,7 +235,7 @@ Manada tiene **una sola regla de envío con DOS ramas** (D81), definida en el ba
    `base_shipping_amount`.
 
 - **`GET /store/shipping-policy`** → `{ shipping_policy: { currency_code, base_shipping_amount,
-  free_shipping_threshold, subscription_free_shipping } }`. Valores en
+  free_shipping_threshold, subscription_free_shipping, coverage } }`. Valores en
   `apps/backend/src/lib/shipping.ts` (fuente única; hoy `3990` / `30000` CLP).
   `subscription_free_shipping` es una **constante de política** (no un cálculo sobre el
   carrito): dice que la suscripción incluye despacho, y por eso puede anunciarse en
@@ -244,6 +244,13 @@ Manada tiene **una sola regla de envío con DOS ramas** (D81), definida en el ba
   gratis, la PDP (`ShippingPolicyNote`), el carrito y el checkout, y **degrada a `false`
   si el campo no viene** (backend viejo desplegado ⇒ no se anuncia un beneficio que ese
   backend no aplicaría al cobrar). **No hay umbral, costo ni regla hardcodeados en el front.**
+- **`coverage: { regions, label }` — DÓNDE despachamos (D84).** `regions` trae los nombres
+  **canónicos** del selector del checkout (`apps/web/src/lib/chile-regions.ts`; hoy
+  `["Metropolitana de Santiago"]`) y `label` es cómo se le nombra al comprador
+  (`"Región Metropolitana"`). Es **informativo**: el candado real está en las dos rutas de
+  pago (§14.3). El front degrada al revés que `subscription_free_shipping` — **sin `coverage`
+  no bloquea a nadie** (`isCoveredRegion` ⇒ `true`), porque una cobertura inventada en el
+  front costaría ventas que sí se pueden cumplir. **Por eso el backend se despliega primero.**
 - **Cobro real (nativo):** la opción "Despacho Estándar" ($3.990) vive en el seed; cada
   rama del "gratis" es una **promoción automática** (`is_automatic`,
   `application_method: { type: "percentage", target_type: "shipping_methods", value: 100,
@@ -540,6 +547,13 @@ El hash hex viaja como parámetro `s`. Implementado en `signParams` (`src/lib/fl
   (`payment/create`, `paymentMethod: 9` = todos los medios) por el **total del carrito**
   (server-side, autoritativo), persiste `flow_payment` (`pending`) y devuelve la URL del
   checkout de Flow. **Reusa** un intento `pending` del mismo carrito/monto (no duplica cobros).
+  **Rechaza fuera de cobertura (D84):** si `shipping_address.province` no está en la zona
+  declarada (`isCoveredProvince`, `src/lib/shipping.ts`) responde `NOT_ALLOWED` con mensaje
+  accionable **antes** de crear nada en Flow. Mismo candado en
+  **`POST /store/carts/:id/subscription-payment`** (alta de suscripción, D59: tokeniza la
+  tarjeta y **requiere sesión**). Sin región ⇒ tampoco pasa: no hay cobertura verificable.
+  Son las **dos únicas puertas** por las que se llega a pagar, así que saltarse la UI no
+  alcanza para comprar fuera de zona.
 - **`POST /flow/confirmation`** (público, fuera de `/store`) — webhook `urlConfirmation` de Flow.
   Recibe `token` (form-encoded) → `settleFlowPayment` → 200. Devuelve **500 solo** si el pago
   está confirmado pero la orden no se pudo crear (para que Flow **reintente**).

@@ -35,7 +35,7 @@ import {
   type ShippingPolicy,
 } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
-import { shippingReasonLabel } from "@/lib/shipping-copy";
+import { shippingReasonLabel, isCoveredRegion, outOfCoverageMessage } from "@/lib/shipping-copy";
 import { cn } from "@/lib/utils";
 import { trackBeginCheckout } from "@/lib/analytics";
 import { PENDING_PURCHASE_KEY } from "@/lib/checkout-snapshot";
@@ -226,6 +226,19 @@ export default function CheckoutPage() {
   }
 
   /**
+   * COBERTURA — hoy solo despachamos donde diga la política del backend.
+   *
+   * El listado sigue mostrando las 16 regiones a propósito: esconder la suya haría
+   * que el comprador buscara un error suyo. Elige la que vive y se le dice de
+   * frente, EN EL MOMENTO de elegirla, que todavía no llegamos ahí — no después de
+   * llenar todo el formulario y apretar Pagar.
+   *
+   * Esto evita el choque; no lo reemplaza: el rechazo que de verdad manda está en
+   * la ruta de pago del backend.
+   */
+  const outOfCoverage = Boolean(province) && !isCoveredRegion(policy, province);
+
+  /**
    * Persistencia temprana del correo (D79) — el comprador termina de escribirlo y
    * el carrito ya queda identificado, sin esperar a que apriete "Pagar".
    *
@@ -267,6 +280,7 @@ export default function CheckoutPage() {
     else if (!isValidRut(rut)) e.rut = "Revisa tu RUT";
     if (!address1.trim()) e.address1 = "Ingresa tu dirección";
     if (!province.trim()) e.province = "Elige tu región";
+    else if (outOfCoverage) e.province = outOfCoverageMessage(policy);
     if (!city.trim()) e.city = "Elige tu comuna";
     if (!shippingId) e.shipping = "Elige un despacho";
     setErrors(e);
@@ -397,6 +411,14 @@ export default function CheckoutPage() {
                       <Select label="Comuna" placeholder={province ? "Elige tu comuna" : "Primero elige la región"} options={comunaOptions} value={city} onValueChange={setCity} error={errors.city} disabled={!province} required />
                     </div>
                   </Row>
+                  {/* Fuera de zona: se dice apenas elige la región, con el porqué y
+                      sin culpar al comprador. El CTA queda apagado hasta corregirlo. */}
+                  {outOfCoverage && (
+                    <Alert variant="urgency" title="Todavía no llegamos a tu región">
+                      {outOfCoverageMessage(policy)} Estamos sumando zonas: escríbenos y te
+                      avisamos apenas abramos la tuya.
+                    </Alert>
+                  )}
                   <Input label="Teléfono (para coordinar la entrega)" placeholder="+56 9 ..." autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </Stack>
               </Block>
@@ -460,6 +482,10 @@ export default function CheckoutPage() {
 
                 {submitError && <Alert variant="error">{submitError}</Alert>}
 
+                {/* El botón apagado necesita su razón AL LADO: el aviso de la
+                    dirección puede haber quedado fuera de pantalla en el resumen. */}
+                {outOfCoverage && <Alert variant="urgency">{outOfCoverageMessage(policy)}</Alert>}
+
                 {needsLogin && (
                   <Alert variant="info">
                     Tu pedido incluye una suscripción. Al pagar te pediremos ingresar o crear tu
@@ -473,7 +499,7 @@ export default function CheckoutPage() {
                   shipping={shippingCost}
                   note="Al pagar aceptas los términos. Te llevamos a Flow para completar el pago de forma segura."
                 >
-                  <Button block size="lg" onClick={pay} disabled={submitting || isLoading}>
+                  <Button block size="lg" onClick={pay} disabled={submitting || isLoading || outOfCoverage}>
                     {submitting
                       ? "Redirigiéndote a Flow…"
                       : hasSubscription

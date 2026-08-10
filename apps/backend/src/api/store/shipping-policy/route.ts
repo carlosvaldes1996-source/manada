@@ -2,6 +2,8 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import {
   FREE_SHIPPING_THRESHOLD,
   BASE_SHIPPING_AMOUNT,
+  COVERAGE_REGIONS,
+  COVERAGE_LABEL,
 } from "../../../lib/shipping";
 
 /**
@@ -17,6 +19,10 @@ import {
  * el carrito: dice que la suscripción incluye despacho, y por eso puede anunciarse
  * en superficies que no tienen carrito (landing, PDP, /despacho). Quién cumple hoy
  * la condición lo decide el backend al cobrar.
+ *
+ * `coverage` responde la otra mitad de la misma pregunta: DÓNDE despachamos. El
+ * front la usa para avisar temprano y para no dejar pagar fuera de zona, pero el
+ * candado real está en las rutas de pago — acá solo se informa.
  */
 export async function GET(_req: MedusaRequest, res: MedusaResponse) {
   res.json({
@@ -25,6 +31,10 @@ export async function GET(_req: MedusaRequest, res: MedusaResponse) {
       base_shipping_amount: BASE_SHIPPING_AMOUNT,
       free_shipping_threshold: FREE_SHIPPING_THRESHOLD,
       subscription_free_shipping: true,
+      coverage: {
+        regions: COVERAGE_REGIONS,
+        label: COVERAGE_LABEL,
+      },
     },
   });
 }

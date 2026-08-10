@@ -13,12 +13,26 @@ import { medusa } from "./client";
  * `@/lib/shipping-copy`, para que las dos ramas de la regla se cuenten igual en
  * todas las pantallas.
  */
+/** Dónde despachamos hoy. `regions` trae los nombres canónicos de `chile-regions.ts`. */
+export interface ShippingCoverage {
+  regions: string[];
+  /** Cómo se le nombra la zona al comprador ("Región Metropolitana"). */
+  label: string;
+}
+
 export interface ShippingPolicy {
   currencyCode: string;
   baseShippingAmount: number;
   freeShippingThreshold: number;
   /** La suscripción incluye el despacho, sin monto mínimo. */
   subscriptionFreeShipping: boolean;
+  /**
+   * Zona de cobertura. `null` = el backend no la declara (versión anterior aún
+   * desplegada): el checkout NO bloquea a nadie por su cuenta —el front consume,
+   * no decide— y el candado sigue siendo del servidor. Por eso el backend se
+   * despliega primero.
+   */
+  coverage: ShippingCoverage | null;
 }
 
 let cached: ShippingPolicy | null = null;
@@ -31,8 +45,10 @@ export async function getShippingPolicy(): Promise<ShippingPolicy> {
       base_shipping_amount: number;
       free_shipping_threshold: number;
       subscription_free_shipping?: boolean;
+      coverage?: { regions?: string[]; label?: string };
     };
   }>("/store/shipping-policy");
+  const coverage = shipping_policy.coverage;
   cached = {
     currencyCode: shipping_policy.currency_code,
     baseShippingAmount: shipping_policy.base_shipping_amount,
@@ -40,6 +56,12 @@ export async function getShippingPolicy(): Promise<ShippingPolicy> {
     // Ausente = backend viejo aún desplegado: no se anuncia un beneficio que ese
     // backend no aplicaría al cobrar.
     subscriptionFreeShipping: shipping_policy.subscription_free_shipping ?? false,
+    // Misma regla, al revés: sin lista de regiones no se bloquea a nadie desde el
+    // front (una cobertura inventada acá podría costar una venta que SÍ se cumple).
+    coverage:
+      coverage?.regions?.length && coverage.label
+        ? { regions: coverage.regions, label: coverage.label }
+        : null,
   };
   return cached;
 }

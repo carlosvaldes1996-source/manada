@@ -2,6 +2,7 @@ import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
 import { registerFlowCard, getFlowConfig, flowErrorMessage } from "../../../../../lib/flow";
 import { ensureFlowCustomer } from "../../../../../lib/flow-customer";
+import { isCoveredProvince, OUT_OF_COVERAGE_MESSAGE } from "../../../../../lib/shipping";
 
 /**
  * `POST /store/carts/:id/subscription-payment` (API.md §14, D59) — inicia la 1ª
@@ -38,12 +39,18 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     data: [cart],
   } = await query.graph({
     entity: "cart",
-    fields: ["id", "completed_at", "items.id", "items.metadata"],
+    fields: ["id", "completed_at", "items.id", "items.metadata", "shipping_address.province"],
     filters: { id: cartId },
   });
   if (!cart) throw new MedusaError(MedusaError.Types.NOT_FOUND, "Carrito no encontrado.");
   if (cart.completed_at) {
     throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Este carrito ya fue completado.");
+  }
+  // COBERTURA: mismo candado que el pago único (`lib/shipping.ts` = fuente única).
+  // Acá pesa aún más: una suscripción fuera de zona no sería un despacho imposible,
+  // sino uno cada mes.
+  if (!isCoveredProvince(cart.shipping_address?.province)) {
+    throw new MedusaError(MedusaError.Types.NOT_ALLOWED, OUT_OF_COVERAGE_MESSAGE);
   }
   const items = (cart.items ?? []) as { id: string; metadata?: Record<string, unknown> | null }[];
   const hasSubscription = items.some((it) => it.metadata?.is_subscription);

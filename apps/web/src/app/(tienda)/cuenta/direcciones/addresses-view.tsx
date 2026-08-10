@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapPin, Plus, Pencil, Trash2 } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Stack, Row } from "@/components/ui/stack";
 import { Grid } from "@/components/ui/grid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -24,9 +25,13 @@ import {
   createAddress,
   updateAddress,
   deleteAddress,
+  getShippingPolicy,
   type AddressView,
   type AddressInput,
+  type ShippingPolicy,
 } from "@/lib/medusa";
+import { REGIONS, getComunas } from "@/lib/chile-regions";
+import { isCoveredRegion, outOfCoverageMessage } from "@/lib/shipping-copy";
 import { AccountGate } from "../account-gate";
 
 /** Direcciones reales del cliente — CRUD nativo de Medusa (Fase 5 · Etapa A). */
@@ -259,8 +264,42 @@ function AddressForm({
   const [errors, setErrors] = useState<Partial<Record<keyof AddressInput, string>>>({});
   const [saving, setSaving] = useState(false);
 
+  // Cobertura real (backend). Guardar acá una dirección fuera de zona es prometer
+  // un despacho que el checkout después va a rechazar: se ataja en el origen.
+  const [policy, setPolicy] = useState<ShippingPolicy | null>(null);
+  useEffect(() => {
+    let active = true;
+    getShippingPolicy()
+      .then((p) => active && setPolicy(p))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Región → comuna: los mismos selectores del checkout, para que lo que se guarda
+  // acá y lo que se valida allá sean literalmente los mismos nombres.
+  const regionOptions: SelectOption[] = useMemo(
+    () => REGIONS.map((r) => ({ value: r.name, label: r.name })),
+    [],
+  );
+  const comunaOptions: SelectOption[] = useMemo(
+    () => getComunas(form.province ?? "").map((c) => ({ value: c, label: c })),
+    [form.province],
+  );
+  const outOfCoverage = Boolean(form.province) && !isCoveredRegion(policy, form.province ?? "");
+
   function set<K extends keyof AddressInput>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function setRegion(next: string) {
+    // Si la comuna guardada no pertenece a la nueva región, se limpia.
+    setForm((prev) => ({
+      ...prev,
+      province: next,
+      city: getComunas(next).includes(prev.city) ? prev.city : "",
+    }));
   }
 
   async function submit(e: React.FormEvent) {
@@ -270,7 +309,9 @@ function AddressForm({
     if (!form.firstName.trim()) next.firstName = "Falta el nombre";
     if (!form.lastName.trim()) next.lastName = "Falta el apellido";
     if (!form.address1.trim()) next.address1 = "Ingresa la dirección";
-    if (!form.city.trim()) next.city = "Ingresa la comuna";
+    if (!form.province?.trim()) next.province = "Elige tu región";
+    else if (outOfCoverage) next.province = outOfCoverageMessage(policy);
+    if (!form.city.trim()) next.city = "Elige tu comuna";
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -303,9 +344,14 @@ function AddressForm({
           </Row>
           <Input label="Dirección" placeholder="Calle y número, depto/casa" value={form.address1} onChange={(e) => set("address1", e.target.value)} error={errors.address1} autoComplete="street-address" required />
           <Row gap={3} wrap>
-            <Input label="Comuna" placeholder="Ñuñoa" value={form.city} onChange={(e) => set("city", e.target.value)} error={errors.city} className="flex-1" required />
-            <Input label="Región" placeholder="Región Metropolitana" value={form.province} onChange={(e) => set("province", e.target.value)} className="flex-1" />
+            <div className="w-full sm:flex-1">
+              <Select label="Región" placeholder="Elige tu región" options={regionOptions} value={form.province ?? ""} onValueChange={setRegion} error={errors.province} required />
+            </div>
+            <div className="w-full sm:flex-1">
+              <Select label="Comuna" placeholder={form.province ? "Elige tu comuna" : "Primero elige la región"} options={comunaOptions} value={form.city} onValueChange={(v) => set("city", v)} error={errors.city} disabled={!form.province} required />
+            </div>
           </Row>
+          {outOfCoverage && <Alert variant="urgency">{outOfCoverageMessage(policy)}</Alert>}
           <Input label="Teléfono (opcional)" placeholder="+56 9 ..." value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" />
 
           <DialogFooter>

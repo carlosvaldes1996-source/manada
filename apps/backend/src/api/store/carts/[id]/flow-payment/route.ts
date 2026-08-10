@@ -8,6 +8,7 @@ import {
 import { FLOW_PAYMENT_MODULE } from "../../../../../modules/flow-payment";
 import type FlowPaymentModuleService from "../../../../../modules/flow-payment/service";
 import { createFlowPayment, getFlowConfig, flowErrorMessage } from "../../../../../lib/flow";
+import { isCoveredProvince, OUT_OF_COVERAGE_MESSAGE } from "../../../../../lib/shipping";
 
 /**
  * `POST /store/carts/:id/flow-payment` (API.md §14, D58) — crea la orden de pago
@@ -43,6 +44,7 @@ type CartGraph = {
   total?: number | null;
   metadata?: Record<string, unknown> | null;
   items?: { id: string }[];
+  shipping_address?: { province?: string | null } | null;
   payment_collection?: { id: string } | null;
 };
 
@@ -72,6 +74,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       "shipping_methods.*",
       "shipping_methods.adjustments.*",
       "shipping_methods.tax_lines.*",
+      "shipping_address.province",
       "payment_collection.id",
     ],
     filters: { id: cartId },
@@ -87,6 +90,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
   if (!cart.email) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "Falta el correo del comprador.");
+  }
+  // COBERTURA: se valida ANTES de crear nada en Flow. Es la última puerta antes de
+  // que exista un cobro, así que un pedido fuera de zona no llega a nacer — ni como
+  // intento de pago ni como orden que después habría que devolver a mano.
+  if (!isCoveredProvince(cart.shipping_address?.province)) {
+    throw new MedusaError(MedusaError.Types.NOT_ALLOWED, OUT_OF_COVERAGE_MESSAGE);
   }
 
   const amount = Math.round(Number(cart.total ?? 0));

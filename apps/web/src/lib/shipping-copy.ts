@@ -18,6 +18,49 @@ import type { ShippingPolicy } from "./medusa";
  *   2. Compra única    → gratis sobre el umbral; bajo eso, el costo base.
  */
 
+/**
+ * Cómo se nombra la zona de cobertura cuando NO hay política a mano (footer, que
+ * es sincrónico y se pinta en todas las pantallas). Es solo el NOMBRE: quién puede
+ * comprar lo decide el backend, nunca este string.
+ */
+export const COVERAGE_LABEL = "Región Metropolitana";
+
+/** Nombre de la zona, priorizando siempre lo que declara el backend. */
+export function coverageLabel(policy?: ShippingPolicy | null): string {
+  return policy?.coverage?.label ?? COVERAGE_LABEL;
+}
+
+/**
+ * ¿Llegamos a esta región? Compara contra la lista del backend, que usa los mismos
+ * nombres canónicos que el selector del checkout (`chile-regions.ts`).
+ *
+ * Sin política cargada o sin cobertura declarada devuelve `true`: el front no
+ * inventa un bloqueo: prefiere dejar seguir y que el servidor —que sí es la fuente
+ * de verdad— rechace. Un falso "no llegamos" cuesta una venta buena; un falso "sí"
+ * lo ataja el candado del backend.
+ */
+export function isCoveredRegion(policy: ShippingPolicy | null, region: string): boolean {
+  const regions = policy?.coverage?.regions;
+  if (!regions?.length) return true;
+  return regions.includes(region);
+}
+
+/** Aviso corto de cobertura, para vitrina (footer, ficha de producto). */
+export function coverageNote(policy?: ShippingPolicy | null): string {
+  return `Despachamos solo en la ${coverageLabel(policy)}`;
+}
+
+/**
+ * El "no llegamos todavía" del checkout — donde el comprador ya escribió sus datos
+ * y merece saber exactamente qué pasa y qué puede hacer, no un error genérico.
+ */
+export function outOfCoverageMessage(policy: ShippingPolicy | null): string {
+  return (
+    `Por ahora despachamos solo en la ${coverageLabel(policy)}. ` +
+    `Elige una dirección de esa zona para completar tu compra.`
+  );
+}
+
 /** Rama 1 · "Despacho gratis con suscripción". Vacío si la política no la ofrece. */
 export function subscriptionShippingLabel(policy: ShippingPolicy): string {
   return policy.subscriptionFreeShipping ? "Despacho gratis con suscripción" : "";

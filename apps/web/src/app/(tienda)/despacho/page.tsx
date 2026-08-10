@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ContentPage, ProseBlock, ProseList } from "@/components/layout/content-page";
 import { getShippingPolicy } from "@/lib/medusa";
 import { formatCLP } from "@/lib/format";
+import { coverageLabel } from "@/lib/shipping-copy";
 
 export const metadata: Metadata = {
   title: "Despacho y cobertura",
@@ -18,9 +19,10 @@ export default async function DespachoPage() {
     <ContentPage
       title="Despacho y cobertura"
       lead={
-        policy.subscriptionFreeShipping
+        (policy.subscriptionFreeShipping
           ? `Con suscripción, el despacho es gratis siempre. En una compra única, es gratis sobre ${formatCLP(policy.freeShippingThreshold)}.`
-          : `El despacho es gratis en compras sobre ${formatCLP(policy.freeShippingThreshold)}.`
+          : `El despacho es gratis en compras sobre ${formatCLP(policy.freeShippingThreshold)}.`) +
+        ` Por ahora llegamos solo a la ${coverageLabel(policy)}.`
       }
     >
       <ProseBlock heading="Cuánto cuesta">
@@ -46,10 +48,15 @@ export default async function DespachoPage() {
           avisamos cuando tu pedido vaya en camino.
         </p>
       </ProseBlock>
-      <ProseBlock heading="Cobertura">
+      <ProseBlock heading="Dónde llegamos">
         <p>
-          Hoy despachamos en la Región Metropolitana y seguimos sumando comunas. También puedes
-          retirar en tienda cuando esté disponible para tu zona.
+          <strong>Hoy despachamos solo en la {coverageLabel(policy)}.</strong> Si tu dirección es de
+          otra región, el checkout te lo dirá antes de que pagues: preferimos decírtelo a tiempo
+          antes que tomar un pedido que no podríamos entregar bien.
+        </p>
+        <p>
+          Estamos trabajando para abrir nuevas zonas. Escríbenos y te avisamos apenas llegue la
+          tuya.
         </p>
       </ProseBlock>
     </ContentPage>
