@@ -125,7 +125,7 @@ function metaEnumList<T extends string>(meta: Meta, key: string, valid: T[]): T[
 
 /* ------------------------------ campos nativos ----------------------------- */
 
-function categoryFromName(name: string | undefined): ProductCategory {
+export function categoryFromName(name: string | undefined): ProductCategory {
   const key = name?.toLowerCase();
   return (key && CATEGORY_BY_NAME[key]) || "accesorios";
 }

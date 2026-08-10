@@ -1,8 +1,8 @@
 import { cache } from "react";
-import type { Product } from "@/types";
+import type { Product, ProductCategory } from "@/types";
 import { medusa } from "./client";
 import { getRegionId } from "./region";
-import { mapProduct, PRODUCT_FIELDS } from "./map-product";
+import { categoryFromName, mapProduct, PRODUCT_FIELDS } from "./map-product";
 
 /**
  * Acceso al catálogo real vía la Store API de Medusa (Fase 5 · Etapa 1).
@@ -85,3 +85,59 @@ export const getProductByHandle = cache(async (handle: string): Promise<Product 
   });
   return products[0] ? mapProduct(products[0]) : null;
 });
+
+/* --------------------------------- sitemap -------------------------------- */
+
+/**
+ * Entrada mínima del catálogo para el sitemap: la URL de la ficha, su categoría
+ * y **cuándo cambió de verdad** el producto en Medusa.
+ *
+ * No pasa por `mapProduct` a propósito: el sitemap no necesita precios, variantes
+ * ni metadata, y `mapProduct` descarta `updated_at` (no es un dato de dominio que
+ * consuma la UI). Por lo mismo esta consulta no pide `region_id` —solo hace falta
+ * para calcular precios— ni expande variantes.
+ */
+export interface ProductSitemapEntry {
+  slug: string;
+  category: ProductCategory;
+  /**
+   * `updated_at` real de Medusa, o `null` si el backend no lo devolvió. Nunca se
+   * sustituye por "ahora": un `lastmod` inventado es peor que ninguno — Google
+   * deja de confiar en el sitemap completo si todas las fechas son la del request.
+   */
+  updatedAt: Date | null;
+}
+
+/** Campos mínimos del sitemap: handle + fecha real + categoría (para el lastmod de la PLP). */
+const SITEMAP_FIELDS = "handle,updated_at,*categories";
+
+function toDate(raw: string | Date | null | undefined): Date | null {
+  if (!raw) return null;
+  const date = raw instanceof Date ? raw : new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Catálogo publicable en el sitemap. Mismo techo (y mismo aviso de truncado) que
+ * `listProducts`: si el catálogo supera el límite, que se vea en los logs en vez
+ * de descubrirse como URLs que nunca se indexaron (D68).
+ */
+export async function listProductsForSitemap(): Promise<ProductSitemapEntry[]> {
+  const { products, count } = await medusa.store.product.list({
+    fields: SITEMAP_FIELDS,
+    limit: CATALOG_LIMIT,
+  });
+
+  if (count > products.length) {
+    console.error(
+      `[medusa] Sitemap truncado: ${count} productos, se recibieron ${products.length} ` +
+        `(limit ${CATALOG_LIMIT}). Toca implementar paginación en servidor (D68).`,
+    );
+  }
+
+  return products.map((product) => ({
+    slug: product.handle,
+    category: categoryFromName(product.categories?.[0]?.name),
+    updatedAt: toDate(product.updated_at),
+  }));
+}
