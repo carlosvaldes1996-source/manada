@@ -17,7 +17,11 @@ import { usePet } from "@/components/providers";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { findBreed, estimateWeightFromBreed, sizeBucketsForSpecies, midpoint, overweightSignal } from "@/lib/breeds";
 import { profileCompleteness } from "@/lib/pet";
-import { trackOnboardingStart } from "@/lib/analytics";
+import {
+  trackOnboardingStart,
+  trackOnboardingStep,
+  trackOnboardingSubmit,
+} from "@/lib/analytics";
 import { fade, fadeInUp } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
@@ -90,6 +94,15 @@ export function OnboardingWizard() {
   useEffect(() => {
     trackOnboardingStart();
   }, []);
+
+  // Fricción pantalla por pantalla. `onboarding_start` y `recommendation_shown`
+  // marcan los extremos del alta, pero entre ambos no había NADA: en la primera
+  // campaña 130 personas entraron acá y ninguna llegó al final, sin forma de
+  // saber en qué pregunta se caían. Con esto, la diferencia entre el paso 1 y el
+  // paso 2 mide exactamente cuánto cuesta el primer bloque de datos.
+  useEffect(() => {
+    trackOnboardingStep(stepId, stepIndex, STEP_IDS.length);
+  }, [stepId, stepIndex]);
 
   // Restaura el borrador guardado al (re)montar. Corre solo en cliente, después de
   // hidratar → sin mismatch de SSR. `restored` habilita el guardado recién después,
@@ -196,6 +209,12 @@ export function OnboardingWizard() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     try {
+      // Se apretó "Ver su recomendación" con el formulario válido. Se emite ACÁ,
+      // antes de crear el perfil y de navegar, porque su valor diagnóstico es
+      // justamente separar "no completan el formulario" de "lo completan y la
+      // recomendación no llega": si se emitiera después del `router.push` toda
+      // navegación perdida se vería igual que un abandono en el formulario.
+      trackOnboardingSubmit();
       const pet: Pet = {
         // id LOCAL de invitado (prefijo `local_`): si hay sesión, addPet lo
         // persiste en el backend y devuelve el id real `pet_…` (D34).

@@ -10,4 +10,8 @@ export {
   trackBeginCheckout,
   trackPurchase,
   trackSubscription,
+  trackPageView,
+  trackViewItem,
+  trackOnboardingStep,
+  trackOnboardingSubmit,
 } from "./events";

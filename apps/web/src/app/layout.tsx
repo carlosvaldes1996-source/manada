@@ -5,6 +5,7 @@ import {
   GoogleTagManager,
   GoogleTagManagerNoScript,
 } from "@/components/analytics/google-tag-manager";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { JsonLd } from "@/components/seo/json-ld";
 import { SITE } from "@/config/site";
 import { organizationSchema } from "@/lib/seo";
@@ -96,6 +97,7 @@ export default function RootLayout({
         <GoogleTagManagerNoScript />
         <AppProviders>{children}</AppProviders>
         <GoogleTagManager />
+        <PageViewTracker />
       </body>
     </html>
   );

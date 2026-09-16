@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TrendingDown } from "lucide-react";
@@ -22,6 +22,7 @@ import {
   PlanManadaCard,
 } from "@/components/commerce";
 import { usePet, useCart } from "@/components/providers";
+import { trackViewItem } from "@/lib/analytics";
 import { dailyRationGrams } from "@/lib/anticipation";
 import { formatCLP, pluralize } from "@/lib/format";
 import { categoryLabel } from "@/lib/catalog";
@@ -81,6 +82,23 @@ export function ProductView({
         subscriptionPrice: undefined,
       }
     : product;
+
+  // Señal de fondo de embudo (`ViewContent` de Meta). Hasta 2026-09 la PDP no
+  // medía NADA: `ViewContent` colgaba de `recommendation_shown`, al final del
+  // onboarding, así que una campaña dirigida a una ficha de producto no generaba
+  // ninguna conversión intermedia y el algoritmo de Meta no tenía sobre qué
+  // optimizar. Se dispara una vez por producto, no por variante: cambiar de
+  // formato es refinar la misma intención, no una visita nueva.
+  const viewedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (viewedRef.current === product.id) return;
+    viewedRef.current = product.id;
+    trackViewItem(selected);
+    // `selected` se omite a propósito de las dependencias: se lee su valor en el
+    // primer render (la variante primaria) y volver a disparar al cambiar de
+    // formato contaría varias visitas de la misma ficha.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   const soldOut = selected.stock <= 0;
 
